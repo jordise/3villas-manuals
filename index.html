@@ -565,9 +565,9 @@
       <!-- CASPIO CONFIG -->
       <button class="config-toggle" onclick="toggleConfig()">⚙ Configuración Caspio API</button>
       <div class="config-section" id="caspio-config">
-        <div class="field-group">
-          <label>Account ID (Caspio)</label>
-          <input type="text" id="caspio-account" placeholder="ej: abc123" value="">
+        <div class="field-group" style="background:#ECFDF5;border:1px solid #6EE7B7;border-radius:8px;padding:8px 10px;margin-bottom:1rem;">
+          <label style="color:#065F46">Proxy activo</label>
+          <div style="font-size:0.75rem;color:#065F46;font-weight:500">caspio-proxy.jordi-89b.workers.dev ✓</div>
         </div>
         <div class="field-group">
           <label>Client ID</label>
@@ -694,21 +694,28 @@ function showStatus(type, msg) {
 }
 
 // ── CASPIO API ──
+const PROXY_URL = 'https://caspio-proxy.jordi-89b.workers.dev';
+
 async function getCaspioToken() {
   const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-  if (!cfg.account || !cfg.clientId || !cfg.clientSecret) {
+  if (!cfg.clientId || !cfg.clientSecret) {
     throw new Error('Configura primero las credenciales de Caspio');
   }
-  const url = `https://${cfg.account}.caspio.com/oauth/token`;
-  const body = new URLSearchParams({
-    grant_type: 'client_credentials',
-    client_id: cfg.clientId,
-    client_secret: cfg.clientSecret
+  const bodyStr = 'grant_type=client_credentials'
+    + '&client_id=' + encodeURIComponent(cfg.clientId)
+    + '&client_secret=' + encodeURIComponent(cfg.clientSecret);
+  const res = await fetch(PROXY_URL + '?path=/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: bodyStr
   });
-  const res = await fetch(url, { method: 'POST', body });
-  if (!res.ok) throw new Error('Error autenticando con Caspio');
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error('Error autenticando con Caspio (' + res.status + '): ' + errText);
+  }
   const data = await res.json();
-  return { token: data.access_token, account: cfg.account, table: cfg.table };
+  if (!data.access_token) throw new Error('Caspio no devolvio token. Revisa Client ID y Secret.');
+  return { token: data.access_token, table: cfg.table || 'TaVillas' };
 }
 
 // ── MAPEO DE CAMPOS CASPIO → TaVillas ──
@@ -744,14 +751,17 @@ function mapRecord(raw) {
 }
 
 async function fetchPropertyFromCaspio(propertyId) {
-  const { token, account, table } = await getCaspioToken();
-  const url = `https://${account}.caspio.com/rest/v2/tables/${table}/records?q.where=Hostawayid%3D'${propertyId}'&q.limit=1`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+  const { token, table } = await getCaspioToken();
+  const path = '/rest/v2/tables/' + table + '/records?q.where=Hostawayid%3D%27' + propertyId + '%27&q.limit=1';
+  const res = await fetch(PROXY_URL + '?path=' + encodeURIComponent(path), {
+    headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' }
   });
-  if (!res.ok) throw new Error('Error obteniendo datos de Caspio');
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error('Error obteniendo datos de Caspio (' + res.status + '): ' + errText);
+  }
   const data = await res.json();
-  if (!data.Result || data.Result.length === 0) throw new Error(`Propiedad ${propertyId} no encontrada en TaVillas`);
+  if (!data.Result || data.Result.length === 0) throw new Error('Propiedad ' + propertyId + ' no encontrada en TaVillas');
   return mapRecord(data.Result[0]);
 }
 
@@ -852,7 +862,7 @@ async function generateManual() {
   try {
     let propData;
     const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-    const hasCaspio = cfg.account && cfg.clientId && cfg.clientSecret;
+    const hasCaspio = cfg.clientId && cfg.clientSecret;
 
     if (hasCaspio) {
       showStatus('loading', 'Obteniendo datos de Caspio...');
