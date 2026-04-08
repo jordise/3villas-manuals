@@ -4,687 +4,393 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>3villas · Generador de Manuales</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --red: #D32E2E; --dark: #1A1A1A; --mid: #4A4A4A;
+  --light: #F7F5F2; --border: #E0DDD8; --white: #FFFFFF;
+}
+body { font-family: 'DM Sans', sans-serif; background: var(--light); color: var(--dark); min-height: 100vh; }
+header { background: var(--dark); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 64px; position: sticky; top: 0; z-index: 100; }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--white); }
+.logo span { color: var(--red); }
+header nav { font-size: 0.78rem; color: #888; letter-spacing: 0.08em; text-transform: uppercase; }
+main { max-width: 1300px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: 300px 1fr; gap: 2rem; align-items: start; }
+.panel { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; position: sticky; top: 80px; }
+.panel-header { background: var(--dark); padding: 1.25rem 1.5rem; color: var(--white); }
+.panel-header h2 { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 400; margin-bottom: 0.25rem; }
+.panel-header p { font-size: 0.75rem; color: #aaa; }
+.panel-body { padding: 1.25rem; }
+label { display: block; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mid); margin-bottom: 0.4rem; }
+input[type="text"], input[type="password"], select {
+  width: 100%; padding: 0.6rem 0.9rem; border: 1px solid var(--border); border-radius: 8px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--dark);
+  background: var(--light); outline: none; transition: border-color 0.15s; margin-bottom: 0.9rem;
+}
+input:focus { border-color: var(--red); background: var(--white); }
+.btn { width: 100%; padding: 0.8rem 1.5rem; border-radius: 8px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.6rem; }
+.btn-primary { background: var(--red); color: white; }
+.btn-primary:hover { background: #b82828; }
+.btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+.btn-secondary { background: var(--dark); color: white; }
+.btn-secondary:hover { background: #333; }
+.btn-outline { background: transparent; color: var(--dark); border: 1px solid var(--border); }
+.btn-outline:hover { background: var(--light); }
+.divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+.status-bar { padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.8rem; margin-bottom: 0.9rem; display: none; align-items: center; gap: 0.5rem; }
+.status-bar.show { display: flex; }
+.status-bar.loading { background: #FEF9EC; color: #92400E; border: 1px solid #FCD34D; }
+.status-bar.success { background: #ECFDF5; color: #065F46; border: 1px solid #6EE7B7; }
+.status-bar.error { background: #FEF2F2; color: #991B1B; border: 1px solid #FCA5A5; }
+.spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.config-toggle { font-size: 0.78rem; color: var(--red); cursor: pointer; text-decoration: underline; margin-bottom: 0.9rem; display: block; background: none; border: none; padding: 0; font-family: inherit; }
+.config-section { display: none; background: var(--light); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 0.9rem; }
+.config-section.open { display: block; }
+.proxy-badge { background: #ECFDF5; border: 1px solid #6EE7B7; border-radius: 8px; padding: 8px 12px; margin-bottom: 0.9rem; font-size: 0.72rem; color: #065F46; font-weight: 500; }
+.preview-area { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; min-height: 700px; }
+.preview-toolbar { background: #F1EFE8; border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+.preview-toolbar span { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mid); }
+.preview-actions { display: flex; gap: 0.5rem; }
+.preview-content { overflow: auto; max-height: 85vh; background: #888; padding: 20px; }
+.preview-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 600px; color: #aaa; text-align: center; padding: 2rem; background: var(--white); }
+.preview-empty .icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.3; }
+.preview-empty h3 { font-family: 'Playfair Display', serif; font-weight: 400; font-size: 1.2rem; color: #bbb; margin-bottom: 0.5rem; }
+.badge-info { background: #EEF4FF; color: #2563EB; font-size: 0.72rem; padding: 0.4rem 0.75rem; border-radius: 6px; margin-bottom: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
 
-  :root {
-    --red: #D32E2E;
-    --red-light: #FBE9E9;
-    --dark: #1A1A1A;
-    --mid: #4A4A4A;
-    --light: #F7F5F2;
-    --border: #E0DDD8;
-    --white: #FFFFFF;
-    --gold: #B8955A;
-  }
+/* ═══════════════════════════════════════
+   MANUAL PDF STYLES — fiel al original
+═══════════════════════════════════════ */
+#manual-output {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #1A1A1A;
+}
+.page {
+  width: 794px;
+  min-height: 1123px;
+  background: white;
+  margin: 0 auto 8px;
+  position: relative;
+  display: flex;
+}
+/* Sidebar de idiomas */
+.lang-bar {
+  width: 22px;
+  background: #1A1A1A;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 0;
+  gap: 0;
+}
+.lang-item {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 7px;
+  color: #666;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 12px 0;
+  flex: 1;
+  text-align: center;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lang-item.active {
+  background: #D32E2E;
+  color: white;
+  font-weight: 700;
+}
+.page-inner {
+  flex: 1;
+  padding: 35px 45px;
+  position: relative;
+}
+.page-number {
+  position: absolute;
+  bottom: 18px;
+  right: 30px;
+  font-size: 8px;
+  color: #bbb;
+}
+/* PORTADA */
+.page-cover {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 50px;
+}
+.cover-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 56px;
+  font-weight: 900;
+  line-height: 1.05;
+  margin-bottom: 40px;
+  color: #1A1A1A;
+}
+.cover-title .red-dot { color: #D32E2E; }
+.cover-photo {
+  width: 100%;
+  height: 310px;
+  object-fit: cover;
+  border-radius: 14px;
+  margin-bottom: 50px;
+}
+.cover-photo-placeholder {
+  width: 100%;
+  height: 310px;
+  background: #f0ede8;
+  border-radius: 14px;
+  margin-bottom: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bbb;
+  font-size: 13px;
+}
+.cover-bottom {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.brand-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #D32E2E;
+  line-height: 1;
+}
+.brand-sub {
+  font-size: 8px;
+  color: #888;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.qr-box {
+  width: 72px; height: 72px;
+  background: #eee;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; color: #aaa; text-align: center;
+}
+/* Tipografía interna */
+.page-inner h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: 12px;
+  color: #1A1A1A;
+}
+.page-inner h2 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+  color: #1A1A1A;
+}
+.page-inner p { font-size: 9.5px; margin-bottom: 7px; line-height: 1.55; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 18px; }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.info-block h2 { font-size: 10px; margin-bottom: 4px; }
+.info-block p { font-size: 9px; color: #444; }
+/* WiFi box */
+.wifi-box {
+  background: #F7F5F2;
+  border: 1px solid #E0DDD8;
+  border-radius: 10px;
+  padding: 14px 18px;
+  text-align: center;
+  margin: 16px 0;
+}
+.wifi-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+.wifi-row { font-size: 9.5px; margin-bottom: 4px; }
+.wifi-val { font-family: monospace; font-size: 10px; background: white; padding: 3px 8px; border-radius: 4px; border: 1px solid #ddd; display: inline-block; margin-top: 2px; }
+/* Manager card */
+.manager-card {
+  background: #F7F5F2;
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+}
+.manager-avatar {
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  background: #ddd;
+  margin: 0 auto 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: #999;
+  overflow: hidden;
+}
+.manager-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.manager-name { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+.manager-role { font-size: 8px; color: #D32E2E; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+.manager-hours { font-size: 8.5px; color: #666; margin-bottom: 10px; line-height: 1.5; }
+.manager-phone { font-size: 22px; font-weight: 700; color: #1A1A1A; }
+/* Highlight box */
+.highlight-box {
+  background: #FBE9E9;
+  border-left: 3px solid #D32E2E;
+  padding: 8px 12px;
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 10px;
+}
+.highlight-label { font-size: 8px; color: #999; margin-bottom: 3px; }
+.highlight-val { font-size: 19px; font-weight: 700; }
+/* Bullet rows */
+.bullet { display: flex; gap: 6px; margin-bottom: 4px; font-size: 9.5px; }
+.bullet .arr { color: #D32E2E; font-weight: 700; flex-shrink: 0; }
+/* Rules */
+.rule { display: flex; gap: 8px; margin-bottom: 5px; font-size: 9px; align-items: flex-start; }
+.rule-n {
+  flex-shrink: 0; width: 15px; height: 15px;
+  background: #D32E2E; color: white; border-radius: 50%;
+  font-size: 7.5px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 1px;
+}
+/* Emergency box */
+.emergency-box {
+  background: #FEF9EC;
+  border: 2px solid #F59E0B;
+  border-radius: 8px;
+  padding: 10px 14px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.emergency-num { font-size: 32px; font-weight: 900; color: #D32E2E; line-height: 1; }
+.emergency-label { font-size: 8px; font-weight: 700; color: #B45309; margin-bottom: 4px; letter-spacing: 0.1em; text-transform: uppercase; }
+/* Map placeholder */
+.map-box {
+  background: #EEF2F7;
+  border-radius: 8px;
+  height: 150px;
+  display: flex; align-items: center; justify-content: center;
+  color: #aaa; font-size: 10px; text-align: center;
+  margin-top: 14px;
+}
+/* Section divider line */
+.sect-line { border: none; border-top: 1px solid #E8E4DE; margin: 12px 0; }
+.sect-label { font-size: 7px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #bbb; margin-bottom: 4px; }
 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--light);
-    color: var(--dark);
-    min-height: 100vh;
-  }
-
-  /* ── HEADER ── */
-  header {
-    background: var(--dark);
-    padding: 0 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 64px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .logo {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.4rem;
-    color: var(--white);
-    letter-spacing: -0.02em;
-  }
-  .logo span { color: var(--red); }
-  header nav {
-    font-size: 0.78rem;
-    color: #888;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  /* ── MAIN LAYOUT ── */
-  main {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 3rem 2rem;
-    display: grid;
-    grid-template-columns: 340px 1fr;
-    gap: 2rem;
-    align-items: start;
-  }
-
-  /* ── PANEL IZQUIERDO ── */
-  .panel {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    position: sticky;
-    top: 80px;
-  }
-  .panel-header {
-    background: var(--dark);
-    padding: 1.25rem 1.5rem;
-    color: var(--white);
-  }
-  .panel-header h2 {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.1rem;
-    font-weight: 400;
-    margin-bottom: 0.25rem;
-  }
-  .panel-header p {
-    font-size: 0.75rem;
-    color: #aaa;
-  }
-  .panel-body { padding: 1.5rem; }
-
-  label {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--mid);
-    margin-bottom: 0.5rem;
-  }
-
-  input[type="text"], input[type="password"], input[type="url"], select, textarea {
-    width: 100%;
-    padding: 0.65rem 0.9rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.9rem;
-    color: var(--dark);
-    background: var(--light);
-    outline: none;
-    transition: border-color 0.15s;
-    margin-bottom: 1rem;
-  }
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--red);
-    background: var(--white);
-  }
-
-  .field-group { margin-bottom: 0.25rem; }
-
-  .divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 1.25rem 0;
-  }
-
-  .badge-info {
-    background: #EEF4FF;
-    color: #2563EB;
-    font-size: 0.72rem;
-    padding: 0.4rem 0.75rem;
-    border-radius: 6px;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .btn {
-    width: 100%;
-    padding: 0.85rem 1.5rem;
-    border-radius: 8px;
-    border: none;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-  .btn-primary {
-    background: var(--red);
-    color: white;
-    margin-bottom: 0.75rem;
-  }
-  .btn-primary:hover { background: #b82828; transform: translateY(-1px); }
-  .btn-primary:disabled { background: #ccc; transform: none; cursor: not-allowed; }
-  .btn-secondary {
-    background: var(--dark);
-    color: white;
-    margin-bottom: 0.75rem;
-  }
-  .btn-secondary:hover { background: #333; }
-  .btn-outline {
-    background: transparent;
-    color: var(--dark);
-    border: 1px solid var(--border);
-  }
-  .btn-outline:hover { background: var(--light); }
-  .btn-sm {
-    width: auto;
-    padding: 0.5rem 1rem;
-    font-size: 0.8rem;
-  }
-
-  .status-bar {
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    font-size: 0.82rem;
-    margin-bottom: 1rem;
-    display: none;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .status-bar.show { display: flex; }
-  .status-bar.loading { background: #FEF9EC; color: #92400E; border: 1px solid #FCD34D; }
-  .status-bar.success { background: #ECFDF5; color: #065F46; border: 1px solid #6EE7B7; }
-  .status-bar.error { background: #FEF2F2; color: #991B1B; border: 1px solid #FCA5A5; }
-
-  .spinner {
-    width: 14px; height: 14px;
-    border: 2px solid currentColor;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    flex-shrink: 0;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── PANEL DERECHO (PREVIEW) ── */
-  .preview-area {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    min-height: 600px;
-  }
-  .preview-toolbar {
-    background: #F1EFE8;
-    border-bottom: 1px solid var(--border);
-    padding: 0.75rem 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .preview-toolbar span {
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--mid);
-  }
-  .preview-actions { display: flex; gap: 0.5rem; }
-  .preview-content {
-    padding: 0;
-    overflow: auto;
-    max-height: 82vh;
-  }
-  .preview-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 500px;
-    color: #aaa;
-    text-align: center;
-    padding: 2rem;
-  }
-  .preview-empty .icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.3;
-  }
-  .preview-empty h3 {
-    font-family: 'Playfair Display', serif;
-    font-weight: 400;
-    font-size: 1.2rem;
-    color: #bbb;
-    margin-bottom: 0.5rem;
-  }
-  .preview-empty p {
-    font-size: 0.82rem;
-    color: #ccc;
-  }
-
-  /* Caspio config toggle */
-  .config-toggle {
-    font-size: 0.78rem;
-    color: var(--red);
-    cursor: pointer;
-    text-decoration: underline;
-    margin-bottom: 1rem;
-    display: block;
-    background: none;
-    border: none;
-    padding: 0;
-    font-family: inherit;
-  }
-  .config-section {
-    display: none;
-    background: var(--light);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-  }
-  .config-section.open { display: block; }
-  .config-section label { color: #777; font-size: 0.68rem; }
-  .config-section input { margin-bottom: 0.6rem; background: var(--white); }
-
-  /* ── MANUAL TEMPLATE (dentro del preview) ── */
-  #manual-output {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 11px;
-    line-height: 1.5;
-    color: #222;
-    background: white;
-  }
-  #manual-output .page {
-    width: 794px;
-    min-height: 1123px;
-    padding: 40px 50px;
-    margin: 0 auto 4px;
-    background: white;
-    border-bottom: 1px solid #eee;
-    position: relative;
-  }
-  #manual-output .page-cover {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-  }
-  #manual-output .cover-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 42px;
-    font-weight: 700;
-    line-height: 1.1;
-    margin-bottom: 30px;
-  }
-  #manual-output .cover-title span { color: #D32E2E; }
-  #manual-output .cover-img {
-    width: 100%;
-    max-height: 320px;
-    object-fit: cover;
-    border-radius: 12px;
-    margin-bottom: 40px;
-  }
-  #manual-output .cover-img-placeholder {
-    width: 100%;
-    height: 280px;
-    background: linear-gradient(135deg, #f0ede8 0%, #e8e4de 100%);
-    border-radius: 12px;
-    margin-bottom: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #aaa;
-    font-size: 14px;
-  }
-  #manual-output .logo-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    margin-top: auto;
-  }
-  #manual-output .qr-placeholder {
-    width: 80px; height: 80px;
-    background: #eee;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 9px; color: #999; border-radius: 4px;
-  }
-  #manual-output .brand-logo {
-    font-family: 'Playfair Display', serif;
-    font-size: 28px;
-    font-weight: 700;
-    color: #D32E2E;
-  }
-  #manual-output .brand-logo small {
-    display: block;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 8px;
-    color: #777;
-    font-weight: 400;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-  }
-
-  /* Info page */
-  #manual-output .page-number {
-    position: absolute;
-    bottom: 20px;
-    right: 40px;
-    font-size: 9px;
-    color: #bbb;
-  }
-  #manual-output .lang-sidebar {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 18px;
-    background: #1A1A1A;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-around;
-    padding: 20px 0;
-  }
-  #manual-output .lang-item {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    font-size: 7px;
-    color: #888;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  #manual-output .lang-item.active { color: white; font-weight: 600; }
-  #manual-output .lang-sidebar-red { background: #D32E2E; }
-
-  #manual-output .inner { padding-left: 30px; }
-  #manual-output .page-cols {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    margin-top: 20px;
-  }
-  #manual-output h1 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; margin-bottom: 10px; line-height: 1.2; }
-  #manual-output h2 { font-size: 13px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
-  #manual-output h3 { font-size: 11px; font-weight: 700; margin-bottom: 6px; }
-  #manual-output p { margin-bottom: 8px; font-size: 10px; line-height: 1.55; }
-  #manual-output ul { padding-left: 14px; margin-bottom: 8px; }
-  #manual-output li { font-size: 10px; margin-bottom: 3px; line-height: 1.4; }
-  #manual-output .red-dot { color: #D32E2E; }
-  #manual-output .block-title {
-    font-size: 16px;
-    font-weight: 700;
-    margin-bottom: 6px;
-  }
-  #manual-output .highlight-box {
-    background: #FBE9E9;
-    border-left: 3px solid #D32E2E;
-    padding: 8px 12px;
-    border-radius: 0 6px 6px 0;
-    margin-bottom: 10px;
-  }
-  #manual-output .highlight-box .big-phone {
-    font-size: 20px;
-    font-weight: 700;
-    color: #1A1A1A;
-  }
-  #manual-output .wifi-box {
-    background: #F7F5F2;
-    border: 1px solid #E0DDD8;
-    border-radius: 8px;
-    padding: 12px 16px;
-    text-align: center;
-    margin: 16px 0;
-  }
-  #manual-output .wifi-box .wifi-title {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-  #manual-output .wifi-name { font-weight: 600; font-size: 11px; }
-  #manual-output .wifi-pass { font-family: monospace; font-size: 12px; background: white; padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; }
-  #manual-output .manager-card {
-    background: #F7F5F2;
-    border-radius: 10px;
-    padding: 16px;
-    text-align: center;
-    margin: 16px 0;
-  }
-  #manual-output .manager-avatar {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: #ddd;
-    margin: 0 auto 8px;
-    overflow: hidden;
-  }
-  #manual-output .manager-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  #manual-output .manager-name { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; }
-  #manual-output .manager-role { font-size: 9px; color: #D32E2E; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-  #manual-output .manager-hours { font-size: 9px; color: #777; margin-bottom: 8px; }
-  #manual-output .manager-phone { font-size: 22px; font-weight: 700; }
-  #manual-output .info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-  #manual-output .info-block { }
-  #manual-output .info-block h2 { font-size: 12px; margin-bottom: 5px; }
-  #manual-output .bullet-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    margin-bottom: 4px;
-  }
-  #manual-output .bullet-row .arrow { color: #D32E2E; flex-shrink: 0; font-weight: 700; }
-  #manual-output .rule-list { counter-reset: rules; }
-  #manual-output .rule-item {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 5px;
-    font-size: 10px;
-  }
-  #manual-output .rule-num {
-    flex-shrink: 0;
-    width: 16px;
-    height: 16px;
-    background: #D32E2E;
-    color: white;
-    border-radius: 50%;
-    font-size: 8px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 1px;
-  }
-  #manual-output .section-label {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #888;
-    margin-bottom: 4px;
-  }
-  #manual-output .emergency-box {
-    background: #FEF9EC;
-    border: 2px solid #F59E0B;
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin: 10px 0;
-    text-align: center;
-  }
-  #manual-output .emergency-box .big-num { font-size: 28px; font-weight: 700; color: #D32E2E; }
-
-  /* ── TABS ── */
-  .tabs {
-    display: flex;
-    gap: 0;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .tab {
-    padding: 0.6rem 1.2rem;
-    font-size: 0.82rem;
-    font-weight: 500;
-    cursor: pointer;
-    border: none;
-    background: none;
-    color: #888;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    font-family: 'DM Sans', sans-serif;
-    transition: all 0.15s;
-  }
-  .tab.active { color: var(--red); border-bottom-color: var(--red); }
-
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-
-  @media print {
-    header, .panel, .preview-toolbar { display: none !important; }
-    main { display: block; padding: 0; }
-    .preview-area { border: none; }
-    #manual-output .page { page-break-after: always; margin: 0; }
-  }
+@media print {
+  header, .panel, .preview-toolbar { display: none !important; }
+  main { display: block; padding: 0; }
+  .preview-area { border: none; border-radius: 0; }
+  .preview-content { background: white; padding: 0; max-height: none; overflow: visible; }
+  .page { margin: 0; page-break-after: always; }
+}
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo">&lt;<span>3</span>villas</div>
-  <nav>Generador de Manuales · v1.0</nav>
+  <nav>Generador de Manuales · v2.0</nav>
 </header>
 
 <main>
-  <!-- ── PANEL CONFIGURACIÓN ── -->
+  <!-- PANEL IZQUIERDO -->
   <div class="panel">
     <div class="panel-header">
       <h2>Configuración</h2>
-      <p>Conecta Caspio y genera el manual</p>
+      <p>Genera el manual de cualquier propiedad</p>
     </div>
     <div class="panel-body">
 
-      <!-- CASPIO CONFIG -->
-      <button class="config-toggle" onclick="toggleConfig()">⚙ Configuración Caspio API</button>
-      <div class="config-section" id="caspio-config">
-        <div class="field-group" style="background:#ECFDF5;border:1px solid #6EE7B7;border-radius:8px;padding:8px 10px;margin-bottom:1rem;">
-          <label style="color:#065F46">Proxy activo</label>
-          <div style="font-size:0.75rem;color:#065F46;font-weight:500">caspio-proxy.jordi-89b.workers.dev ✓</div>
-        </div>
-        <div class="field-group">
-          <label>Client ID</label>
-          <input type="text" id="caspio-client-id" placeholder="Client ID de tu app">
-        </div>
-        <div class="field-group">
-          <label>Client Secret</label>
-          <input type="password" id="caspio-client-secret" placeholder="Client Secret">
-        </div>
-        <div class="field-group">
-          <label>Nombre de la tabla</label>
-          <input type="text" id="caspio-table" placeholder="ej: TaVillas" value="TaVillas">
-        </div>
-        <button class="btn btn-outline btn-sm" onclick="saveConfig()" style="width:100%">Guardar configuración</button>
+      <button class="config-toggle" onclick="document.getElementById('cfg').classList.toggle('open')">⚙ Configuración Caspio API</button>
+      <div class="config-section" id="cfg">
+        <div class="proxy-badge">✓ Proxy activo · caspio-proxy.jordi-89b.workers.dev</div>
+        <label>Client ID</label>
+        <input type="text" id="caspio-client-id" placeholder="Client ID">
+        <label>Client Secret</label>
+        <input type="password" id="caspio-client-secret" placeholder="Client Secret">
+        <label>Tabla</label>
+        <input type="text" id="caspio-table" value="TaVillas">
+        <button class="btn btn-outline" style="width:100%;padding:0.5rem" onclick="saveConfig()">Guardar</button>
       </div>
 
-      <hr class="divider">
-
-      <!-- BUSCAR PROPIEDAD -->
-      <div class="field-group">
-        <label>Código de propiedad</label>
-        <input type="text" id="property-id" placeholder="ej: 165528" maxlength="20">
-      </div>
-
-      <div class="badge-info">
-        <span>ℹ</span>
-        <span>El código es el <strong>Hostawayid</strong> de la propiedad en TaVillas</span>
-      </div>
+      <label>Hostawayid de la propiedad</label>
+      <input type="text" id="property-id" placeholder="ej: 92737">
+      <div class="badge-info"><span>ℹ</span> Introduce el Hostawayid de TaVillas</div>
 
       <div id="status" class="status-bar"></div>
 
-      <button class="btn btn-primary" onclick="generateManual()" id="btn-generate">
-        <span>Generar Manual</span>
+      <button class="btn btn-primary" onclick="generateManual()" id="btn-gen">
+        Generar Manual
       </button>
 
       <hr class="divider">
 
-      <!-- OPCIONES DE IDIOMA -->
-      <label>Idiomas a incluir</label>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 1rem;">
-        <label style="display:flex; align-items:center; gap:6px; text-transform:none; font-size:0.82rem; letter-spacing:0; font-weight:400; cursor:pointer; margin-bottom:0;">
-          <input type="checkbox" id="lang-es" checked> Español
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; text-transform:none; font-size:0.82rem; letter-spacing:0; font-weight:400; cursor:pointer; margin-bottom:0;">
-          <input type="checkbox" id="lang-ca" checked> Català
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; text-transform:none; font-size:0.82rem; letter-spacing:0; font-weight:400; cursor:pointer; margin-bottom:0;">
-          <input type="checkbox" id="lang-en" checked> English
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; text-transform:none; font-size:0.82rem; letter-spacing:0; font-weight:400; cursor:pointer; margin-bottom:0;">
-          <input type="checkbox" id="lang-fr" checked> Français
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; text-transform:none; font-size:0.82rem; letter-spacing:0; font-weight:400; cursor:pointer; margin-bottom:0;">
-          <input type="checkbox" id="lang-de" checked> Deutsch
-        </label>
+      <label>Idiomas</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:1rem">
+        <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-size:0.8rem;letter-spacing:0;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" id="l-ca" checked> Català</label>
+        <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-size:0.8rem;letter-spacing:0;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" id="l-es" checked> Español</label>
+        <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-size:0.8rem;letter-spacing:0;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" id="l-en" checked> English</label>
+        <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-size:0.8rem;letter-spacing:0;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" id="l-fr" checked> Français</label>
+        <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-size:0.8rem;letter-spacing:0;font-weight:400;cursor:pointer;margin-bottom:0"><input type="checkbox" id="l-de" checked> Deutsch</label>
       </div>
 
       <hr class="divider">
-
-      <button class="btn btn-secondary" onclick="downloadHTML()" id="btn-html" disabled>
-        ⬇ Descargar HTML
-      </button>
-      <button class="btn btn-outline" onclick="window.print()" id="btn-pdf" disabled>
-        🖨 Imprimir / Guardar PDF
-      </button>
-
+      <button class="btn btn-secondary" onclick="downloadHTML()" id="btn-html" disabled>⬇ Descargar HTML</button>
+      <button class="btn btn-outline" onclick="window.print()" id="btn-pdf" disabled>🖨 Imprimir / PDF</button>
     </div>
   </div>
 
-  <!-- ── PANEL PREVIEW ── -->
+  <!-- PANEL DERECHO -->
   <div class="preview-area">
     <div class="preview-toolbar">
-      <span>Vista previa del manual</span>
-      <div class="preview-actions">
-        <span id="prop-badge" style="font-size:0.75rem; color:#888; font-weight:400; letter-spacing:0; text-transform:none;"></span>
-      </div>
+      <span>Vista previa</span>
+      <span id="prop-badge" style="font-size:0.75rem;color:#888;font-weight:400;letter-spacing:0;text-transform:none"></span>
     </div>
     <div class="preview-content" id="preview-container">
       <div class="preview-empty">
         <div class="icon">📄</div>
         <h3>Manual vacío</h3>
-        <p>Introduce un código de propiedad y pulsa "Generar Manual"<br>para ver la previsualización aquí.</p>
+        <p>Introduce un Hostawayid y pulsa Generar Manual</p>
       </div>
     </div>
   </div>
 </main>
 
 <script>
-// ── CONFIGURACIÓN LOCAL ──
 const CONFIG_KEY = '3villas_caspio_config';
+const PROXY_URL = 'https://caspio-proxy.jordi-89b.workers.dev';
+const DEFAULT_CLIENT_ID = '7940b2a813ac4f75778f76cb56311e877e3084dd8bf2b057dd';
+const DEFAULT_CLIENT_SECRET = 'd0ea1b6508f5499486af4559e389e1a5e9d0e4df8b991cc1b8';
+const DEFAULT_TABLE = 'TaVillas';
 
 function saveConfig() {
   const cfg = {
-    account: '',
     clientId: document.getElementById('caspio-client-id').value,
     clientSecret: document.getElementById('caspio-client-secret').value,
     table: document.getElementById('caspio-table').value
   };
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+  try { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); } catch(e) {}
   showStatus('success', 'Configuración guardada');
 }
 
 function loadConfig() {
-  const raw = localStorage.getItem(CONFIG_KEY);
-  if (!raw) return;
-  const cfg = JSON.parse(raw);
-  // account field removed
-  document.getElementById('caspio-client-id').value = cfg.clientId || '';
-  document.getElementById('caspio-client-secret').value = cfg.clientSecret || '';
-  document.getElementById('caspio-table').value = cfg.table || 'TaVillas';
+  try {
+    const raw = localStorage.getItem(CONFIG_KEY);
+    if (!raw) return;
+    const cfg = JSON.parse(raw);
+    if (cfg.clientId) document.getElementById('caspio-client-id').value = cfg.clientId;
+    if (cfg.clientSecret) document.getElementById('caspio-client-secret').value = cfg.clientSecret;
+    if (cfg.table) document.getElementById('caspio-table').value = cfg.table;
+  } catch(e) {}
 }
 
-function toggleConfig() {
-  document.getElementById('caspio-config').classList.toggle('open');
-}
-
-// ── STATUS ──
 function showStatus(type, msg) {
   const el = document.getElementById('status');
   el.className = 'status-bar show ' + type;
@@ -693,330 +399,235 @@ function showStatus(type, msg) {
   if (type !== 'loading') setTimeout(() => el.classList.remove('show'), 4000);
 }
 
-// ── CASPIO API ──
-const PROXY_URL = 'https://caspio-proxy.jordi-89b.workers.dev';
-
-// Credenciales por defecto (se sobreescriben si se guardan en configuración)
-const DEFAULT_CLIENT_ID = '7940b2a813ac4f75778f76cb56311e877e3084dd8bf2b057dd';
-const DEFAULT_CLIENT_SECRET = 'd0ea1b6508f5499486af4559e389e1a5e9d0e4df8b991cc1b8';
-const DEFAULT_TABLE = 'TaVillas';
-
-async function getCaspioToken() {
-  const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-  const clientId = (cfg.clientId && cfg.clientId.length > 10) ? cfg.clientId : DEFAULT_CLIENT_ID;
-  const clientSecret = (cfg.clientSecret && cfg.clientSecret.length > 10) ? cfg.clientSecret : DEFAULT_CLIENT_SECRET;
-  const tokenUrl = PROXY_URL
-    + '?path=/oauth/token'
-    + '&client_id=' + clientId
-    + '&client_secret=' + clientSecret;
-  console.log('Token URL:', tokenUrl);
-  const res = await fetch(tokenUrl, {
-    method: 'GET'
-  });
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error('Error autenticando con Caspio (' + res.status + '): ' + errText);
+function getCredentials() {
+  try {
+    const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+    return {
+      clientId: (cfg.clientId && cfg.clientId.length > 10) ? cfg.clientId : DEFAULT_CLIENT_ID,
+      clientSecret: (cfg.clientSecret && cfg.clientSecret.length > 10) ? cfg.clientSecret : DEFAULT_CLIENT_SECRET,
+      table: cfg.table || DEFAULT_TABLE
+    };
+  } catch(e) {
+    return { clientId: DEFAULT_CLIENT_ID, clientSecret: DEFAULT_CLIENT_SECRET, table: DEFAULT_TABLE };
   }
-  const data = await res.json();
-  if (!data.access_token) throw new Error('Caspio no devolvio token. Revisa Client ID y Secret.');
-  return { token: data.access_token, table: cfg.table || 'TaVillas' };
 }
 
-// ── MAPEO DE CAMPOS CASPIO → TaVillas ──
 function mapRecord(raw) {
-  const d = {};
-  d.property_id             = raw['Hostawayid'] || '';
-  d.nombre                  = raw['Name_villa_para_inquilinos'] || raw['Name'] || '';
-  d.tipo                    = raw['Property_Type'] || '';
-  d.zona                    = raw['Zone'] || '';
-  d.descripcion_entorno_es  = raw['Comercial_info'] || raw['Marketing_Comments'] || '';
-  d.descripcion_entorno_en  = raw['Comercial_info'] || '';
-  d.wifi_nombre             = raw['Wifi_user'] || '';
-  d.wifi_password           = raw['Wifi_password'] || '';
-  d.distancia_centro_es     = '';
-  d.distancia_playa_referencia_es = '';
-  d.playa_cercana_nombre    = '';
-  d.playa_cercana_distancia = raw['Beach_distance'] || '';
-  d.restaurante_nombre      = raw['Restaurant_distance'] ? raw['Restaurant_distance'].split(' ').slice(2).join(' ') : '';
-  d.restaurante_distancia   = raw['Restaurant_distance'] ? raw['Restaurant_distance'].split(' ')[0] + ' ' + raw['Restaurant_distance'].split(' ')[1] : '';
-  d.supermercado_nombre     = raw['Supermarket_distance'] ? raw['Supermarket_distance'].split(' ').slice(2).join(' ') : '';
-  d.supermercado_distancia  = raw['Supermarket_distance'] ? raw['Supermarket_distance'].split(' ')[0] + ' ' + raw['Supermarket_distance'].split(' ')[1] : '';
-  d.farmacia_nombre         = raw['Pharmacy_distance'] ? raw['Pharmacy_distance'].split('\n')[0] : '';
-  d.farmacia_horario        = raw['Pharmacy_distance'] ? raw['Pharmacy_distance'].split('\n').slice(1).join(' ') : '';
-  d.distancia_aeropuerto    = raw['Airport_distance'] || '';
-  d.distancia_hospital      = '';
-  d.puntos_interes_extra_es = raw['Views'] || '';
-  d.lineas_bus_especificas  = raw['Public_transpost'] || '';
-  d.cuadro_electrico_es     = raw['where_is_mainpower'] || '';
-  d.llave_de_paso_es        = raw['wher_is_water_stopcock'] || '';
-  d.villa_manager_nombre    = raw['KeyHolder_person'] || '';
-  d.villa_manager_telefono  = raw['Taxi_and_Transfers'] ? '971 367 111' : '';
-  d.bbq                     = raw['BBQ'] || '';
-  d.pax_legal               = raw['Pax_legal'] || '';
-  d.keybox_code             = raw['Keybox_code'] || '';
-  d.listingUrl              = raw['linkweb'] || '';
-  d.address                 = raw['Address'] || '';
-  d.license                 = raw['License'] || '';
-  return d;
+  return {
+    property_id:              raw['Hostawayid'] || '',
+    nombre:                   raw['Name_villa_para_inquilinos'] || raw['Name'] || '',
+    address:                  raw['Address'] || '',
+    license:                  raw['License'] || '',
+    zona:                     raw['Zone'] || '',
+    wifi_nombre:              raw['Wifi_user'] || '',
+    wifi_password:            raw['Wifi_password'] || '',
+    playa_distancia:          raw['Beach_distance'] || '',
+    restaurante:              raw['Restaurant_distance'] || '',
+    supermercado:             raw['Supermarket_distance'] || '',
+    farmacia:                 raw['Pharmacy_distance'] || '',
+    aeropuerto:               raw['Airport_distance'] || '',
+    transporte:               raw['Public_transpost'] || '',
+    taxi:                     raw['Taxi_and_Transfers'] || '',
+    cuadro_electrico:         raw['where_is_mainpower'] || '',
+    llave_paso:               raw['wher_is_water_stopcock'] || '',
+    manager:                  raw['KeyHolder_person'] || '',
+    bbq:                      raw['BBQ'] || '',
+    piscina:                  raw['size_of_swimingpool'] || '',
+    pax:                      raw['Pax_legal'] || '',
+    keybox:                   raw['Keybox_code'] || '',
+    listing:                  raw['linkweb'] || '',
+    drive:                    raw['Drive'] || '',
+    googlemaps:               raw['Googlemaps_link'] || '',
+    aircon_info:              raw['Explanation_aircon'] || '',
+    parking:                  raw['Parking_aditionalinfo'] || '',
+    views:                    raw['Views'] || '',
+    comentarios:              raw['Comercial_info'] || '',
+    nombre_corto:             raw['Name'] || raw['Name_villa_para_inquilinos'] || '',
+    first_aid:                raw['where_is_first_aid'] || '',
+    keybox2:                  raw['Keybox_code2'] || '',
+  };
 }
 
 async function fetchPropertyFromCaspio(propertyId) {
-  const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-  const tableName = cfg.table || DEFAULT_TABLE;
-
-  // 1. Get fresh token
-  const clientId = (cfg.clientId && cfg.clientId.length > 10) ? cfg.clientId : DEFAULT_CLIENT_ID;
-  const clientSecret = (cfg.clientSecret && cfg.clientSecret.length > 10) ? cfg.clientSecret : DEFAULT_CLIENT_SECRET;
-  const tokenResp = await fetch(PROXY_URL + '?path=/oauth/token&client_id=' + clientId + '&client_secret=' + clientSecret);
-  if (!tokenResp.ok) throw new Error('Error obteniendo token');
+  const creds = getCredentials();
+  // Fresh token
+  const tokenResp = await fetch(
+    PROXY_URL + '?path=/oauth/token&client_id=' + creds.clientId + '&client_secret=' + creds.clientSecret
+  );
+  if (!tokenResp.ok) throw new Error('Error obteniendo token (' + tokenResp.status + ')');
   const tokenData = await tokenResp.json();
   const token = tokenData.access_token;
-  if (!token) throw new Error('Token invalido');
+  if (!token) throw new Error('Token inválido');
 
-  // 2. Query data — encode the full caspio path
-  const caspioPart = encodeURIComponent('/rest/v2/tables/' + tableName + '/records?q.where=Hostawayid=' + propertyId + '&q.limit=1');
+  // Query
+  const caspioPart = encodeURIComponent('/rest/v2/tables/' + creds.table + '/records?q.where=Hostawayid=' + propertyId + '&q.limit=1');
   const res = await fetch(PROXY_URL + '?path=' + caspioPart, {
     headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' }
   });
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error('Error obteniendo datos (' + res.status + '): ' + errText);
-  }
+  if (!res.ok) throw new Error('Error consultando datos (' + res.status + ')');
   const data = await res.json();
-  if (!data.Result || data.Result.length === 0) throw new Error('Propiedad ' + propertyId + ' no encontrada en TaVillas');
+  if (!data.Result || data.Result.length === 0) throw new Error('Propiedad ' + propertyId + ' no encontrada en ' + creds.table);
   return mapRecord(data.Result[0]);
 }
 
-async function fetchPropertyPhotos(propertyId) {
-  const url = `https://www.3villas.com/es/listings/${propertyId}`;
-  try {
-    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-    const data = await res.json();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(data.contents, 'text/html');
-    const imgs = doc.querySelectorAll('img[src*="cloudfront"], img[src*="res.cloudinary"], img[src*="propertyimages"]');
-    const srcs = [];
-    imgs.forEach(img => { if (img.src && !srcs.includes(img.src) && srcs.length < 5) srcs.push(img.src); });
-    return srcs;
-  } catch {
-    return [];
-  }
+async function fetchDrivePhoto(driveUrl) {
+  if (!driveUrl) return null;
+  // Extract folder ID from Drive URL and get first image
+  const match = driveUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+  if (!match) return null;
+  const folderId = match[1];
+  // Return a direct Google Drive thumbnail URL
+  return 'https://drive.google.com/thumbnail?id=' + folderId + '&sz=w800';
 }
 
-// ── DEMO DATA (cuando no hay Caspio) ──
-function getDemoData(propertyId) {
-  const demos = {
-    '165528': {
-      property_id: '165528',
-      nombre: 'Can Palanca',
-      tipo: 'Apartamento',
-      zona: 'Es Murtar',
-      descripcion_entorno_es: 'Se encuentra en Es Murtar, una tranquila urbanización costera al noreste de Mahón. Este enclave ofrece vistas panorámicas al mar Mediterráneo y un ambiente relajado.',
-      descripcion_entorno_ca: "Es troba a Es Murtar, una tranquil·la urbanització costanera al nord-est de Maó.",
-      descripcion_entorno_en: 'Located in Es Murtar, a quiet coastal residential area northeast of Mahón.',
-      wifi_nombre: 'MOVISTAR_25E2',
-      wifi_password: '7u5kh2sfyCM2Uv8',
-      distancia_centro_es: '5 km del centro de Mahón',
-      distancia_playa_referencia_es: '6 km de Sa Mesquida',
-      playa_cercana_nombre: 'Cala Es Murtar',
-      playa_cercana_distancia: '50 m',
-      restaurante_nombre: 'Cap Roig',
-      restaurante_distancia: '1 km',
-      supermercado_nombre: 'Lidl Mahón',
-      supermercado_distancia: '6 km',
-      farmacia_nombre: 'Farmacia Victoria Bernat (Mahón - puerto)',
-      farmacia_horario: '',
-      distancia_aeropuerto: '10 km',
-      distancia_hospital: '7 km',
-      cuadro_electrico_es: 'En la última habitación de arriba a la derecha, de las que están en la planta general.',
-      llave_de_paso_es: 'En un cuarto al entrar a la finca a la izquierda, al final del corredor. Es la llave que hay en el tubo que sale hacia arriba de la bomba de presión (motor amarillo en la pared derecha).',
-      lineas_bus_es: 'Servicio regular desde Mahón (estación en C/ Josep Anselm Clavé).',
-      villa_manager_nombre: 'Kike',
-      villa_manager_telefono: '+34 644 84 85 43',
-      puntos_interes_extra_es: 'Puerto natural de Mahón (6 km), Sa Mesquida beach',
-      lineas_bus_especificas: ''
-    },
-    '98939': {
-      property_id: '98939',
-      nombre: 'Villa Bella',
-      tipo: 'Villa',
-      zona: 'Son Bou',
-      descripcion_entorno_es: 'Se encuentra en Son Bou, hogar de la playa de arena blanca más larga de las Islas Baleares (2,5 km). Es una de las zonas turísticas más completas de la isla.',
-      descripcion_entorno_en: 'Located in Son Bou, home to the longest white sand beach in the Balearic Islands (2.5 km).',
-      wifi_nombre: '',
-      wifi_password: '',
-      distancia_centro_es: '18 km de Mahón, capital de Menorca',
-      distancia_playa_referencia_es: '7 km de Alaior',
-      playa_cercana_nombre: 'Son Bou',
-      playa_cercana_distancia: '900 m',
-      restaurante_nombre: 'La Góndola',
-      restaurante_distancia: '150 m',
-      supermercado_nombre: 'Sant Jaume',
-      supermercado_distancia: '150 m',
-      farmacia_nombre: 'Farmacia Son Bou',
-      farmacia_horario: 'Lun-Vie 9:30-13:00',
-      distancia_aeropuerto: '19 km',
-      distancia_hospital: '19 km',
-      cuadro_electrico_es: 'Situado en el garaje.',
-      llave_de_paso_es: 'Situado en el garaje.',
-      lineas_bus_es: 'Línea 32: Mahón – Alaior – Son Bou / Línea 36: Ciutadella – Son Bou',
-      villa_manager_nombre: 'Felix',
-      villa_manager_telefono: '+34 644 33 05 97',
-      puntos_interes_extra_es: 'Centro buceo, deportes acuáticos, paseos a caballo',
-      lineas_bus_especificas: 'Línea 32: Mahón – Alaior – Son Bou | Línea 36: Ciutadella – Son Bou'
-    }
-  };
-  return demos[propertyId] || null;
-}
-
-// ── GENERATE MANUAL ──
 let currentData = null;
 
 async function generateManual() {
   const propertyId = document.getElementById('property-id').value.trim();
-  if (!propertyId) { showStatus('error', 'Introduce un código de propiedad'); return; }
+  if (!propertyId) { showStatus('error', 'Introduce un Hostawayid'); return; }
 
-  const btn = document.getElementById('btn-generate');
+  const btn = document.getElementById('btn-gen');
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Generando...';
   showStatus('loading', 'Conectando con Caspio...');
 
   try {
-    let propData;
-    // Siempre usa Caspio con las credenciales por defecto
-    showStatus('loading', 'Obteniendo datos de Caspio...');
-    propData = await fetchPropertyFromCaspio(propertyId);
+    showStatus('loading', 'Obteniendo datos de TaVillas...');
+    const propData = await fetchPropertyFromCaspio(propertyId);
 
-    showStatus('loading', 'Cargando fotos del listing...');
-    const photos = await fetchPropertyPhotos(propertyId);
+    showStatus('loading', 'Cargando foto de la propiedad...');
+    let photoUrl = null;
+    if (propData.drive) {
+      photoUrl = await fetchDrivePhoto(propData.drive);
+    }
 
-    currentData = { ...propData, photos, propertyId };
+    currentData = { ...propData, photoUrl, propertyId };
     renderManual(currentData);
 
-    document.getElementById('prop-badge').textContent = `${propData.tipo || ''} ${propData.nombre || propertyId} · ID ${propertyId}`;
+    document.getElementById('prop-badge').textContent = propData.nombre + ' · ID ' + propertyId;
     document.getElementById('btn-html').disabled = false;
     document.getElementById('btn-pdf').disabled = false;
-    showStatus('success', 'Manual generado correctamente');
-
-  } catch (err) {
+    showStatus('success', '¡Manual generado correctamente!');
+  } catch(err) {
     showStatus('error', err.message);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<span>Generar Manual</span>';
+    btn.innerHTML = 'Generar Manual';
   }
 }
 
-// ── RENDER MANUAL ──
-function renderManual(data) {
+function getLangs() {
+  const l = [];
+  if (document.getElementById('l-ca').checked) l.push('CATALÁ');
+  if (document.getElementById('l-es').checked) l.push('CASTELLANO');
+  if (document.getElementById('l-en').checked) l.push('ENGLISH');
+  if (document.getElementById('l-fr').checked) l.push('FRANÇAIS');
+  if (document.getElementById('l-de').checked) l.push('DEUTSCH');
+  return l;
+}
+
+function langBar(activeIdx) {
+  const langs = getLangs();
+  return '<div class="lang-bar">' +
+    langs.map((l, i) => '<div class="lang-item' + (i === activeIdx ? ' active' : '') + '">' + l + '</div>').join('') +
+    '</div>';
+}
+
+function renderManual(d) {
   const container = document.getElementById('preview-container');
-  const listingUrl = `https://www.3villas.com/es/listings/${data.propertyId}`;
-  const mainPhoto = data.photos && data.photos[0] ? data.photos[0] : null;
-
-  const langs = [];
-  if (document.getElementById('lang-ca').checked) langs.push('CA');
-  if (document.getElementById('lang-es').checked) langs.push('ES');
-  if (document.getElementById('lang-en').checked) langs.push('EN');
-  if (document.getElementById('lang-fr').checked) langs.push('FR');
-  if (document.getElementById('lang-de').checked) langs.push('DE');
-
-  const hasFarmHorario = data.farmacia_horario && data.farmacia_horario.trim();
+  const langs = getLangs();
+  const activeIdx = langs.indexOf('CASTELLANO') >= 0 ? langs.indexOf('CASTELLANO') : langs.indexOf('ENGLISH') >= 0 ? langs.indexOf('ENGLISH') : 0;
 
   // ── PÁGINA 1: PORTADA ──
-  const portada = `
-  <div class="page page-cover">
-    <div class="cover-title">Manual de<br>${data.tipo || 'Propiedad'}<br><span>${data.nombre || data.propertyId}</span>.</div>
-    ${mainPhoto
-      ? `<img class="cover-img" src="${mainPhoto}" alt="${data.nombre}" onerror="this.parentNode.innerHTML+='<div class=cover-img-placeholder>Foto no disponible</div>';this.remove()">`
-      : `<div class="cover-img-placeholder">📷 Añade fotos en el listing de 3villas</div>`}
-    <div class="logo-row">
-      <div style="text-align:left">
-        <div class="qr-placeholder">QR<br>+info</div>
-        <div style="font-size:8px;color:#aaa;margin-top:4px">+info</div>
+  const p1 = `<div class="page page-cover" style="flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 50px;">
+    <div class="cover-title">Manual de<br>${d.nombre ? d.nombre.split(' ')[0] : 'Villa'}<br><span style="color:#1A1A1A">${d.nombre || d.propertyId}</span><span class="red-dot">.</span></div>
+    ${d.photoUrl
+      ? `<img class="cover-photo" src="${d.photoUrl}" alt="${d.nombre}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      : ''}
+    <div class="cover-photo-placeholder" ${d.photoUrl ? 'style="display:none"' : ''}>📷 Foto de la propiedad</div>
+    <div class="cover-bottom">
+      <div class="qr-box">QR<br>+info</div>
+      <div style="text-align:right">
+        <div class="brand-name">&lt;3villas</div>
+        <div class="brand-sub">Inmobiliaria &amp; Alquiler Vacacional</div>
       </div>
-      <div class="brand-logo">&lt;3villas<small>Inmobiliaria &amp; Alquiler Vacacional</small></div>
     </div>
   </div>`;
 
-  // ── PÁGINA 2: DATOS RÁPIDOS ──
-  const dataPage = `
-  <div class="page">
-    <div class="lang-sidebar">
-      ${langs.map((l, i) => `<div class="lang-item ${i===0?'active lang-sidebar-red':''}">${l}</div>`).join('')}
-    </div>
-    <div class="inner">
-      <div class="page-cols">
-        <div>
-          <div class="info-grid">
-            <div class="info-block">
-              <h2>Cuadro eléctrico</h2>
-              <p>${data.cuadro_electrico_es || 'Consultar con el villa manager'}</p>
-            </div>
-            <div class="info-block">
-              <h2>Llave de paso</h2>
-              <p>${data.llave_de_paso_es || 'Consultar con el villa manager'}</p>
-            </div>
-          </div>
-          <div class="info-grid">
-            <div class="info-block">
-              <h2>Manuales electrodomésticos</h2>
-              <p>Todos los manuales se encuentran en el último cajón de la cocina.</p>
-            </div>
-            <div class="info-block">
-              <h2>Información legal</h2>
-              <p>Este establecimiento dispone de Hojas de Reclamación. Plazo: 3 meses.</p>
-            </div>
-          </div>
-          <div class="wifi-box">
-            <div class="wifi-title">Wifi</div>
-            <p><span class="wifi-name">Nombre: </span><span class="wifi-pass">${data.wifi_nombre || 'Ver en la propiedad'}</span></p>
-            <p style="margin-top:6px"><span class="wifi-name">Contraseña: </span><span class="wifi-pass">${data.wifi_password || '— —'}</span></p>
-          </div>
+  // ── PÁGINA 2: DATOS RÁPIDOS + WIFI + MANAGER ──
+  const p2 = `<div class="page">
+    ${langBar(activeIdx)}
+    <div class="page-inner">
+      <div class="info-grid">
+        <div class="info-block">
+          <h2>Cuadro eléctrico</h2>
+          <p>${d.cuadro_electrico || 'Consultar con el villa manager'}</p>
         </div>
-        <div>
-          <h2 style="margin-bottom:12px">Responsable 3villas</h2>
-          <div class="manager-card">
-            <div class="manager-avatar"><div style="width:100%;height:100%;background:#ddd;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#999">${(data.villa_manager_nombre||'?')[0]}</div></div>
-            <div class="manager-name">${data.villa_manager_nombre || 'Villa Manager'}</div>
-            <div class="manager-role">Vila Manager</div>
-            <div class="manager-hours">Atención de 9:00 a 14:00 y de 16:00 a 19:00.<br>Fuera de este horario, solo emergencias.</div>
-            <div class="manager-phone">${data.villa_manager_telefono || ''}</div>
-          </div>
+        <div class="info-block">
+          <h2>Llave de paso</h2>
+          <p>${d.llave_paso || 'Consultar con el villa manager'}</p>
         </div>
+        <div class="info-block">
+          <h2>Manuales electrodomésticos</h2>
+          <p>En el último cajón de la cocina</p>
+        </div>
+        <div class="info-block">
+          <h2>Información legal</h2>
+          <p>Hojas de Reclamación disponibles. Plazo: 3 meses.</p>
+        </div>
+      </div>
+      <div class="wifi-box">
+        <div class="wifi-title">Wifi</div>
+        <div class="wifi-row">Nombre: <span class="wifi-val">${d.wifi_nombre || '—'}</span></div>
+        <div class="wifi-row" style="margin-top:6px">Contraseña: <span class="wifi-val">${d.wifi_password || '—'}</span></div>
+      </div>
+      <h2 style="text-align:center;margin-bottom:10px">Responsable 3villas</h2>
+      <div class="manager-card">
+        <div class="manager-avatar">${d.manager ? d.manager[0] : '?'}</div>
+        <div class="manager-name">${d.manager || 'Villa Manager'}</div>
+        <div class="manager-role">Vila Manager</div>
+        <div class="manager-hours">Atención de 9:00 a 14:00 y de 16:00 a 19:00.<br>Fuera de este horario, solo emergencias<br>(incendios, inundaciones o pérdida de llaves).</div>
+        <div class="manager-phone">+34 644 84 85 43</div>
       </div>
     </div>
     <div class="page-number">2</div>
   </div>`;
 
   // ── PÁGINA 3: BIENVENIDA + ENTORNO ──
-  const welcomePage = `
-  <div class="page">
-    <div class="lang-sidebar">
-      ${langs.map((l, i) => `<div class="lang-item ${i===0?'active lang-sidebar-red':''}">${l}</div>`).join('')}
-    </div>
-    <div class="inner">
-      <div class="page-cols">
+  const farmaciaLineas = d.farmacia ? d.farmacia.split('\n') : [];
+  const farmaciaNombre = farmaciaLineas[0] || '';
+  const farmaciaHorario = farmaciaLineas.slice(1).join(' ').trim();
+
+  const p3 = `<div class="page">
+    ${langBar(activeIdx)}
+    <div class="page-inner">
+      <div class="two-col">
         <div>
-          <h1>Bienvenidos al<br>${data.tipo || ''}<br><span style="color:#D32E2E">${data.nombre}</span></h1>
+          <h1>Bienvenidos a<br><span style="color:#D32E2E">${d.nombre || d.propertyId}</span></h1>
           <p>¡Esperamos que disfruten y tengan muchos momentos de diversión durante sus vacaciones! Les agradecemos que mantengan el ruido al mínimo durante las horas nocturnas.</p>
           <p><strong>Las fiestas están absolutamente prohibidas durante toda la estancia.</strong></p>
-          <h2 style="margin-top:16px">Sobre el entorno</h2>
-          <p>${data.descripcion_entorno_es || ''}</p>
-          <p><strong>Estamos a solo:</strong></p>
-          <div class="bullet-row"><span class="arrow">›</span><span>${data.distancia_centro_es || ''}</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span>${data.distancia_playa_referencia_es || ''}</span></div>
-          ${data.puntos_interes_extra_es ? `<div class="bullet-row"><span class="arrow">›</span><span>${data.puntos_interes_extra_es}</span></div>` : ''}
+          ${d.comentarios ? `<p style="margin-top:8px;color:#555">${d.comentarios.substring(0, 200)}</p>` : ''}
+
+          <h2 style="margin-top:14px">Sobre el entorno</h2>
+          <p>Propiedad situada en zona ${d.zona || 'de Menorca'}, con acceso a las mejores playas y servicios de la isla.</p>
+          ${d.views ? `<div class="bullet"><span class="arr">›</span><span>${d.views}</span></div>` : ''}
+          ${d.transporte ? `<div class="bullet"><span class="arr">›</span><span>${d.transporte}</span></div>` : ''}
+          ${d.parking ? `<div class="bullet"><span class="arr">›</span><span>${d.parking.split('\n')[0]}</span></div>` : ''}
         </div>
         <div>
           <h2>Información práctica</h2>
-          <div class="bullet-row"><span class="arrow">›</span><span><strong>Playa más cercana:</strong> ${data.playa_cercana_nombre} (${data.playa_cercana_distancia})</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span><strong>Restaurante:</strong> ${data.restaurante_nombre} (${data.restaurante_distancia})</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span><strong>Supermercado:</strong> ${data.supermercado_nombre} (${data.supermercado_distancia})</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span><strong>Farmacia:</strong> ${data.farmacia_nombre}${hasFarmHorario ? ' · ' + data.farmacia_horario : ''}</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span><strong>Aeropuerto:</strong> ${data.distancia_aeropuerto}</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span><strong>Hospital:</strong> Hospital Mateu Orfila (${data.distancia_hospital})</span></div>
-          ${data.lineas_bus_especificas ? `<div style="margin-top:10px"><h2>Líneas de autobús</h2><p style="font-size:10px">${data.lineas_bus_especificas}</p></div>` : ''}
-          <div style="margin-top:14px; background:#f7f5f2; border-radius:8px; overflow:hidden; height:140px; display:flex; align-items:center; justify-content:center; color:#aaa; font-size:10px;">
-            📍 Mapa de la zona<br><small style="font-size:8px">${data.zona}</small>
+          ${d.playa_distancia ? `<div class="bullet"><span class="arr">›</span><span><strong>Playa:</strong> ${d.playa_distancia}</span></div>` : ''}
+          ${d.restaurante ? `<div class="bullet"><span class="arr">›</span><span><strong>Restaurante:</strong> ${d.restaurante}</span></div>` : ''}
+          ${d.supermercado ? `<div class="bullet"><span class="arr">›</span><span><strong>Supermercado:</strong> ${d.supermercado}</span></div>` : ''}
+          ${farmaciaNombre ? `<div class="bullet"><span class="arr">›</span><span><strong>Farmacia:</strong> ${farmaciaNombre}${farmaciaHorario ? ' · ' + farmaciaHorario.substring(0,40) : ''}</span></div>` : ''}
+          ${d.aeropuerto ? `<div class="bullet"><span class="arr">›</span><span><strong>Aeropuerto:</strong> ${d.aeropuerto}</span></div>` : ''}
+          <div class="bullet"><span class="arr">›</span><span><strong>Hospital:</strong> Hospital Mateu Orfila (Mahón)</span></div>
+          ${d.bbq ? `<div class="bullet"><span class="arr">›</span><span><strong>Barbacoa:</strong> ${d.bbq}</span></div>` : ''}
+          ${d.piscina ? `<div class="bullet"><span class="arr">›</span><span><strong>Piscina:</strong> ${d.piscina}</span></div>` : ''}
+          ${d.keybox ? `<div class="bullet"><span class="arr">›</span><span><strong>Código keybox:</strong> ${d.keybox}</span></div>` : ''}
+          <div class="map-box">
+            📍 ${d.address || 'Menorca'}<br>
+            <small style="font-size:8px;margin-top:4px;display:block">${d.googlemaps ? 'Ver en Google Maps' : 'Zona ' + (d.zona || '')}</small>
           </div>
         </div>
       </div>
@@ -1027,62 +638,63 @@ function renderManual(data) {
   // ── PÁGINA 4: REGLAMENTO ──
   const rules = [
     'Conservar una política medioambiental responsable: No tiren basura ni en los jardines ni en los espacios naturales.',
-    'Cuiden el uso de los equipamientos (aire acondicionado, agua caliente, electricidad, etc.)',
+    'Cuiden el uso de los diversos equipamientos que la propiedad ofrece (aire acondicionado, agua caliente, electricidad, etc.)',
     'No dejen luces encendidas o aparatos de aire en funcionamiento cuando no esté ocupada la casa.',
     'Está terminantemente prohibido fumar en el interior de la vivienda, así como encender velas.',
-    'Check-in a las 16h y check-out a las 10h. Cambios solo con permiso escrito: bookings@3villas.com',
-    'Mantener la casa y las instalaciones limpias en todo momento.',
-    'No se puede tirar nada por el inodoro, excepto papel higiénico.',
-    'No causar ningún daño por uso negligente (paredes, puertas, ventanas, jardín…). Avisar inmediatamente.',
+    'El check-in es a las 16h y el check-out a las 10h. Cambios solo con permiso escrito: bookings@3villas.com',
+    'Mantener la casa y las instalaciones limpias en todo momento para evitar su deterioro.',
+    'Recordar que no se puede tirar nada por el inodoro, excepto papel higiénico.',
+    'No causar ningún daño por uso negligente (paredes, puertas, ventanas, jardín…). En caso de desperfectos, avisar cuanto antes.',
     'No se permiten fiestas ni eventos sin permiso previo claro y por escrito.',
-    'No se permite que la propiedad sea ocupada por más personas de las autorizadas.',
-    'Adoptar todas las medidas para salvaguardar sus propiedades personales. 3 Villas no se hace responsable.',
+    'No se permite que la propiedad sea ocupada por más personas de las autorizadas sin acuerdo escrito.',
+    'Adoptar todas las medidas para salvaguardar sus propiedades personales. 3 Villas no se hace responsable de pérdidas.',
     'No se admiten mascotas, salvo autorización previa por escrito con depósito adicional.',
-    'Permita el acceso al personal de mantenimiento en cualquier momento razonable. Dejen la clave en el key box.'
+    'Permita el acceso al personal de mantenimiento en cualquier momento razonable durante su estancia.'
   ];
-  const rulesHtml = rules.map((r, i) => `<div class="rule-item"><div class="rule-num">${i+1}</div><div>${r}</div></div>`).join('');
 
-  const reglamento = `
-  <div class="page">
-    <div class="lang-sidebar">
-      ${langs.map((l, i) => `<div class="lang-item ${i===0?'active lang-sidebar-red':''}">${l}</div>`).join('')}
-    </div>
-    <div class="inner">
+  const p4 = `<div class="page">
+    ${langBar(activeIdx)}
+    <div class="page-inner">
       <h1>Reglamento<br>de uso</h1>
-      <p style="margin-bottom:12px;">Nuestras propiedades 3 Villas están equipadas con materiales y equipos de calidad. Rogamos tengan en mente que esta casa está gestionada por 3 Villas. Por favor, realicen un uso lo más respetuoso posible.</p>
-      <div class="rule-list">${rulesHtml}</div>
+      <p style="margin-bottom:12px">Nuestras propiedades 3 Villas están equipadas con materiales y equipos de calidad. Por favor, realicen un uso lo más respetuoso posible de las instalaciones, equipamiento y mobiliario.</p>
+      <div class="two-col">
+        <div>${rules.slice(0,7).map((r,i) => `<div class="rule"><div class="rule-n">${i+1}</div><div>${r}</div></div>`).join('')}</div>
+        <div>${rules.slice(7).map((r,i) => `<div class="rule"><div class="rule-n">${i+8}</div><div>${r}</div></div>`).join('')}</div>
+      </div>
     </div>
     <div class="page-number">4</div>
   </div>`;
 
   // ── PÁGINA 5: SERVICIOS ──
-  const servicios = `
-  <div class="page">
-    <div class="lang-sidebar">
-      ${langs.map((l, i) => `<div class="lang-item ${i===0?'active lang-sidebar-red':''}">${l}</div>`).join('')}
-    </div>
-    <div class="inner">
+  const p5 = `<div class="page">
+    ${langBar(activeIdx)}
+    <div class="page-inner">
       <h1>Servicios y<br>equipamiento</h1>
-      <div class="page-cols">
+      <div class="two-col">
         <div>
           <h2>Internet / Wifi</h2>
-          <p>Conecte sus dispositivos a la red wifi mediante la contraseña proporcionada. Si se interrumpe, desenchufe el router 1 minuto y vuelva a conectar.</p>
-
-          <h2 style="margin-top:12px">Piscina</h2>
-          <p>Mantenimiento dos veces por semana. Menores de 14 años deben estar acompañados por un adulto. Ducha obligatoria antes de bañarse. Prohibido saltar o tirarse de cabeza. Prohibido comer o beber dentro de la piscina.</p>
-
-          <h2 style="margin-top:12px">Fumadores</h2>
-          <p>Prohibido fumar dentro de la casa. Permitido en terrazas y jardines usando los ceniceros dispuestos.</p>
+          <p>Conecte sus dispositivos a la red wifi mediante la contraseña indicada. Si se interrumpe, desenchufe el router 1 minuto y vuelva a conectar.</p>
+          <hr class="sect-line">
+          <h2>Piscina</h2>
+          <p>Mantenimiento dos veces por semana. Menores de 14 años deben ir acompañados de un adulto. Ducha obligatoria antes de bañarse. Prohibido saltar o tirarse de cabeza. No comer ni beber dentro de la piscina.</p>
+          ${d.piscina ? `<p style="color:#555;font-style:italic">${d.piscina}</p>` : ''}
+          <hr class="sect-line">
+          <h2>Fumadores</h2>
+          <p>Prohibido fumar dentro de la casa. Permitido en terrazas y jardines usando los ceniceros disponibles.</p>
         </div>
         <div>
           <h2>Aire acondicionado</h2>
-          <p>Temperatura recomendada: 22°C. No dejar encendido al salir. No usar con ventanas abiertas. Uso responsable para mantener tarifas razonables.</p>
-
-          <h2 style="margin-top:12px">Limpieza</h2>
-          <p>Mantener muebles y propiedad en buen estado. En verano no dejar comida al aire más de 1 hora ni bolsas de basura abiertas en terraza (insectos).</p>
-
-          <h2 style="margin-top:12px">Botiquín</h2>
-          <p>Todas las propiedades disponen de botiquín de primeros auxilios. Se facilita información sobre centros médicos, clínicas y hospitales cercanos.</p>
+          <p>Temperatura recomendada: 22°C. No dejar encendido al salir. No usar con ventanas abiertas.</p>
+          ${d.aircon_info ? `<p style="color:#555">${d.aircon_info}</p>` : ''}
+          <hr class="sect-line">
+          <h2>Limpieza</h2>
+          <p>Mantener muebles y propiedad en buen estado. En verano no dejar comida al aire más de 1 hora ni bolsas de basura abiertas en terraza para evitar insectos.</p>
+          <hr class="sect-line">
+          <h2>Botiquín</h2>
+          <p>Todas las propiedades disponen de botiquín de primeros auxilios.${d.first_aid ? ' Ubicación: ' + d.first_aid + '.' : ''} Se facilita información sobre centros médicos cercanos.</p>
+          <hr class="sect-line">
+          <h2>Barbacoa</h2>
+          <p>${d.bbq || 'Consultar disponibilidad con el villa manager.'}</p>
         </div>
       </div>
     </div>
@@ -1090,104 +702,125 @@ function renderManual(data) {
   </div>`;
 
   // ── PÁGINA 6: CHECKOUT ──
-  const checkout = `
-  <div class="page">
-    <div class="lang-sidebar">
-      ${langs.map((l, i) => `<div class="lang-item ${i===0?'active lang-sidebar-red':''}">${l}</div>`).join('')}
-    </div>
-    <div class="inner">
+  const p6 = `<div class="page">
+    ${langBar(activeIdx)}
+    <div class="page-inner">
       <h1>Checkout –<br>Salida</h1>
-      <p>El día de su salida le agradeceríamos lo siguiente:</p>
-      <div class="bullet-row" style="margin:8px 0"><span class="arrow">›</span><span>Tiren la basura en los contenedores de la calle. <strong>Recargo de hasta 350€ por suciedad excesiva.</strong></span></div>
-      <div class="bullet-row" style="margin:8px 0"><span class="arrow">›</span><span>Devuelvan todo el mobiliario y complementos a su ubicación original (cojines, colchas, etc.).</span></div>
-      <div class="bullet-row" style="margin:8px 0"><span class="arrow">›</span><span>No dejen vajilla ni menaje sucio, salvo el desayuno del día de salida (dejarlo en el lavavajillas en marcha).</span></div>
-      <div class="bullet-row" style="margin:8px 0"><span class="arrow">›</span><span>Cualquier desperfecto importante debe notificarse durante la estancia para valoración y reposición.</span></div>
-      <div class="bullet-row" style="margin:8px 0"><span class="arrow">›</span><span>Desperfectos detectados a la salida sin notificar previo se comunicarán por email con el coste de reparación.</span></div>
+      <p>El día de su salida les agradeceríamos que tuviesen en cuenta lo siguiente:</p>
+      <div class="bullet" style="margin-top:10px"><span class="arr">›</span><span>Tiren la basura en los contenedores de la calle al terminar la estancia. <strong>Recargo de hasta 350€ por suciedad excesiva.</strong></span></div>
+      <div class="bullet"><span class="arr">›</span><span>Devuelvan todo el mobiliario y complementos (cojines, colchas, etc.) a su ubicación original antes de entregar las llaves.</span></div>
+      <div class="bullet"><span class="arr">›</span><span>No dejen vajilla ni menaje sucio, salvo los elementos usados para el desayuno del día de salida (dejarlos en el lavavajillas en marcha).</span></div>
+      <div class="bullet"><span class="arr">›</span><span>El cliente es responsable de entregar el equipamiento en perfectas condiciones al final de la estancia.</span></div>
+      <div class="bullet"><span class="arr">›</span><span>Cualquier desperfecto importante debe notificarse durante la estancia para valoración económica y reposición si procede.</span></div>
+      <div class="bullet"><span class="arr">›</span><span>Desperfectos detectados a la salida sin notificación previa se comunicarán por email con el coste de reparación o sustitución.</span></div>
+      ${d.keybox ? `<div class="bullet"><span class="arr">›</span><span>Dejar la llave en el keybox (código: <strong>${d.keybox}</strong>) al salir de la propiedad.</span></div>` : ''}
     </div>
     <div class="page-number">6</div>
   </div>`;
 
-  // ── PÁGINA 7: EMERGENCIAS ──
-  const emergencias = `
-  <div class="page">
-    <div class="lang-sidebar">
-      ${langs.map((l, i) => `<div class="lang-item ${i===0?'active lang-sidebar-red':''}">${l}</div>`).join('')}
-    </div>
-    <div class="inner">
-      <h1>Plan de emergencias<br>y prevención de riesgos</h1>
-      <div class="page-cols">
+  // ── PÁGINA 7: INFORMACIÓN PRÁCTICA ──
+  const p7 = `<div class="page">
+    ${langBar(activeIdx)}
+    <div class="page-inner">
+      <h1>Información<br>práctica</h1>
+      <div class="two-col">
         <div>
-          <h2>Evacuación</h2>
-          <p>Al llegar, familiarícese con las salidas de emergencia y la ruta de evacuación.</p>
-          <div class="bullet-row"><span class="arrow">›</span><span>Parar cualquier actividad inmediatamente.</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span>Actuar con calma para una evacuación rápida.</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span>No salir con objetos pesados ni retroceder por olvidados.</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span>No regresar hasta que los profesionales lo indiquen.</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span>Avisar a las autoridades competentes.</span></div>
-
-          <h2 style="margin-top:12px">Riesgo de incendio</h2>
-          <div class="bullet-row"><span class="arrow">›</span><span>Cubrir la boca con toalla seca para no inhalar gases.</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span>Gatear por debajo del humo hacia la salida.</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span>Tocar puertas con el dorso (no el pomo). Si están calientes, buscar otra salida.</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span>No volver nunca a un edificio en llamas.</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span>Si no puede escapar: toallas mojadas en puertas, ventana abierta, pedir ayuda.</span></div>
-          <div class="bullet-row"><span class="arrow">›</span><span>Si se enciende la ropa: parar, tirarse al suelo y rodar.</span></div>
+          <h2>Atención sanitaria</h2>
+          <p>En caso de emergencia médica, marque el <strong>061</strong> si necesita ambulancia o atención urgente.</p>
+          <p>También puede llamar a nuestro Servicio de Atención al Cliente: <strong>+34 659 93 34 34</strong></p>
+          <h2 style="margin-top:12px">Hospital</h2>
+          <p>Hospital Mateu Orfila, Ronda Malbúger (dirección Sant Lluís), Mahón.</p>
+          <p>General: <strong>+34 971 487 000</strong><br>Urgencias: <strong>+34 971 487 030</strong> (24h)</p>
+          <h2 style="margin-top:12px">Transportes</h2>
+          ${d.transporte ? `<p>${d.transporte}</p>` : '<p>Menorca dispone de servicio de autobús eficiente. Estación principal en Mahón (C/ Josep Anselm Clavé).</p>'}
+          <p style="margin-top:6px">www.tmsa.es · Tel. +34 971 360 475</p>
+          <h2 style="margin-top:12px">Taxis</h2>
+          <p>Radio Taxi Menorca: <strong>+34 971 367 111</strong><br>Taxi Mahón: <strong>+34 971 357 700</strong></p>
         </div>
         <div>
-          <div class="emergency-box">
-            <div style="font-size:10px;font-weight:700;margin-bottom:4px;color:#B45309">TELÉFONO DE EMERGENCIAS</div>
-            <div class="big-num">112</div>
-          </div>
-          <div class="highlight-box" style="margin-top:12px">
-            <div style="font-size:9px;color:#777;margin-bottom:4px">3 Villas Atención al Cliente</div>
-            <div class="big-phone">+34 659 93 34 34</div>
-          </div>
-          <div class="highlight-box">
-            <div style="font-size:9px;color:#777;margin-bottom:4px">Villa Manager · ${data.villa_manager_nombre}</div>
-            <div class="big-phone">${data.villa_manager_telefono}</div>
-          </div>
-
-          <h2 style="margin-top:14px">Recuerden: terminantemente prohibido</h2>
-          <div class="bullet-row"><span class="arrow" style="color:#D32E2E">✗</span><span>Fumar en el interior de la vivienda</span></div>
-          <div class="bullet-row"><span class="arrow" style="color:#D32E2E">✗</span><span>Encender velas</span></div>
-
-          <h2 style="margin-top:14px">Hospital Mateu Orfila</h2>
-          <p>Ronda Malbúger dirección Sant Lluís, Mahón</p>
-          <p>General: <strong>+34 971 487 000</strong></p>
-          <p>Urgencias: <strong>+34 971 487 030</strong></p>
-          <p style="margin-top:4px">Taxis: Radio Taxi Menorca <strong>+34 971 367 111</strong></p>
+          <h2>Oficinas de turismo</h2>
+          <p>Abiertas de 10:00 a 14:00h</p>
+          <div class="bullet"><span class="arr">›</span><span>Aeropuerto: +34 971 157 115</span></div>
+          <div class="bullet"><span class="arr">›</span><span>Estación autobuses Mahón: +34 971 363 790</span></div>
+          <div class="bullet"><span class="arr">›</span><span>Puerto de Mahón: +34 971 355 952</span></div>
+          <div class="bullet"><span class="arr">›</span><span>Ciutadella: +34 971 382 693</span></div>
+          ${d.listingUrl ? `<div style="margin-top:14px"><h2>Listing online</h2><p style="word-break:break-all;color:#2563EB">${d.listingUrl}</p></div>` : ''}
+          ${d.googlemaps ? `<div style="margin-top:10px"><h2>Google Maps</h2><p style="word-break:break-all;color:#2563EB;font-size:8px">${d.googlemaps}</p></div>` : ''}
         </div>
       </div>
     </div>
     <div class="page-number">7</div>
   </div>`;
 
-  container.innerHTML = `<div id="manual-output">${portada}${dataPage}${welcomePage}${reglamento}${servicios}${checkout}${emergencias}</div>`;
+  // ── PÁGINA 8: EMERGENCIAS ──
+  const p8 = `<div class="page">
+    ${langBar(activeIdx)}
+    <div class="page-inner">
+      <h1>Plan de emergencias<br>y prevención de riesgos</h1>
+      <div class="two-col">
+        <div>
+          <h2>Evacuación</h2>
+          <p>Al llegar, familiarícese con las salidas de emergencia y la ruta de evacuación.</p>
+          <div class="bullet"><span class="arr">›</span><span>Parar cualquier actividad inmediatamente.</span></div>
+          <div class="bullet"><span class="arr">›</span><span>Mantener la calma y facilitar una evacuación rápida y ordenada.</span></div>
+          <div class="bullet"><span class="arr">›</span><span>No salir con objetos pesados ni volver a buscar olvidados.</span></div>
+          <div class="bullet"><span class="arr">›</span><span>No regresar al edificio hasta que las autoridades lo indiquen.</span></div>
+          <div class="bullet"><span class="arr">›</span><span>Avisar a los servicios de emergencia.</span></div>
+          <hr class="sect-line">
+          <h2>Riesgo de incendio</h2>
+          <p>La propiedad está equipada con extintores claramente señalizados.</p>
+          <div class="bullet"><span class="arr">›</span><span>Cubrir la boca con toalla seca para no inhalar gases.</span></div>
+          <div class="bullet"><span class="arr">›</span><span>Gatear por debajo del humo hacia la salida.</span></div>
+          <div class="bullet"><span class="arr">›</span><span>Tocar puertas con el dorso — si están calientes, buscar otra salida.</span></div>
+          <div class="bullet"><span class="arr">›</span><span>No volver nunca a un edificio en llamas.</span></div>
+          <div class="bullet"><span class="arr">›</span><span>Si la ropa se enciende: parar, tirarse al suelo y rodar.</span></div>
+        </div>
+        <div>
+          <div class="emergency-box">
+            <div class="emergency-label">Teléfono de emergencias</div>
+            <div class="emergency-num">112</div>
+          </div>
+          <div class="highlight-box">
+            <div class="highlight-label">3 Villas Atención al Cliente</div>
+            <div class="highlight-val">+34 659 93 34 34</div>
+          </div>
+          <div class="highlight-box">
+            <div class="highlight-label">Villa Manager · ${d.manager || ''}</div>
+            <div class="highlight-val">+34 644 84 85 43</div>
+          </div>
+          <h2 style="margin-top:14px">Terminantemente prohibido</h2>
+          <div class="bullet"><span class="arr" style="color:#D32E2E">✗</span><span>Fumar en el interior de la vivienda</span></div>
+          <div class="bullet"><span class="arr" style="color:#D32E2E">✗</span><span>Encender velas</span></div>
+          <h2 style="margin-top:12px">Hospital Mateu Orfila</h2>
+          <p>Ronda Malbúger → Sant Lluís, Mahón</p>
+          <p>General: <strong>+34 971 487 000</strong></p>
+          <p>Urgencias: <strong>+34 971 487 030</strong></p>
+        </div>
+      </div>
+    </div>
+    <div class="page-number">8</div>
+  </div>`;
+
+  container.innerHTML = '<div id="manual-output">' + p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + '</div>';
 }
 
-// ── DOWNLOAD HTML ──
 function downloadHTML() {
   if (!currentData) return;
-  const output = document.getElementById('manual-output');
-  if (!output) return;
-  const styles = `<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <style>
-  body{font-family:'DM Sans',sans-serif;margin:0;padding:20px;background:#f5f5f5;}
-  ${document.querySelector('style').textContent.split('#manual-output').slice(1).join('#manual-output').replace(/}/,'').split('.panel,')[0]}
-  </style>`;
-  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">${styles}<title>Manual ${currentData.nombre}</title></head><body>${output.outerHTML}</body></html>`;
-  const blob = new Blob([html], { type: 'text/html' });
+  const out = document.getElementById('manual-output');
+  if (!out) return;
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>body{margin:20px;background:#888;font-family:'DM Sans',sans-serif}</style>
+  <style>${document.querySelector('style').textContent}</style>
+  <title>Manual ${currentData.nombre}</title></head><body>${out.outerHTML}</body></html>`;
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `manual_${currentData.nombre?.replace(/\s/g,'_') || currentData.propertyId}.html`;
+  a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+  a.download = 'manual_' + (currentData.nombre || currentData.propertyId).replace(/\s/g,'_') + '.html';
   a.click();
 }
 
-// ── INIT ──
 loadConfig();
-document.getElementById('property-id').addEventListener('keydown', e => {
-  if (e.key === 'Enter') generateManual();
-});
+document.getElementById('property-id').addEventListener('keydown', e => { if (e.key === 'Enter') generateManual(); });
 </script>
 </body>
 </html>
