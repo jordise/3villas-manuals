@@ -764,8 +764,8 @@ async function fetchPropertyFromCaspio(propertyId) {
   const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
   const { token } = await getCaspioToken();
   const tableName = cfg.table || DEFAULT_TABLE;
-  const path = '/rest/v2/tables/' + tableName + '/records?q.where=Hostawayid%3D' + propertyId + '&q.limit=1';
-  const res = await fetch(PROXY_URL + '?path=' + encodeURIComponent(path), {
+  const caspioPart = '/rest/v2/tables/' + tableName + '/records?q.where=Hostawayid%3D' + propertyId + '%26q.limit%3D1';
+  const res = await fetch(PROXY_URL + '?path=' + caspioPart, {
     headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' }
   });
   if (!res.ok) {
