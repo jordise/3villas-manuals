@@ -725,32 +725,38 @@ async function getCaspioToken() {
 // ── MAPEO DE CAMPOS CASPIO → TaVillas ──
 function mapRecord(raw) {
   const d = {};
-  d.property_id            = raw['Hostawayid'] || '';
-  d.nombre                 = raw['Name_villa_para_inquilinos'] || '';
-  d.tipo                   = raw['tipo'] || '';               // pendiente nombre real
-  d.zona                   = raw['Zone'] || '';
-  d.descripcion_entorno_es = raw['descripcion_entorno_es'] || ''; // pendiente
-  d.descripcion_entorno_en = raw['descripcion_entorno_en'] || ''; // pendiente
-  d.wifi_nombre            = raw['Wifi_user'] || '';
-  d.wifi_password          = raw['Wifi_password'] || '';
-  d.distancia_centro_es    = raw['distancia_centro_es'] || ''; // pendiente
-  d.distancia_playa_referencia_es = raw['distancia_playa_referencia_es'] || ''; // pendiente
-  d.playa_cercana_nombre   = raw['playa_cercana_nombre'] || ''; // pendiente
-  d.playa_cercana_distancia = raw['playa_cercana_distancia'] || ''; // pendiente
-  d.restaurante_nombre     = raw['restaurante_nombre'] || ''; // pendiente
-  d.restaurante_distancia  = raw['restaurante_distancia'] || ''; // pendiente
-  d.supermercado_nombre    = raw['supermercado_nombre'] || ''; // pendiente
-  d.supermercado_distancia = raw['supermercado_distancia'] || ''; // pendiente
-  d.farmacia_nombre        = raw['farmacia_nombre'] || ''; // pendiente
-  d.farmacia_horario       = raw['farmacia_horario'] || ''; // pendiente
-  d.distancia_aeropuerto   = raw['distancia_aeropuerto'] || ''; // pendiente
-  d.distancia_hospital     = raw['distancia_hospital'] || ''; // pendiente
-  d.puntos_interes_extra_es = raw['puntos_interes_extra_es'] || ''; // pendiente
-  d.lineas_bus_especificas = raw['lineas_bus_especificas'] || ''; // pendiente
-  d.cuadro_electrico_es    = raw['where_is_mainpower'] || '';
-  d.llave_de_paso_es       = raw['wher_is_water_stopcock'] || '';
-  d.villa_manager_nombre   = raw['KeyHolder_person'] || '';
-  d.villa_manager_telefono = raw['villa_manager_telefono'] || ''; // pendiente
+  d.property_id             = raw['Hostawayid'] || '';
+  d.nombre                  = raw['Name_villa_para_inquilinos'] || raw['Name'] || '';
+  d.tipo                    = raw['Property_Type'] || '';
+  d.zona                    = raw['Zone'] || '';
+  d.descripcion_entorno_es  = raw['Comercial_info'] || raw['Marketing_Comments'] || '';
+  d.descripcion_entorno_en  = raw['Comercial_info'] || '';
+  d.wifi_nombre             = raw['Wifi_user'] || '';
+  d.wifi_password           = raw['Wifi_password'] || '';
+  d.distancia_centro_es     = '';
+  d.distancia_playa_referencia_es = '';
+  d.playa_cercana_nombre    = '';
+  d.playa_cercana_distancia = raw['Beach_distance'] || '';
+  d.restaurante_nombre      = raw['Restaurant_distance'] ? raw['Restaurant_distance'].split(' ').slice(2).join(' ') : '';
+  d.restaurante_distancia   = raw['Restaurant_distance'] ? raw['Restaurant_distance'].split(' ')[0] + ' ' + raw['Restaurant_distance'].split(' ')[1] : '';
+  d.supermercado_nombre     = raw['Supermarket_distance'] ? raw['Supermarket_distance'].split(' ').slice(2).join(' ') : '';
+  d.supermercado_distancia  = raw['Supermarket_distance'] ? raw['Supermarket_distance'].split(' ')[0] + ' ' + raw['Supermarket_distance'].split(' ')[1] : '';
+  d.farmacia_nombre         = raw['Pharmacy_distance'] ? raw['Pharmacy_distance'].split('\n')[0] : '';
+  d.farmacia_horario        = raw['Pharmacy_distance'] ? raw['Pharmacy_distance'].split('\n').slice(1).join(' ') : '';
+  d.distancia_aeropuerto    = raw['Airport_distance'] || '';
+  d.distancia_hospital      = '';
+  d.puntos_interes_extra_es = raw['Views'] || '';
+  d.lineas_bus_especificas  = raw['Public_transpost'] || '';
+  d.cuadro_electrico_es     = raw['where_is_mainpower'] || '';
+  d.llave_de_paso_es        = raw['wher_is_water_stopcock'] || '';
+  d.villa_manager_nombre    = raw['KeyHolder_person'] || '';
+  d.villa_manager_telefono  = raw['Taxi_and_Transfers'] ? '971 367 111' : '';
+  d.bbq                     = raw['BBQ'] || '';
+  d.pax_legal               = raw['Pax_legal'] || '';
+  d.keybox_code             = raw['Keybox_code'] || '';
+  d.listingUrl              = raw['linkweb'] || '';
+  d.address                 = raw['Address'] || '';
+  d.license                 = raw['License'] || '';
   return d;
 }
 
