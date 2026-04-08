@@ -10,14 +10,15 @@
 :root{--red:#D32E2E;--dark:#1A1A1A;--white:#fff;--light:#F5F5F5;--border:#DEDEDE}
 body{font-family:"Open Sans",sans-serif;background:#EFEFEF;color:var(--dark);min-height:100vh;display:flex;flex-direction:column}
 header{background:var(--dark);height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0}
-header img{height:26px}
+.header-logo{display:flex;align-items:center;gap:10px}
+.header-logo img{height:28px}
 header span{font-size:10px;color:#777;letter-spacing:.1em;text-transform:uppercase}
 .app{flex:1;display:grid;grid-template-columns:280px 1fr;grid-template-rows:1fr auto;gap:0;height:calc(100vh - 58px)}
 .preview-area{grid-column:2;grid-row:1/3;background:#888;overflow:auto;padding:16px}
 .gen-panel{grid-column:1;grid-row:1;background:#fff;border-right:1px solid var(--border);padding:20px;overflow-y:auto}
 .cfg-panel{grid-column:1;grid-row:2;background:#F9F9F9;border-right:1px solid var(--border);border-top:1px solid var(--border);padding:16px}
-.gen-panel h2{font-family:"Montserrat",sans-serif;font-size:13px;font-weight:700;margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em}
-.cfg-panel h3{font-family:"Montserrat",sans-serif;font-size:10px;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:.08em;color:#888}
+.gen-panel h2{font-family:"Montserrat",sans-serif;font-size:12px;font-weight:700;margin-bottom:14px;text-transform:uppercase;letter-spacing:.07em;color:#444}
+.cfg-panel h3{font-family:"Montserrat",sans-serif;font-size:10px;font-weight:700;margin-bottom:0;text-transform:uppercase;letter-spacing:.08em;color:#888;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
 label{display:block;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#666;margin-bottom:4px}
 input[type=text],input[type=password]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--dark);background:var(--light);outline:none;margin-bottom:10px;font-family:inherit}
 input:focus{border-color:var(--red);background:#fff}
@@ -37,11 +38,33 @@ input:focus{border-color:var(--red);background:#fff}
 .lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px}
 .lang-grid label{display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:0;margin-bottom:0}
 .info-badge{background:#EEF4FF;color:#2563EB;font-size:10px;padding:6px 8px;border-radius:5px;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.cfg-body{display:none;margin-top:12px}
+.cfg-body.open{display:block}
 .preview-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:500px;background:#fff;color:#bbb;text-align:center;padding:30px;border-radius:8px}
 .preview-empty .icon{font-size:36px;opacity:.2;margin-bottom:12px}
 .preview-empty h3{font-family:"Montserrat",sans-serif;font-size:16px;font-weight:700;color:#ccc;margin-bottom:6px}
 
-/* MANUAL STYLES */
+/* ══ PRINT FIXES ══ */
+@media print{
+  @page{margin:0;size:A4}
+  header,.gen-panel,.cfg-panel{display:none!important}
+  .app{display:block;height:auto}
+  .preview-area{padding:0;background:white!important;overflow:visible;height:auto}
+  .pg{margin:0!important;page-break-after:always;page-break-inside:avoid}
+  /* Forzar colores en impresión */
+  .lbar{background:#1A1A1A!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .li{color:#555!important}
+  .li.act{background:#D32E2E!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rn{background:#D32E2E!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .ebox{background:#FEF9EC!important;border:2px solid #F59E0B!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .hbox{background:#FBE9E9!important;border-left:4px solid #D32E2E!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .mgr-card{background:#F7F5F2!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wifi-box{background:#F7F5F2!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .cv-ph{background:#EDEBE7!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .mbox{background:#E8EFF6!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+/* ══ MANUAL STYLES ══ */
 #manual{font-family:"Montserrat",sans-serif}
 .pg{width:794px;min-height:1123px;background:#fff;margin:0 auto 6px;display:flex;position:relative}
 .lbar{width:20px;background:#1A1A1A;flex-shrink:0;display:flex;flex-direction:column}
@@ -87,28 +110,20 @@ input:focus{border-color:var(--red);background:#fff}
 .rl{display:flex;gap:7px;margin-bottom:4px;font-size:8pt;font-family:"Open Sans",sans-serif;align-items:flex-start}
 .rn{flex-shrink:0;width:15px;height:15px;background:#D32E2E;color:#fff;border-radius:50%;font-size:7.5pt;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px;font-family:"Montserrat",sans-serif}
 .mbox{background:#E8EFF6;border-radius:7px;height:150px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:8.5pt;text-align:center;margin-top:14px;font-family:"Open Sans",sans-serif}
-
-@media print{
-  header,.gen-panel,.cfg-panel{display:none!important}
-  .app{display:block;height:auto}
-  .preview-area{padding:0;background:white;overflow:visible}
-  .pg{margin:0;page-break-after:always}
-}
 </style>
 </head>
 <body>
 <header>
-  <img src="data:image/png;base64,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" alt="3villas">
-  <span>Generador de Manuales · v4.0</span>
+  <div style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.02em">&lt;<span style="color:#D32E2E">3</span>villas</div>
+  <span>Generador de Manuales · v4.1</span>
 </header>
-<div class="app">
 
-  <!-- PANEL GENERACIÓN (arriba izquierda) -->
+<div class="app">
   <div class="gen-panel">
     <h2>Generar Manual</h2>
     <label>Hostawayid</label>
     <input type="text" id="pid" placeholder="ej: 92737">
-    <div class="info-badge">ℹ Introduce el Hostawayid de TaVillas</div>
+    <div class="info-badge">ℹ Hostawayid de la tabla TaVillas</div>
     <div id="st" class="status"></div>
     <button class="btn btn-red" onclick="gen()" id="btngen">Generar Manual</button>
     <div class="divider"></div>
@@ -122,18 +137,22 @@ input:focus{border-color:var(--red);background:#fff}
     </div>
     <div class="divider"></div>
     <button class="btn btn-dark btn-sm" onclick="dlHTML()" id="bdl" disabled>⬇ Descargar HTML</button>
-    <button class="btn btn-out btn-sm" onclick="window.print()" id="bpdf" disabled>🖨 Imprimir / PDF</button>
+    <button class="btn btn-out btn-sm" onclick="printManual()" id="bpdf" disabled>🖨 Imprimir / PDF</button>
   </div>
 
-  <!-- PANEL CONFIGURACIÓN (abajo izquierda) -->
   <div class="cfg-panel">
-    <h3>⚙ Configuración Caspio</h3>
-    <label>Tabla</label>
-    <input type="text" id="ctbl" value="TaVillas" style="margin-bottom:6px">
-    <button class="btn btn-out btn-sm" onclick="saveConfig()">Guardar</button>
+    <h3 onclick="toggleCfg()" style="cursor:pointer">⚙ Configuración Caspio <span id="cfg-arrow">▸</span></h3>
+    <div class="cfg-body" id="cfg-body">
+      <div style="background:#EEF4FF;border:1px solid #BFDBFE;border-radius:6px;padding:8px 10px;margin:10px 0;font-size:10px;color:#1E40AF;line-height:1.5">
+        <strong>Proxy:</strong> caspio-proxy.jordi-89b.workers.dev<br>
+        Las credenciales de Caspio están guardadas como secretos cifrados en Cloudflare Workers. No se envían nunca al navegador.
+      </div>
+      <label>Tabla de Caspio</label>
+      <input type="text" id="ctbl" value="TaVillas">
+      <button class="btn btn-out btn-sm" onclick="saveConfig()">Guardar tabla</button>
+    </div>
   </div>
 
-  <!-- PREVIEW (derecha) -->
   <div class="preview-area" id="pv">
     <div class="preview-empty">
       <div class="icon">📄</div>
@@ -147,6 +166,12 @@ input:focus{border-color:var(--red);background:#fff}
 const PROXY = 'https://caspio-proxy.jordi-89b.workers.dev';
 const DTBL = 'TaVillas';
 
+function toggleCfg(){
+  const b=document.getElementById('cfg-body');
+  const a=document.getElementById('cfg-arrow');
+  b.classList.toggle('open');
+  a.textContent=b.classList.contains('open')?'▾':'▸';
+}
 function saveConfig(){
   try{localStorage.setItem('3v_tbl',document.getElementById('ctbl').value);}catch(e){}
   st('success','Guardado');
@@ -154,9 +179,7 @@ function saveConfig(){
 function loadConfig(){
   try{const t=localStorage.getItem('3v_tbl');if(t)document.getElementById('ctbl').value=t;}catch(e){}
 }
-function getTbl(){
-  try{return localStorage.getItem('3v_tbl')||DTBL;}catch(e){return DTBL;}
-}
+function getTbl(){try{return localStorage.getItem('3v_tbl')||DTBL;}catch(e){return DTBL;}}
 function st(type,msg){
   const el=document.getElementById('st');
   el.className='status show '+type;
@@ -164,443 +187,30 @@ function st(type,msg){
   if(type!=='loading')setTimeout(()=>el.classList.remove('show'),4000);
 }
 
-// Translations for manual content
-const T = {
-  ca: {
-    welcome_title: "Benvinguts a",
-    welcome_p: "Esperam que gaudiu i que passeu molts moments de diversió durant les vostres vacances. Us agrairíem molt que mantingueu el silenci durant les hores nocturnes.",
-    no_parties: "Les festes estan absolutament prohibides durant tota l'estada.",
-    environment: "Sobre l'entorn",
-    practical: "Informació pràctica",
-    beach: "Platja més propera",
-    restaurant: "Restaurant més proper",
-    supermarket: "Supermercat més proper",
-    pharmacy: "Farmàcia",
-    airport: "Aeroport",
-    hospital: "Hospital",
-    keybox_code: "Codi keybox",
-    rules_title: "Reglament d'ús",
-    rules_intro: "Les nostres propietats de 3 Villas estan equipades amb materials i equips de qualitat. Us demanam que en feu un ús tan respectuós com sigui possible.",
-    services_title: "Serveis i equipament",
-    wifi_section: "Internet / Wifi",
-    wifi_p: "Connecteu els vostres dispositius a la xarxa wifi de la casa mitjançant la contrasenya indicada. Si la connexió s'interromp, desendollau el router 1 minut i torneu-lo a connectar.",
-    pool_title: "Piscina",
-    pool_p: "Manteniment dues vegades per setmana. Menors de 14 anys han d'estar acompanyats. Dutxa obligatòria abans de banyar-se. Prohibit saltar o llançar-se de cap. No menjar ni beure dins la piscina.",
-    smoking_title: "Fumadors",
-    smoking_p: "Prohibit fumar dins la casa. Es pot fumar a terrasses i jardins usant els cendres disponibles.",
-    aircon_title: "Aire condicionat",
-    aircon_p: "Temperatura recomanada: 22°C. No deixar encès en marxar. No usar amb finestres obertes.",
-    cleaning_title: "Neteja",
-    cleaning_p: "Manteniu el mobiliari i la propietat en bon estat. A l'estiu, no deixeu menjar a l'aire més d'1 hora ni bosses obertes a la terrassa.",
-    firstaid_title: "Farmaciola",
-    firstaid_p: "Totes les propietats disposen de farmaciola de primers auxilis.",
-    bbq_title: "Barbacoa",
-    checkout_title: "Checkout – Sortida",
-    checkout_intro: "El dia de la vostra sortida us agrairíem que tinguéssiu en compte el següent:",
-    checkout1: "Llenceu la brossa als contenidors del carrer. Recàrrec de fins a 350€ per brutícia excessiva.",
-    checkout2: "Retorneu tot el mobiliari i complements al seu lloc original abans d'entregar les claus.",
-    checkout3: "No deixeu vaixella ni estris bruts, tret dels de l'esmorzar del dia de sortida (deixar-los al rentaplats en marxa).",
-    checkout4: "El client és responsable de lliurar l'equipament en perfectes condicions.",
-    checkout5: "Qualsevol desperfecte important cal notificar-ho durant l'estada per a valoració i reposició.",
-    checkout6: "Desperfectes detectats a la sortida sense notificació prèvia s'enviaran per correu amb el cost.",
-    info_title: "Informació pràctica",
-    medical_title: "Atenció sanitària",
-    medical_p: "En cas d'emergència mèdica, marqueu el 061 si necessiteu ambulància o atenció mèdica urgent.",
-    medical_p2: "També podeu contactar amb el nostre Servei d'Atenció al Client: +34 659 93 34 34",
-    hospital_title: "Hospital",
-    hospital_p: "Hospital Mateu Orfila, Ronda Malbúger (direcció Sant Lluís), Maó.",
-    hospital_p2: "General: +34 971 487 000 · Urgències: +34 971 487 030 (24h)",
-    transport_title: "Transports",
-    taxi_title: "Taxis",
-    taxi_p: "Radio Taxi Menorca: +34 971 367 111 · Taxi Maó: +34 971 357 700",
-    tourist_title: "Oficines d'informació turística",
-    tourist_p: "Obertes generalment de 10:00h a 14:00h.",
-    emergency_title: "Pla d'emergències i prevenció de riscos",
-    evacuation_title: "Evacuacions",
-    evacuation_p: "Quan arribeu a la propietat, familiaritzau-vos amb les sortides d'emergència.",
-    evac1: "Atureu immediatament qualsevol activitat.",
-    evac2: "Manteniu la calma per a una sortida ràpida i ordenada.",
-    evac3: "No intenteu sortir amb objectes pesants ni torneu a cercar objectes oblidats.",
-    evac4: "No torneu a entrar a l'edifici fins que les autoritats ho permetin.",
-    evac5: "Aviseu els serveis d'emergència.",
-    fire_title: "Risc d'incendi",
-    fire_p: "La propietat està equipada amb extintors senyalitzats.",
-    fire1: "Tapau-vos la boca amb una tovallola seca per evitar inhalar gasos tòxics.",
-    fire2: "Desplaceu-vos gatejant per sota del nivell del fum.",
-    fire3: "Toqueu les portes amb el dors de la mà — si estan calentes, cerqueu una altra sortida.",
-    fire4: "Sortiu de l'edifici el més ràpidament possible.",
-    fire5: "No torneu mai a entrar en un edifici en flames.",
-    fire6: "Si se us encén la roba: aturau-vos, tireu-vos a terra i rodoleu.",
-    forbidden_title: "Recordau que està terminantment prohibit",
-    forbidden1: "Fumar dins la vivenda",
-    forbidden2: "Encendre espelmes",
-    appliances: "Manuals d'electrodomèstics",
-    appliances_p: "Tots els manuals es troben a l'últim calaix de la cuina.",
-    legal: "Informació legal",
-    legal_p: "Aquest establiment disposa de Fulls de Reclamació oficials. Termini: 3 mesos.",
-    electric: "Quadre elèctric",
-    water: "Clau de pas",
-    manager_title: "Responsable 3villas",
-    manager_hours: "Atenció de 9:00 a 14:00 i de 16:00 a 19:00. Fora d'aquest horari, només emergències (incendis, inundacions o pèrdua de claus).",
-  },
-  es: {
-    welcome_title: "Bienvenidos al",
-    welcome_p: "¡Esperamos que disfruten y tengan muchos momentos de diversión durante sus vacaciones! Les agradecemos que mantengan el ruido al mínimo durante las horas nocturnas.",
-    no_parties: "Las fiestas están absolutamente prohibidas durante toda la estancia.",
-    environment: "Sobre el entorno",
-    practical: "Información práctica",
-    beach: "Playa más cercana",
-    restaurant: "Restaurante más cercano",
-    supermarket: "Supermercado más cercano",
-    pharmacy: "Farmacia",
-    airport: "Aeropuerto",
-    hospital: "Hospital",
-    keybox_code: "Código keybox",
-    rules_title: "Reglamento de uso",
-    rules_intro: "Nuestras propiedades 3 Villas están equipadas con materiales y equipos de calidad. Rogamos tengan en mente que esta casa está gestionada por 3 Villas.",
-    services_title: "Servicios y equipamiento",
-    wifi_section: "Internet / Wifi",
-    wifi_p: "Conecte sus dispositivos a la red wifi mediante la contraseña indicada. Si se interrumpe, desenchufe el router 1 minuto y vuelva a conectar.",
-    pool_title: "Piscina",
-    pool_p: "Mantenimiento dos veces por semana. Menores de 14 años deben estar acompañados. Ducha obligatoria antes de bañarse. Prohibido saltar o tirarse de cabeza. No comer ni beber dentro de la piscina.",
-    smoking_title: "Fumadores",
-    smoking_p: "Prohibido fumar dentro de la casa. Se puede fumar en terrazas y jardines usando los ceniceros disponibles.",
-    aircon_title: "Aire acondicionado",
-    aircon_p: "Temperatura recomendada: 22°C. No dejar encendido al salir. No usar con ventanas abiertas.",
-    cleaning_title: "Limpieza",
-    cleaning_p: "Mantener muebles y propiedad en buen estado. En verano no dejar comida al aire más de 1 hora ni bolsas abiertas en terraza.",
-    firstaid_title: "Botiquín",
-    firstaid_p: "Todas las propiedades disponen de botiquín de primeros auxilios.",
-    bbq_title: "Barbacoa",
-    checkout_title: "Checkout – Salida",
-    checkout_intro: "El día de su salida le agradeceríamos lo siguiente:",
-    checkout1: "Tiren la basura en los contenedores de la calle. Hay un cargo extra de hasta 350€ en caso de suciedad excesiva.",
-    checkout2: "Devuelvan todo el mobiliario y complementos a su ubicación original antes de entregar las llaves.",
-    checkout3: "No dejen vajilla ni menaje sucio, salvo los elementos del desayuno del día de salida (dejar en el lavavajillas en marcha).",
-    checkout4: "El cliente es responsable de entregar el equipamiento en perfectas condiciones.",
-    checkout5: "Cualquier desperfecto importante debe notificarse durante la estancia para valoración y reposición.",
-    checkout6: "Desperfectos detectados a la salida sin notificación previa se comunicarán por email con el coste.",
-    info_title: "Información práctica",
-    medical_title: "Atención sanitaria",
-    medical_p: "En caso de emergencia médica, marque el 061 si necesita ambulancia o atención médica urgente.",
-    medical_p2: "También puede llamar a nuestro Servicio de Atención al Cliente: +34 659 93 34 34",
-    hospital_title: "Hospital",
-    hospital_p: "Hospital Mateu Orfila, Ronda Malbúger (dirección Sant Lluís), Mahón.",
-    hospital_p2: "General: +34 971 487 000 · Urgencias: +34 971 487 030 (24h)",
-    transport_title: "Transportes",
-    taxi_title: "Taxis",
-    taxi_p: "Radio Taxi Menorca: +34 971 367 111 · Taxi Mahón: +34 971 357 700",
-    tourist_title: "Oficinas de información turística",
-    tourist_p: "Abiertas generalmente de 10:00h a 14:00h.",
-    emergency_title: "Plan de emergencias y prevención de riesgos",
-    evacuation_title: "Evacuaciones",
-    evacuation_p: "Al llegar a su propiedad, familiarícese con las salidas de emergencia.",
-    evac1: "Parar cualquier actividad inmediatamente.",
-    evac2: "Actuar con calma para una evacuación rápida y ordenada.",
-    evac3: "No salir con objetos pesados ni retroceder a buscar objetos olvidados.",
-    evac4: "No regresar al edificio hasta que los profesionales lo indiquen.",
-    evac5: "Avisar a las autoridades competentes de la emergencia.",
-    fire_title: "Riesgo de incendio",
-    fire_p: "La propiedad cuenta con extintores de incendios señalizados.",
-    fire1: "Cubrirse la boca con una toalla seca para no inhalar gases tóxicos.",
-    fire2: "Gatear por debajo del nivel del humo hacia un lugar seguro.",
-    fire3: "Tocar cualquier puerta con el dorso — si está caliente, buscar otra salida.",
-    fire4: "Salgan tan rápidamente como les sea posible.",
-    fire5: "No volver nunca a entrar en un edificio en llamas.",
-    fire6: "Si se les enciende la ropa: deténgase, tírese al suelo y ruede.",
-    forbidden_title: "Recuerden que está terminantemente prohibido",
-    forbidden1: "Fumar en el interior de la vivienda",
-    forbidden2: "Encender velas",
-    appliances: "Manuales de electrodomésticos",
-    appliances_p: "Todos los manuales se encuentran en el último cajón de la cocina.",
-    legal: "Información legal",
-    legal_p: "Este establecimiento dispone de Hojas de Reclamación oficiales. Plazo: 3 meses.",
-    electric: "Cuadro eléctrico",
-    water: "Llave de paso",
-    manager_title: "Responsable 3villas",
-    manager_hours: "Atención de 9:00 a 14:00 y de 16:00 a 19:00. Fuera de este horario, solo emergencias (incendios, inundaciones o pérdida de llaves).",
-  },
-  en: {
-    welcome_title: "Welcome to",
-    welcome_p: "We hope you enjoy your stay and have many fun moments during your vacation! We kindly ask you to keep noise to a minimum during night hours.",
-    no_parties: "Parties are strictly prohibited throughout the stay.",
-    environment: "About the surroundings",
-    practical: "Practical information",
-    beach: "Nearest beach",
-    restaurant: "Nearest restaurant",
-    supermarket: "Nearest supermarket",
-    pharmacy: "Pharmacy",
-    airport: "Airport",
-    hospital: "Hospital",
-    keybox_code: "Keybox code",
-    rules_title: "Rules of Use",
-    rules_intro: "Our 3 Villas properties are equipped with quality materials and appliances. Please keep in mind that this house is managed by 3 Villas.",
-    services_title: "Services and Equipment",
-    wifi_section: "Internet / Wifi",
-    wifi_p: "Simply connect your devices to the house wifi network using the password provided. If the connection drops, unplug the router for 1 minute and reconnect.",
-    pool_title: "Pool",
-    pool_p: "Maintenance twice a week. Children under 14 must be supervised by an adult. Shower before swimming. Diving or jumping is strictly prohibited. No eating or drinking inside the pool.",
-    smoking_title: "Smoking",
-    smoking_p: "Smoking is not permitted inside the house. You may smoke on terraces and in gardens using the provided ashtrays.",
-    aircon_title: "Air conditioning",
-    aircon_p: "Recommended temperature: 22°C. Do not leave it on when you go out. Do not use with windows open.",
-    cleaning_title: "Cleaning",
-    cleaning_p: "Please maintain furniture and property in good condition. In summer, do not leave food out for over 1 hour or trash bags open on the terrace.",
-    firstaid_title: "First Aid Kit",
-    firstaid_p: "All properties have a basic first aid kit.",
-    bbq_title: "BBQ",
-    checkout_title: "Checkout – Departure",
-    checkout_intro: "On the day of your departure, we kindly ask you to:",
-    checkout1: "Please take out the trash to the public bins on the main street. An extra charge of up to €350 may apply in case of excessive dirt.",
-    checkout2: "Return all furniture and accessories to their original location before check-out.",
-    checkout3: "Do not leave dirty dishes or kitchenware, except breakfast items on the day of departure (leave them in the dishwasher with the cycle running).",
-    checkout4: "Guests are responsible for returning all equipment in perfect condition.",
-    checkout5: "Any significant damage should be reported during the stay for assessment and replacement.",
-    checkout6: "Unreported damages found at check-out will be communicated via email with a cost estimate.",
-    info_title: "Practical Information",
-    medical_title: "Medical Assistance",
-    medical_p: "In case of a medical emergency, call 061 for an ambulance or urgent medical attention.",
-    medical_p2: "You may also call our Customer Service at +34 659 93 34 34",
-    hospital_title: "Hospital",
-    hospital_p: "Hospital Mateu Orfila, Ronda Malbúger towards Sant Lluís, Mahón.",
-    hospital_p2: "General: +34 971 487 000 · Emergency: +34 971 487 030 (24h)",
-    transport_title: "Transportation",
-    taxi_title: "Taxis",
-    taxi_p: "Radio Taxi Menorca: +34 971 367 111 · Taxi Mahón: +34 971 357 700",
-    tourist_title: "Tourist Information Offices",
-    tourist_p: "Open generally from 10:00 to 14:00.",
-    emergency_title: "Emergency Plan and Risk Prevention",
-    evacuation_title: "Evacuation",
-    evacuation_p: "Upon arrival, locate the emergency exits and familiarize yourself with the evacuation route.",
-    evac1: "Stop any activity immediately.",
-    evac2: "Remain calm and help others evacuate in an orderly manner.",
-    evac3: "Do not carry heavy objects or return for forgotten items.",
-    evac4: "Do not re-enter the building until cleared by professionals.",
-    evac5: "Notify emergency services immediately.",
-    fire_title: "Fire Risk",
-    fire_p: "The property is equipped with clearly marked fire extinguishers.",
-    fire1: "Cover your mouth with a dry towel to avoid inhaling toxic gases.",
-    fire2: "Crawl low under the smoke to escape safely.",
-    fire3: "Touch doors with the back of your hand — if hot, find another exit.",
-    fire4: "Exit the building as quickly as possible.",
-    fire5: "Do not re-enter a burning building.",
-    fire6: "If your clothes catch fire: stop, drop, and roll to extinguish the flames.",
-    forbidden_title: "It is strictly forbidden to",
-    forbidden1: "Smoke indoors",
-    forbidden2: "Light candles",
-    appliances: "Appliance Manuals",
-    appliances_p: "All appliance manuals are located in the last kitchen drawer.",
-    legal: "Legal Information",
-    legal_p: "This establishment has official Complaint Forms available. Deadline: 3 months.",
-    electric: "Electrical Panel",
-    water: "Water Shutoff Valve",
-    manager_title: "3 Villas Responsible Contact",
-    manager_hours: "Hours: 9:00 to 14:00 and 16:00 to 19:00. Outside these hours, contact is only for emergencies (fire, flooding, or lost keys).",
-  },
-  fr: {
-    welcome_title: "Bienvenue à",
-    welcome_p: "Nous espérons que vous passerez un agréable séjour ! Nous vous serions reconnaissants de bien vouloir limiter le bruit pendant les heures nocturnes.",
-    no_parties: "Les fêtes sont strictement interdites pendant toute la durée du séjour.",
-    environment: "À propos de l'environnement",
-    practical: "Informations pratiques",
-    beach: "Plage la plus proche",
-    restaurant: "Restaurant le plus proche",
-    supermarket: "Supermarché le plus proche",
-    pharmacy: "Pharmacie",
-    airport: "Aéroport",
-    hospital: "Hôpital",
-    keybox_code: "Code keybox",
-    rules_title: "Règlement d'utilisation",
-    rules_intro: "Nos propriétés 3 Villas sont équipées de matériaux et d'équipements de qualité. Nous vous prions de traiter les installations avec le plus grand respect.",
-    services_title: "Services et équipements",
-    wifi_section: "Internet / Wifi",
-    wifi_p: "Connectez vos appareils au réseau wifi à l'aide du mot de passe fourni. Si la connexion est interrompue, débranchez le routeur 1 minute puis rebranchez-le.",
-    pool_title: "Piscine",
-    pool_p: "Entretien deux fois par semaine. Les enfants de moins de 14 ans doivent être accompagnés. Douche obligatoire avant d'entrer. Plonger ou sauter est strictement interdit. Interdit de manger ou boire dans la piscine.",
-    smoking_title: "Fumeurs",
-    smoking_p: "Il est interdit de fumer à l'intérieur. Il est permis de fumer sur les terrasses et jardins en utilisant les cendriers prévus.",
-    aircon_title: "Climatisation",
-    aircon_p: "Température recommandée : 22°C. Ne pas laisser allumée en sortant. Ne pas utiliser avec les fenêtres ouvertes.",
-    cleaning_title: "Nettoyage",
-    cleaning_p: "Veuillez maintenir les meubles et la propriété en bon état. En été, ne laissez pas la nourriture à l'air plus d'1 heure ni les sacs ouverts sur la terrasse.",
-    firstaid_title: "Trousse de premiers secours",
-    firstaid_p: "Toutes les propriétés disposent d'une trousse de premiers secours.",
-    bbq_title: "Barbecue",
-    checkout_title: "Checkout – Départ",
-    checkout_intro: "Le jour de votre départ, nous vous serions reconnaissants de :",
-    checkout1: "Jeter les déchets dans les conteneurs de la rue. Un supplément jusqu'à 350€ peut être appliqué en cas de saleté excessive.",
-    checkout2: "Remettre tous les meubles et accessoires à leur emplacement d'origine avant de rendre les clés.",
-    checkout3: "Ne pas laisser de vaisselle sale, sauf les éléments du petit-déjeuner du jour du départ (les laisser dans le lave-vaisselle en marche).",
-    checkout4: "Le client est responsable de restituer tous les équipements en parfait état.",
-    checkout5: "Tout dommage important doit être signalé pendant le séjour pour évaluation et remplacement.",
-    checkout6: "Les dommages détectés au départ sans signalement préalable seront communiqués par email avec le coût.",
-    info_title: "Informations pratiques",
-    medical_title: "Assistance médicale",
-    medical_p: "En cas d'urgence médicale, composez le 061 pour une ambulance ou une assistance médicale urgente.",
-    medical_p2: "Vous pouvez également contacter notre Service Client : +34 659 93 34 34",
-    hospital_title: "Hôpital",
-    hospital_p: "Hôpital Mateu Orfila, Ronda Malbúger direction Sant Lluís, Mahón.",
-    hospital_p2: "Général : +34 971 487 000 · Urgences : +34 971 487 030 (24h)",
-    transport_title: "Transports",
-    taxi_title: "Taxis",
-    taxi_p: "Radio Taxi Menorca : +34 971 367 111 · Taxi Mahón : +34 971 357 700",
-    tourist_title: "Offices de tourisme",
-    tourist_p: "Ouverts généralement de 10h00 à 14h00.",
-    emergency_title: "Plan d'urgence et prévention des risques",
-    evacuation_title: "Évacuation",
-    evacuation_p: "À votre arrivée, repérez les issues de secours et familiarisez-vous avec le plan d'évacuation.",
-    evac1: "Arrêtez immédiatement toute activité.",
-    evac2: "Gardez votre calme pour une évacuation rapide et ordonnée.",
-    evac3: "Ne transportez pas d'objets lourds et ne retournez pas chercher des objets oubliés.",
-    evac4: "Ne retournez pas dans le bâtiment tant que les professionnels ne l'ont pas autorisé.",
-    evac5: "Alertez immédiatement les services d'urgence.",
-    fire_title: "Risque d'incendie",
-    fire_p: "La propriété est équipée d'extincteurs clairement signalés.",
-    fire1: "Couvrez-vous la bouche avec une serviette sèche pour éviter d'inhaler les gaz toxiques.",
-    fire2: "Déplacez-vous en rampant sous la fumée.",
-    fire3: "Touchez les portes avec le dos de la main — si chaudes, cherchez une autre sortie.",
-    fire4: "Sortez du bâtiment le plus rapidement possible.",
-    fire5: "Ne retournez jamais dans un bâtiment en feu.",
-    fire6: "Si vos vêtements prennent feu : arrêtez-vous, jetez-vous au sol et roulez.",
-    forbidden_title: "Il est strictement interdit de",
-    forbidden1: "Fumer à l'intérieur",
-    forbidden2: "Allumer des bougies",
-    appliances: "Manuels d'utilisation des appareils",
-    appliances_p: "Tous les manuels se trouvent dans le dernier tiroir de la cuisine.",
-    legal: "Informations légales",
-    legal_p: "Cet établissement met à disposition des formulaires officiels de réclamation. Délai : 3 mois.",
-    electric: "Tableau électrique",
-    water: "Robinet d'arrêt d'eau",
-    manager_title: "Responsable 3 Villas",
-    manager_hours: "Horaires : de 9h00 à 14h00 et de 16h00 à 19h00. En dehors de ces horaires, uniquement pour les urgences (incendies, inondations ou perte de clés).",
-  },
-  de: {
-    welcome_title: "Willkommen im",
-    welcome_p: "Wir hoffen, dass Sie einen angenehmen Aufenthalt haben! Wir bitten Sie, während der Nachtstunden die Lautstärke auf ein Minimum zu beschränken.",
-    no_parties: "Partys sind während des gesamten Aufenthalts strengstens untersagt.",
-    environment: "Zur Umgebung",
-    practical: "Praktische Informationen",
-    beach: "Nächster Strand",
-    restaurant: "Nächstgelegenes Restaurant",
-    supermarket: "Nächster Supermarkt",
-    pharmacy: "Apotheke",
-    airport: "Flughafen",
-    hospital: "Krankenhaus",
-    keybox_code: "Schlüsselkasten-Code",
-    rules_title: "Nutzungsordnung",
-    rules_intro: "Unsere 3 Villas-Unterkünfte sind mit hochwertigen Materialien versehen. Bitte behandeln Sie die Einrichtungen mit größtem Respekt.",
-    services_title: "Dienstleistungen und Ausstattung",
-    wifi_section: "Internet / WLAN",
-    wifi_p: "Verbinden Sie Ihre Geräte mit dem WLAN-Netzwerk über das bereitgestellte Passwort. Bei Verbindungsabbruch: Router 1 Minute ausstecken und wieder anschließen.",
-    pool_title: "Schwimmbad",
-    pool_p: "Wartung zweimal pro Woche. Kinder unter 14 Jahren müssen begleitet werden. Duschen vor dem Baden Pflicht. Springen oder Kopfspringen ist strengstens verboten. Essen und Trinken im Pool nicht erlaubt.",
-    smoking_title: "Rauchen",
-    smoking_p: "Rauchen im Inneren des Hauses verboten. Auf Terrassen und in Gärten mit den vorgesehenen Aschenbechern erlaubt.",
-    aircon_title: "Klimaanlage",
-    aircon_p: "Empfohlene Temperatur: 22°C. Nicht eingeschaltet lassen beim Verlassen. Nicht mit offenen Fenstern verwenden.",
-    cleaning_title: "Reinigung",
-    cleaning_p: "Bitte halten Sie Möbel und Unterkunft in gutem Zustand. Im Sommer keine Speisen länger als 1 Stunde offen stehen lassen.",
-    firstaid_title: "Erste-Hilfe-Kasten",
-    firstaid_p: "Alle Unterkünfte verfügen über einen Erste-Hilfe-Kasten.",
-    bbq_title: "Grill",
-    checkout_title: "Checkout – Abreise",
-    checkout_intro: "Am Tag Ihrer Abreise bitten wir Sie:",
-    checkout1: "Werfen Sie Ihren Müll in die öffentlichen Container auf der Hauptstraße. Bei übermäßiger Verschmutzung kann eine Zusatzgebühr von bis zu 350€ berechnet werden.",
-    checkout2: "Bringen Sie alle Möbel und Accessoires vor der Schlüsselrückgabe an ihren ursprünglichen Platz zurück.",
-    checkout3: "Kein schmutziges Geschirr hinterlassen, außer dem Frühstücksgeschirr am Abreisetag (in den Geschirrspüler stellen).",
-    checkout4: "Der Gast ist für die Rückgabe aller Einrichtungsgegenstände in einwandfreiem Zustand verantwortlich.",
-    checkout5: "Erhebliche Schäden müssen während des Aufenthalts gemeldet werden.",
-    checkout6: "Bei der Abreise festgestellte Schäden ohne vorherige Meldung werden per E-Mail mitgeteilt.",
-    info_title: "Praktische Informationen",
-    medical_title: "Medizinische Hilfe",
-    medical_p: "Im Notfall wählen Sie 061 für einen Krankenwagen oder medizinische Soforthilfe.",
-    medical_p2: "Sie können auch unseren Kundendienst kontaktieren: +34 659 93 34 34",
-    hospital_title: "Krankenhaus",
-    hospital_p: "Hospital Mateu Orfila, Ronda Malbúger Richtung Sant Lluís, Mahón.",
-    hospital_p2: "Allgemein: +34 971 487 000 · Notfall: +34 971 487 030 (24h)",
-    transport_title: "Transport",
-    taxi_title: "Taxis",
-    taxi_p: "Radio Taxi Menorca: +34 971 367 111 · Taxi Mahón: +34 971 357 700",
-    tourist_title: "Touristeninformationen",
-    tourist_p: "Generell geöffnet von 10:00 bis 14:00 Uhr.",
-    emergency_title: "Notfallplan und Risikoprävention",
-    evacuation_title: "Evakuierung",
-    evacuation_p: "Machen Sie sich bei Ihrer Ankunft mit den Notausgängen vertraut.",
-    evac1: "Beenden Sie sofort jede Aktivität.",
-    evac2: "Bleiben Sie ruhig für eine geordnete Evakuierung.",
-    evac3: "Keine schweren Gegenstände mitnehmen, nicht zurückkehren für vergessene Sachen.",
-    evac4: "Das Gebäude erst wieder betreten, wenn dies von Fachpersonal freigegeben wurde.",
-    evac5: "Rettungskräfte sofort alarmieren.",
-    fire_title: "Brandgefahr",
-    fire_p: "Die Unterkunft ist mit deutlich gekennzeichneten Feuerlöschern ausgestattet.",
-    fire1: "Mund und Nase mit einem trockenen Tuch bedecken.",
-    fire2: "Unter dem Rauch hindurch kriechen.",
-    fire3: "Türen mit dem Handrücken anfassen — falls heiß, anderen Ausgang suchen.",
-    fire4: "Das Gebäude so schnell wie möglich verlassen.",
-    fire5: "Niemals in ein brennendes Gebäude zurückkehren.",
-    fire6: "Wenn Kleidung Feuer fängt: stehen bleiben, auf den Boden fallen und rollen.",
-    forbidden_title: "Es ist strengstens verboten",
-    forbidden1: "Im Haus zu rauchen",
-    forbidden2: "Kerzen anzuzünden",
-    appliances: "Bedienungsanleitungen",
-    appliances_p: "Alle Bedienungsanleitungen befinden sich in der untersten Schublade der Küche.",
-    legal: "Rechtliche Hinweise",
-    legal_p: "In dieser Unterkunft stehen offizielle Beschwerdeformulare zur Verfügung. Frist: 3 Monate.",
-    electric: "Sicherungskasten",
-    water: "Hauptwasserhahn",
-    manager_title: "Verantwortlicher von 3 Villas",
-    manager_hours: "Erreichbarkeit: 09:00–14:00 und 16:00–19:00. Außerhalb nur für Notfälle (Brände, Überschwemmungen oder verlorene Schlüssel).",
-  }
-};
-
-const RULES = {
-  ca: ["Mantenir una política mediambiental responsable: No llenceu fems ni al jardí ni a espais naturals.","Fer un ús adequat dels equips que ofereix la propietat (aire condicionat, aigua calenta, electricitat, etc.)","No deixar llums enceses ni aparells d'aire condicionat en marxa quan la casa estigui desocupada.","Està terminantment prohibit fumar a l'interior de la vivenda, així com encendre espelmes.","Check-in a les 16h i check-out a les 10h. Canvis sols amb permís escrit a bookings@3villas.com","Mantenir la casa i les instal·lacions netes en tot moment per evitar deterioraments.","No llençar res per l'inodor excepte paper higiènic.","No causar danys per ús negligent (parets, portes, finestres, jardí…). En cas de desperfectes, avisar l'equip.","No es permeten festes ni esdeveniments sense permís previ, clar i per escrit.","No es permet superar el nombre de persones autoritzades sense acord previ i escrit.","Prendre totes les mesures necessàries per protegir els objectes personals. 3 Villas no es fa responsable.","No es permeten mascotes, excepte si s'ha autoritzat prèviament per escrit amb dipòsit addicional.","Permetre l'accés del personal de manteniment en qualsevol moment raonable de l'estada."],
-  es: ["Conservar una política medioambiental responsable: No tiren basura ni en los jardines ni en los espacios naturales.","Cuiden el uso de los equipamientos que la propiedad ofrece (aire acondicionado, agua caliente, electricidad, etc.)","No dejen luces encendidas o aparatos de aire en funcionamiento cuando no esté ocupada la casa.","Está terminantemente prohibido fumar en el interior de la vivienda, así como encender velas.","El check-in es a las 16h y el check-out a las 10h. Cambios solo con permiso escrito a bookings@3villas.com","Mantener la casa y las instalaciones limpias en todo momento para evitar su deterioro.","No se puede tirar nada por el inodoro, excepto papel higiénico.","No causar ningún daño por uso negligente (paredes, puertas, ventanas, jardín…). En caso de desperfectos, avisar cuanto antes.","No se permiten fiestas ni eventos sin permiso previo, claro y por escrito.","No se permite que la propiedad sea ocupada por más personas de las autorizadas sin acuerdo escrito.","Adoptar todas las medidas para salvaguardar sus propiedades personales. 3 Villas no se hace responsable.","No se admiten mascotas, salvo autorización previa por escrito con depósito adicional.","Permita el acceso al personal de mantenimiento en cualquier momento razonable durante su estancia."],
-  en: ["Maintain an environmentally responsible policy: Do not litter in the gardens or natural areas.","Use the property's equipment properly (air conditioning, hot water, electricity, etc.)","Do not leave lights or air conditioning running when the house is unoccupied.","Smoking and lighting candles inside the property is strictly prohibited.","Check-in is at 16:00 and check-out at 10:00. Changes only with written permission at bookings@3villas.com","Keep the house and facilities clean at all times to prevent deterioration.","Do not flush anything down the toilet except toilet paper.","Avoid any damage due to negligent use (walls, doors, windows, garden). In case of damage, notify our team.","Parties and events are not allowed without prior written permission.","The property may not be occupied by more people than authorized without written agreement.","Take all necessary precautions to safeguard your personal belongings. 3 Villas is not responsible.","Pets are not allowed unless prior written authorization has been given with an additional security deposit.","Allow access to maintenance personnel at any reasonable time during your stay."],
-  fr: ["Maintenir une politique environnementale responsable : ne jetez pas de déchets dans le jardin ou les espaces naturels.","Utilisez les équipements de la propriété de manière appropriée (climatisation, eau chaude, électricité, etc.)","Ne laissez pas les lumières ni la climatisation allumées lorsque la maison est vide.","Il est strictement interdit de fumer à l'intérieur, ainsi que d'allumer des bougies.","Check-in à 16h00 et check-out à 10h00. Changements uniquement avec autorisation écrite à bookings@3villas.com","Maintenez la maison et ses installations propres à tout moment.","Ne jetez rien dans les toilettes à l'exception du papier hygiénique.","N'endommagez pas les murs, portes, fenêtres ou le jardin. En cas de dommage, informez notre équipe.","Les fêtes et événements sont interdits sans autorisation écrite préalable.","Le nombre d'occupants ne peut dépasser celui autorisé sans accord écrit préalable.","Protégez vos objets de valeur. 3 Villas n'est pas responsable des pertes ou vols.","Les animaux ne sont pas autorisés, sauf autorisation écrite avec dépôt de garantie.","Autorisez l'accès au personnel d'entretien pour réparations, jardin et piscine."],
-  de: ["Pflegen Sie einen verantwortungsvollen Umgang mit der Umwelt: Werfen Sie keinen Müll in den Garten.","Verwenden Sie die Ausstattung des Hauses sachgerecht (Klimaanlage, Warmwasser, Strom usw.)","Lassen Sie keine Lichter oder Klimaanlage eingeschaltet, wenn das Haus unbeaufsichtigt ist.","Es ist strengstens verboten, im Inneren des Hauses zu rauchen oder Kerzen anzuzünden.","Check-in um 16:00 Uhr, Check-out um 10:00 Uhr. Änderungen nur schriftlich an bookings@3villas.com","Halten Sie das Haus und seine Einrichtungen jederzeit sauber.","Werfen Sie nichts außer Toilettenpapier in die Toilette.","Beschädigen Sie keine Wände, Türen, Fenster oder Gartenelemente. Melden Sie Schäden sofort.","Partys und Veranstaltungen sind ohne vorherige schriftliche Genehmigung verboten.","Die Anzahl der Gäste darf ohne vorherige schriftliche Zustimmung nicht überschritten werden.","Bewahren Sie Ihre Wertsachen sicher auf. 3 Villas übernimmt keine Haftung.","Haustiere sind nicht erlaubt, außer mit vorheriger schriftlicher Genehmigung und Kaution.","Ermöglichen Sie dem Wartungspersonal den Zugang zu jeder zumutbaren Zeit."]
-};
-
 function mapRecord(r){
   return{
-    id:r.Hostawayid||"",
-    nombre:r.Name_villa_para_inquilinos||r.Name||"",
-    address:r.Address||"",
-    license:r.License||"",
-    zona:r.Zone||"",
-    wifi_n:r.Wifi_user||"",
-    wifi_p:r.Wifi_password||"",
-    playa:r.Beach_distance||"",
-    rest:r.Restaurant_distance||"",
-    super:r.Supermarket_distance||"",
-    farm:r.Pharmacy_distance||"",
-    aero:r.Airport_distance||"",
-    bus:r.Public_transpost||"",
-    taxi:r.Taxi_and_Transfers||"",
-    cuadro:r.where_is_mainpower||"",
-    llave:r.wher_is_water_stopcock||"",
-    manager:r.KeyHolder_person||"",
-    bbq:r.BBQ||"",
-    piscina:r.size_of_swimingpool||"",
-    pax:r.Pax_legal||"",
-    keybox:r.Keybox_code||"",
-    listing:r.linkweb||"",
-    drive:r.Drive||"",
-    maps:r.Googlemaps_link||"",
-    aircon:r.Explanation_aircon||"",
-    parking:r.Parking_aditionalinfo||"",
-    views:r.Views||"",
-    botiquin:r.where_is_first_aid||"",
-    extintores:r.Extintores__extinguisher_comment||"",
+    id:r.Hostawayid||'',nombre:r.Name_villa_para_inquilinos||r.Name||'',
+    address:r.Address||'',license:r.License||'',zona:r.Zone||'',
+    wifi_n:r.Wifi_user||'',wifi_p:r.Wifi_password||'',
+    playa:r.Beach_distance||'',rest:r.Restaurant_distance||'',
+    super:r.Supermarket_distance||'',farm:r.Pharmacy_distance||'',
+    aero:r.Airport_distance||'',bus:r.Public_transpost||'',
+    taxi:r.Taxi_and_Transfers||'',cuadro:r.where_is_mainpower||'',
+    llave:r.wher_is_water_stopcock||'',manager:r.KeyHolder_person||'',
+    bbq:r.BBQ||'',piscina:r.size_of_swimingpool||'',pax:r.Pax_legal||'',
+    keybox:r.Keybox_code||'',listing:r.linkweb||'',drive:r.Drive||'',
+    maps:r.Googlemaps_link||'',aircon:r.Explanation_aircon||'',
+    parking:r.Parking_aditionalinfo||'',views:r.Views||'',
+    botiquin:r.where_is_first_aid||'',extintores:r.Extintores__extinguisher_comment||'',
   };
 }
 
 async function fetchProp(pid){
   const tbl=getTbl();
-  const tr=await fetch(PROXY+"?action=data&table="+tbl+"&id="+pid);
-  if(!tr.ok)throw new Error("Error datos ("+tr.status+")");
+  const tr=await fetch(PROXY+'?action=data&table='+tbl+'&id='+pid);
+  if(!tr.ok)throw new Error('Error datos ('+tr.status+')');
   const dd=await tr.json();
-  if(!dd.Result||!dd.Result.length)throw new Error("Propiedad "+pid+" no encontrada en "+tbl);
+  if(!dd.Result||!dd.Result.length)throw new Error('Propiedad '+pid+' no encontrada en '+tbl);
   return mapRecord(dd.Result[0]);
 }
 
@@ -608,192 +218,221 @@ function drivePhoto(url){
   if(!url)return null;
   const m=url.match(/folders\/([a-zA-Z0-9_-]+)/);
   if(!m)return null;
-  return"https://drive.google.com/thumbnail?id="+m[1]+"&sz=w900";
+  // Use Google Drive folder thumbnail - gets first image
+  return 'https://lh3.googleusercontent.com/d/'+m[1]+'=w900';
+}
+
+function drivePhotoAlt(url){
+  if(!url)return null;
+  const m=url.match(/folders\/([a-zA-Z0-9_-]+)/);
+  if(!m)return null;
+  return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w900';
 }
 
 let CD=null;
 async function gen(){
-  const pid=document.getElementById("pid").value.trim();
-  if(!pid){st("error","Introduce un Hostawayid");return;}
-  const btn=document.getElementById("btngen");
-  btn.disabled=true;btn.innerHTML="<div class=\"spinner\"></div> Generando...";
-  st("loading","Obteniendo datos...");
+  const pid=document.getElementById('pid').value.trim();
+  if(!pid){st('error','Introduce un Hostawayid');return;}
+  const btn=document.getElementById('btngen');
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div> Generando...';
+  st('loading','Obteniendo datos...');
   try{
     const d=await fetchProp(pid);
-    const photo=drivePhoto(d.drive);
+    const photo=drivePhotoAlt(d.drive);
     CD={...d,photo,pid};
     render(CD);
-    document.getElementById("bdl").disabled=false;
-    document.getElementById("bpdf").disabled=false;
-    st("success","¡Manual generado!");
-  }catch(e){st("error",e.message);}
-  finally{btn.disabled=false;btn.innerHTML="Generar Manual";}
+    document.getElementById('bdl').disabled=false;
+    document.getElementById('bpdf').disabled=false;
+    st('success','¡Manual generado!');
+  }catch(e){st('error',e.message);}
+  finally{btn.disabled=false;btn.innerHTML='Generar Manual';}
 }
 
 function getLangs(){
   const l=[];
-  if(document.getElementById("lca").checked)l.push("ca");
-  if(document.getElementById("les").checked)l.push("es");
-  if(document.getElementById("len").checked)l.push("en");
-  if(document.getElementById("lfr").checked)l.push("fr");
-  if(document.getElementById("lde").checked)l.push("de");
+  if(document.getElementById('lca').checked)l.push('ca');
+  if(document.getElementById('les').checked)l.push('es');
+  if(document.getElementById('len').checked)l.push('en');
+  if(document.getElementById('lfr').checked)l.push('fr');
+  if(document.getElementById('lde').checked)l.push('de');
   return l;
 }
 
-const LANG_LABELS={ca:"CATALÁ",es:"CASTELLANO",en:"ENGLISH",fr:"FRANÇAIS",de:"DEUTSCH"};
+const LANG_LABELS={ca:'CATALÁ',es:'CASTELLANO',en:'ENGLISH',fr:'FRANÇAIS',de:'DEUTSCH'};
+const LOGO_N='data:image/png;base64,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';
+const LOGO_B='data:image/png;base64,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';
+
+const T={
+ca:{welcome_title:"Benvinguts a",welcome_p:"Esperam que gaudiu i que passeu molts moments de diversió durant les vostres vacances. Us agrairíem molt que mantingueu el silenci durant les hores nocturnes.",no_parties:"Les festes estan absolutament prohibides durant tota l'estada.",environment:"Sobre l'entorn",practical:"Informació pràctica",beach:"Platja més propera",restaurant:"Restaurant més proper",supermarket:"Supermercat més proper",pharmacy:"Farmàcia",airport:"Aeroport",hospital:"Hospital",keybox_code:"Codi keybox",rules_title:"Reglament d'ús",rules_intro:"Les nostres propietats de 3 Villas estan equipades amb materials i equips de qualitat. Us demanam que en feu un ús tan respectuós com sigui possible.",services_title:"Serveis i equipament",wifi_section:"Internet / Wifi",wifi_p:"Connecteu els vostres dispositius a la xarxa wifi de la casa mitjançant la contrasenya indicada. Si la connexió s'interromp, desendollau el router 1 minut i torneu-lo a connectar.",pool_title:"Piscina",pool_p:"Manteniment dues vegades per setmana. Menors de 14 anys han d'anar acompanyats. Dutxa obligatòria abans de banyar-se. Prohibit saltar o llançar-se de cap.",smoking_title:"Fumadors",smoking_p:"Prohibit fumar dins la casa. Es pot fumar a terrasses i jardins usant els cendres disponibles.",aircon_title:"Aire condicionat",aircon_p:"Temperatura recomanada: 22°C. No deixar encès en marxar. No usar amb finestres obertes.",cleaning_title:"Neteja",cleaning_p:"Manteniu el mobiliari i la propietat en bon estat. A l'estiu, no deixeu menjar a l'aire més d'1 hora ni bosses obertes a la terrassa.",firstaid_title:"Farmaciola",firstaid_p:"Totes les propietats disposen de farmaciola de primers auxilis.",bbq_title:"Barbacoa",checkout_title:"Checkout – Sortida",checkout_intro:"El dia de la vostra sortida us agrairíem que tinguéssiu en compte el següent:",checkout1:"Llenceu la brossa als contenidors del carrer. Recàrrec de fins a 350€ per brutícia excessiva.",checkout2:"Retorneu tot el mobiliari i complements al seu lloc original abans d'entregar les claus.",checkout3:"No deixeu vaixella ni estris bruts, tret dels de l'esmorzar del dia de sortida (deixar-los al rentaplats en marxa).",checkout4:"El client és responsable de lliurar l'equipament en perfectes condicions.",checkout5:"Qualsevol desperfecte important cal notificar-ho durant l'estada per a valoració i reposició.",checkout6:"Desperfectes detectats a la sortida sense notificació prèvia s'enviaran per correu amb el cost.",info_title:"Informació pràctica",medical_title:"Atenció sanitària",medical_p:"En cas d'emergència mèdica, marqueu el 061 si necessiteu ambulància o atenció mèdica urgent.",medical_p2:"També podeu contactar amb el nostre Servei d'Atenció al Client: +34 659 93 34 34",hospital_title:"Hospital",hospital_p:"Hospital Mateu Orfila, Ronda Malbúger (direcció Sant Lluís), Maó.",hospital_p2:"General: +34 971 487 000 · Urgències: +34 971 487 030 (24h)",transport_title:"Transports",taxi_title:"Taxis",taxi_p:"Radio Taxi Menorca: +34 971 367 111 · Taxi Maó: +34 971 357 700",tourist_title:"Oficines d'informació turística",tourist_p:"Obertes generalment de 10:00h a 14:00h.",emergency_title:"Pla d'emergències i prevenció de riscos",evacuation_title:"Evacuacions",evacuation_p:"Quan arribeu a la propietat, familiaritzau-vos amb les sortides d'emergència.",evac1:"Atureu immediatament qualsevol activitat.",evac2:"Manteniu la calma per a una sortida ràpida i ordenada.",evac3:"No intenteu sortir amb objectes pesants ni torneu a cercar objectes oblidats.",evac4:"No torneu a entrar a l'edifici fins que les autoritats ho permetin.",evac5:"Aviseu els serveis d'emergència.",fire_title:"Risc d'incendi",fire_p:"La propietat està equipada amb extintors senyalitzats.",fire1:"Tapau-vos la boca amb una tovallola seca per evitar inhalar gasos tòxics.",fire2:"Desplaceu-vos gatejant per sota del nivell del fum.",fire3:"Toqueu les portes amb el dors de la mà — si estan calentes, cerqueu una altra sortida.",fire4:"Sortiu de l'edifici el més ràpidament possible.",fire5:"No torneu mai a entrar en un edifici en flames.",fire6:"Si se us encén la roba: aturau-vos, tireu-vos a terra i rodoleu.",forbidden_title:"Recordau que està terminantment prohibit",forbidden1:"Fumar dins la vivenda",forbidden2:"Encendre espelmes",appliances:"Manuals d'electrodomèstics",appliances_p:"Tots els manuals es troben a l'últim calaix de la cuina.",legal:"Informació legal",legal_p:"Aquest establiment disposa de Fulls de Reclamació oficials. Termini: 3 mesos.",electric:"Quadre elèctric",water:"Clau de pas",manager_title:"Responsable 3villas",manager_hours:"Atenció de 9:00 a 14:00 i de 16:00 a 19:00. Fora d'aquest horari, només emergències (incendis, inundacions o pèrdua de claus)."},
+es:{welcome_title:"Bienvenidos al",welcome_p:"¡Esperamos que disfruten y tengan muchos momentos de diversión durante sus vacaciones! Les agradecemos que mantengan el ruido al mínimo durante las horas nocturnas.",no_parties:"Las fiestas están absolutamente prohibidas durante toda la estancia.",environment:"Sobre el entorno",practical:"Información práctica",beach:"Playa más cercana",restaurant:"Restaurante más cercano",supermarket:"Supermercado más cercano",pharmacy:"Farmacia",airport:"Aeropuerto",hospital:"Hospital",keybox_code:"Código keybox",rules_title:"Reglamento de uso",rules_intro:"Nuestras propiedades 3 Villas están equipadas con materiales y equipos de calidad. Rogamos tengan en mente que esta casa está gestionada por 3 Villas.",services_title:"Servicios y equipamiento",wifi_section:"Internet / Wifi",wifi_p:"Conecte sus dispositivos a la red wifi mediante la contraseña indicada. Si se interrumpe, desenchufe el router 1 minuto y vuelva a conectar.",pool_title:"Piscina",pool_p:"Mantenimiento dos veces por semana. Menores de 14 años deben estar acompañados. Ducha obligatoria antes de bañarse. Prohibido saltar o tirarse de cabeza.",smoking_title:"Fumadores",smoking_p:"Prohibido fumar dentro de la casa. Se puede fumar en terrazas y jardines usando los ceniceros disponibles.",aircon_title:"Aire acondicionado",aircon_p:"Temperatura recomendada: 22°C. No dejar encendido al salir. No usar con ventanas abiertas.",cleaning_title:"Limpieza",cleaning_p:"Mantener muebles y propiedad en buen estado. En verano no dejar comida al aire más de 1 hora ni bolsas abiertas en terraza.",firstaid_title:"Botiquín",firstaid_p:"Todas las propiedades disponen de botiquín de primeros auxilios.",bbq_title:"Barbacoa",checkout_title:"Checkout – Salida",checkout_intro:"El día de su salida le agradeceríamos lo siguiente:",checkout1:"Tiren la basura en los contenedores de la calle. Hay un cargo extra de hasta 350€ en caso de suciedad excesiva.",checkout2:"Devuelvan todo el mobiliario y complementos a su ubicación original antes de entregar las llaves.",checkout3:"No dejen vajilla ni menaje sucio, salvo los elementos del desayuno del día de salida (dejar en el lavavajillas en marcha).",checkout4:"El cliente es responsable de entregar el equipamiento en perfectas condiciones.",checkout5:"Cualquier desperfecto importante debe notificarse durante la estancia para valoración y reposición.",checkout6:"Desperfectos detectados a la salida sin notificación previa se comunicarán por email con el coste.",info_title:"Información práctica",medical_title:"Atención sanitaria",medical_p:"En caso de emergencia médica, marque el 061 si necesita ambulancia o atención médica urgente.",medical_p2:"También puede llamar a nuestro Servicio de Atención al Cliente: +34 659 93 34 34",hospital_title:"Hospital",hospital_p:"Hospital Mateu Orfila, Ronda Malbúger (dirección Sant Lluís), Mahón.",hospital_p2:"General: +34 971 487 000 · Urgencias: +34 971 487 030 (24h)",transport_title:"Transportes",taxi_title:"Taxis",taxi_p:"Radio Taxi Menorca: +34 971 367 111 · Taxi Mahón: +34 971 357 700",tourist_title:"Oficinas de información turística",tourist_p:"Abiertas generalmente de 10:00h a 14:00h.",emergency_title:"Plan de emergencias y prevención de riesgos",evacuation_title:"Evacuaciones",evacuation_p:"Al llegar a su propiedad, familiarícese con las salidas de emergencia.",evac1:"Parar cualquier actividad inmediatamente.",evac2:"Actuar con calma para una evacuación rápida y ordenada.",evac3:"No salir con objetos pesados ni retroceder a buscar objetos olvidados.",evac4:"No regresar al edificio hasta que los profesionales lo indiquen.",evac5:"Avisar a las autoridades competentes de la emergencia.",fire_title:"Riesgo de incendio",fire_p:"La propiedad cuenta con extintores de incendios señalizados.",fire1:"Cubrirse la boca con una toalla seca para no inhalar gases tóxicos.",fire2:"Gatear por debajo del nivel del humo hacia un lugar seguro.",fire3:"Tocar cualquier puerta con el dorso — si está caliente, buscar otra salida.",fire4:"Salgan tan rápidamente como les sea posible.",fire5:"No volver nunca a entrar en un edificio en llamas.",fire6:"Si se les enciende la ropa: deténgase, tírese al suelo y ruede.",forbidden_title:"Recuerden que está terminantemente prohibido",forbidden1:"Fumar en el interior de la vivienda",forbidden2:"Encender velas",appliances:"Manuales de electrodomésticos",appliances_p:"Todos los manuales se encuentran en el último cajón de la cocina.",legal:"Información legal",legal_p:"Este establecimiento dispone de Hojas de Reclamación oficiales. Plazo: 3 meses.",electric:"Cuadro eléctrico",water:"Llave de paso",manager_title:"Responsable 3villas",manager_hours:"Atención de 9:00 a 14:00 y de 16:00 a 19:00. Fuera de este horario, solo emergencias (incendios, inundaciones o pérdida de llaves)."},
+en:{welcome_title:"Welcome to",welcome_p:"We hope you enjoy your stay and have many fun moments during your vacation! We kindly ask you to keep noise to a minimum during night hours.",no_parties:"Parties are strictly prohibited throughout the stay.",environment:"About the surroundings",practical:"Practical information",beach:"Nearest beach",restaurant:"Nearest restaurant",supermarket:"Nearest supermarket",pharmacy:"Pharmacy",airport:"Airport",hospital:"Hospital",keybox_code:"Keybox code",rules_title:"Rules of Use",rules_intro:"Our 3 Villas properties are equipped with quality materials and appliances. Please keep in mind that this house is managed by 3 Villas.",services_title:"Services and Equipment",wifi_section:"Internet / Wifi",wifi_p:"Simply connect your devices to the house wifi using the password provided. If the connection drops, unplug the router for 1 minute and reconnect.",pool_title:"Pool",pool_p:"Maintenance twice a week. Children under 14 must be supervised by an adult. Shower before swimming. Diving or jumping is strictly prohibited.",smoking_title:"Smoking",smoking_p:"Smoking is not permitted inside the house. You may smoke on terraces and in gardens using the provided ashtrays.",aircon_title:"Air conditioning",aircon_p:"Recommended temperature: 22°C. Do not leave it on when you go out. Do not use with windows open.",cleaning_title:"Cleaning",cleaning_p:"Please maintain furniture and property in good condition. In summer, do not leave food out for over 1 hour or trash bags open on the terrace.",firstaid_title:"First Aid Kit",firstaid_p:"All properties have a basic first aid kit.",bbq_title:"BBQ",checkout_title:"Checkout – Departure",checkout_intro:"On the day of your departure, we kindly ask you to:",checkout1:"Please take out the trash to the public bins on the main street. An extra charge of up to €350 may apply in case of excessive dirt.",checkout2:"Return all furniture and accessories to their original location before check-out.",checkout3:"Do not leave dirty dishes or kitchenware, except breakfast items on the day of departure (leave them in the dishwasher with the cycle running).",checkout4:"Guests are responsible for returning all equipment in perfect condition.",checkout5:"Any significant damage should be reported during the stay for assessment and replacement.",checkout6:"Unreported damages found at check-out will be communicated via email with a cost estimate.",info_title:"Practical Information",medical_title:"Medical Assistance",medical_p:"In case of a medical emergency, call 061 for an ambulance or urgent medical attention.",medical_p2:"You may also call our Customer Service at +34 659 93 34 34",hospital_title:"Hospital",hospital_p:"Hospital Mateu Orfila, Ronda Malbúger towards Sant Lluís, Mahón.",hospital_p2:"General: +34 971 487 000 · Emergency: +34 971 487 030 (24h)",transport_title:"Transportation",taxi_title:"Taxis",taxi_p:"Radio Taxi Menorca: +34 971 367 111 · Taxi Mahón: +34 971 357 700",tourist_title:"Tourist Information Offices",tourist_p:"Open generally from 10:00 to 14:00.",emergency_title:"Emergency Plan and Risk Prevention",evacuation_title:"Evacuation",evacuation_p:"Upon arrival, locate the emergency exits and familiarize yourself with the evacuation route.",evac1:"Stop any activity immediately.",evac2:"Remain calm and help others evacuate in an orderly manner.",evac3:"Do not carry heavy objects or return for forgotten items.",evac4:"Do not re-enter the building until cleared by professionals.",evac5:"Notify emergency services immediately.",fire_title:"Fire Risk",fire_p:"The property is equipped with clearly marked fire extinguishers.",fire1:"Cover your mouth with a dry towel to avoid inhaling toxic gases.",fire2:"Crawl low under the smoke to escape safely.",fire3:"Touch doors with the back of your hand — if hot, find another exit.",fire4:"Exit the building as quickly as possible.",fire5:"Do not re-enter a burning building.",fire6:"If your clothes catch fire: stop, drop, and roll to extinguish the flames.",forbidden_title:"It is strictly forbidden to",forbidden1:"Smoke indoors",forbidden2:"Light candles",appliances:"Appliance Manuals",appliances_p:"All appliance manuals are located in the last kitchen drawer.",legal:"Legal Information",legal_p:"This establishment has official Complaint Forms available. Deadline: 3 months.",electric:"Electrical Panel",water:"Water Shutoff Valve",manager_title:"3 Villas Responsible Contact",manager_hours:"Hours: 9:00 to 14:00 and 16:00 to 19:00. Outside these hours, contact is only for emergencies (fire, flooding, or lost keys)."},
+fr:{welcome_title:"Bienvenue à",welcome_p:"Nous espérons que vous passerez un agréable séjour ! Nous vous serions reconnaissants de bien vouloir limiter le bruit pendant les heures nocturnes.",no_parties:"Les fêtes sont strictement interdites pendant toute la durée du séjour.",environment:"À propos de l'environnement",practical:"Informations pratiques",beach:"Plage la plus proche",restaurant:"Restaurant le plus proche",supermarket:"Supermarché le plus proche",pharmacy:"Pharmacie",airport:"Aéroport",hospital:"Hôpital",keybox_code:"Code keybox",rules_title:"Règlement d'utilisation",rules_intro:"Nos propriétés 3 Villas sont équipées de matériaux et d'équipements de qualité. Nous vous prions de traiter les installations avec le plus grand respect.",services_title:"Services et équipements",wifi_section:"Internet / Wifi",wifi_p:"Connectez vos appareils au réseau wifi à l'aide du mot de passe fourni. Si la connexion est interrompue, débranchez le routeur 1 minute puis rebranchez-le.",pool_title:"Piscine",pool_p:"Entretien deux fois par semaine. Les enfants de moins de 14 ans doivent être accompagnés. Douche obligatoire avant d'entrer. Plonger ou sauter est strictement interdit.",smoking_title:"Fumeurs",smoking_p:"Il est interdit de fumer à l'intérieur. Il est permis de fumer sur les terrasses et jardins en utilisant les cendriers prévus.",aircon_title:"Climatisation",aircon_p:"Température recommandée : 22°C. Ne pas laisser allumée en sortant. Ne pas utiliser avec les fenêtres ouvertes.",cleaning_title:"Nettoyage",cleaning_p:"Veuillez maintenir les meubles et la propriété en bon état. En été, ne laissez pas la nourriture à l'air plus d'1 heure ni les sacs ouverts sur la terrasse.",firstaid_title:"Trousse de premiers secours",firstaid_p:"Toutes les propriétés disposent d'une trousse de premiers secours.",bbq_title:"Barbecue",checkout_title:"Checkout – Départ",checkout_intro:"Le jour de votre départ, nous vous serions reconnaissants de :",checkout1:"Jeter les déchets dans les conteneurs de la rue. Un supplément jusqu'à 350€ peut être appliqué en cas de saleté excessive.",checkout2:"Remettre tous les meubles et accessoires à leur emplacement d'origine avant de rendre les clés.",checkout3:"Ne pas laisser de vaisselle sale, sauf les éléments du petit-déjeuner du jour du départ (les laisser dans le lave-vaisselle en marche).",checkout4:"Le client est responsable de restituer tous les équipements en parfait état.",checkout5:"Tout dommage important doit être signalé pendant le séjour pour évaluation et remplacement.",checkout6:"Les dommages détectés au départ sans signalement préalable seront communiqués par email avec le coût.",info_title:"Informations pratiques",medical_title:"Assistance médicale",medical_p:"En cas d'urgence médicale, composez le 061 pour une ambulance ou une assistance médicale urgente.",medical_p2:"Vous pouvez également contacter notre Service Client : +34 659 93 34 34",hospital_title:"Hôpital",hospital_p:"Hôpital Mateu Orfila, Ronda Malbúger direction Sant Lluís, Mahón.",hospital_p2:"Général : +34 971 487 000 · Urgences : +34 971 487 030 (24h)",transport_title:"Transports",taxi_title:"Taxis",taxi_p:"Radio Taxi Menorca : +34 971 367 111 · Taxi Mahón : +34 971 357 700",tourist_title:"Offices de tourisme",tourist_p:"Ouverts généralement de 10h00 à 14h00.",emergency_title:"Plan d'urgence et prévention des risques",evacuation_title:"Évacuation",evacuation_p:"À votre arrivée, repérez les issues de secours et familiarisez-vous avec le plan d'évacuation.",evac1:"Arrêtez immédiatement toute activité.",evac2:"Gardez votre calme pour une évacuation rapide et ordonnée.",evac3:"Ne transportez pas d'objets lourds et ne retournez pas chercher des objets oubliés.",evac4:"Ne retournez pas dans le bâtiment tant que les professionnels ne l'ont pas autorisé.",evac5:"Alertez immédiatement les services d'urgence.",fire_title:"Risque d'incendie",fire_p:"La propriété est équipée d'extincteurs clairement signalés.",fire1:"Couvrez-vous la bouche avec une serviette sèche pour éviter d'inhaler les gaz toxiques.",fire2:"Déplacez-vous en rampant sous la fumée.",fire3:"Touchez les portes avec le dos de la main — si chaudes, cherchez une autre sortie.",fire4:"Sortez du bâtiment le plus rapidement possible.",fire5:"Ne retournez jamais dans un bâtiment en feu.",fire6:"Si vos vêtements prennent feu : arrêtez-vous, jetez-vous au sol et roulez.",forbidden_title:"Il est strictement interdit de",forbidden1:"Fumer à l'intérieur",forbidden2:"Allumer des bougies",appliances:"Manuels d'utilisation des appareils",appliances_p:"Tous les manuels se trouvent dans le dernier tiroir de la cuisine.",legal:"Informations légales",legal_p:"Cet établissement met à disposition des formulaires officiels de réclamation. Délai : 3 mois.",electric:"Tableau électrique",water:"Robinet d'arrêt d'eau",manager_title:"Responsable 3 Villas",manager_hours:"Horaires : de 9h00 à 14h00 et de 16h00 à 19h00. En dehors de ces horaires, uniquement pour les urgences (incendies, inondations ou perte de clés)."},
+de:{welcome_title:"Willkommen im",welcome_p:"Wir hoffen, dass Sie einen angenehmen Aufenthalt haben! Wir bitten Sie, während der Nachtstunden die Lautstärke auf ein Minimum zu beschränken.",no_parties:"Partys sind während des gesamten Aufenthalts strengstens untersagt.",environment:"Zur Umgebung",practical:"Praktische Informationen",beach:"Nächster Strand",restaurant:"Nächstgelegenes Restaurant",supermarket:"Nächster Supermarkt",pharmacy:"Apotheke",airport:"Flughafen",hospital:"Krankenhaus",keybox_code:"Schlüsselkasten-Code",rules_title:"Nutzungsordnung",rules_intro:"Unsere 3 Villas-Unterkünfte sind mit hochwertigen Materialien versehen. Bitte behandeln Sie die Einrichtungen mit größtem Respekt.",services_title:"Dienstleistungen und Ausstattung",wifi_section:"Internet / WLAN",wifi_p:"Verbinden Sie Ihre Geräte mit dem WLAN-Netzwerk über das bereitgestellte Passwort. Bei Verbindungsabbruch: Router 1 Minute ausstecken und wieder anschließen.",pool_title:"Schwimmbad",pool_p:"Wartung zweimal pro Woche. Kinder unter 14 Jahren müssen begleitet werden. Duschen vor dem Baden Pflicht. Springen oder Kopfspringen ist strengstens verboten.",smoking_title:"Rauchen",smoking_p:"Rauchen im Inneren des Hauses verboten. Auf Terrassen und in Gärten mit den vorgesehenen Aschenbechern erlaubt.",aircon_title:"Klimaanlage",aircon_p:"Empfohlene Temperatur: 22°C. Nicht eingeschaltet lassen beim Verlassen. Nicht mit offenen Fenstern verwenden.",cleaning_title:"Reinigung",cleaning_p:"Bitte halten Sie Möbel und Unterkunft in gutem Zustand. Im Sommer keine Speisen länger als 1 Stunde offen stehen lassen.",firstaid_title:"Erste-Hilfe-Kasten",firstaid_p:"Alle Unterkünfte verfügen über einen Erste-Hilfe-Kasten.",bbq_title:"Grill",checkout_title:"Checkout – Abreise",checkout_intro:"Am Tag Ihrer Abreise bitten wir Sie:",checkout1:"Werfen Sie Ihren Müll in die öffentlichen Container auf der Hauptstraße. Bei übermäßiger Verschmutzung kann eine Zusatzgebühr von bis zu 350€ berechnet werden.",checkout2:"Bringen Sie alle Möbel und Accessoires vor der Schlüsselrückgabe an ihren ursprünglichen Platz zurück.",checkout3:"Kein schmutziges Geschirr hinterlassen, außer dem Frühstücksgeschirr am Abreisetag (in den Geschirrspüler stellen).",checkout4:"Der Gast ist für die Rückgabe aller Einrichtungsgegenstände in einwandfreiem Zustand verantwortlich.",checkout5:"Erhebliche Schäden müssen während des Aufenthalts gemeldet werden.",checkout6:"Bei der Abreise festgestellte Schäden ohne vorherige Meldung werden per E-Mail mitgeteilt.",info_title:"Praktische Informationen",medical_title:"Medizinische Hilfe",medical_p:"Im Notfall wählen Sie 061 für einen Krankenwagen oder medizinische Soforthilfe.",medical_p2:"Sie können auch unseren Kundendienst kontaktieren: +34 659 93 34 34",hospital_title:"Krankenhaus",hospital_p:"Hospital Mateu Orfila, Ronda Malbúger Richtung Sant Lluís, Mahón.",hospital_p2:"Allgemein: +34 971 487 000 · Notfall: +34 971 487 030 (24h)",transport_title:"Transport",taxi_title:"Taxis",taxi_p:"Radio Taxi Menorca: +34 971 367 111 · Taxi Mahón: +34 971 357 700",tourist_title:"Touristeninformationen",tourist_p:"Generell geöffnet von 10:00 bis 14:00 Uhr.",emergency_title:"Notfallplan und Risikoprävention",evacuation_title:"Evakuierung",evacuation_p:"Machen Sie sich bei Ihrer Ankunft mit den Notausgängen vertraut.",evac1:"Beenden Sie sofort jede Aktivität.",evac2:"Bleiben Sie ruhig für eine geordnete Evakuierung.",evac3:"Keine schweren Gegenstände mitnehmen, nicht zurückkehren für vergessene Sachen.",evac4:"Das Gebäude erst wieder betreten, wenn dies von Fachpersonal freigegeben wurde.",evac5:"Rettungskräfte sofort alarmieren.",fire_title:"Brandgefahr",fire_p:"Die Unterkunft ist mit deutlich gekennzeichneten Feuerlöschern ausgestattet.",fire1:"Mund und Nase mit einem trockenen Tuch bedecken.",fire2:"Unter dem Rauch hindurch kriechen.",fire3:"Türen mit dem Handrücken anfassen — falls heiß, anderen Ausgang suchen.",fire4:"Das Gebäude so schnell wie möglich verlassen.",fire5:"Niemals in ein brennendes Gebäude zurückkehren.",fire6:"Wenn Kleidung Feuer fängt: stehen bleiben, auf den Boden fallen und rollen.",forbidden_title:"Es ist strengstens verboten",forbidden1:"Im Haus zu rauchen",forbidden2:"Kerzen anzuzünden",appliances:"Bedienungsanleitungen",appliances_p:"Alle Bedienungsanleitungen befinden sich in der untersten Schublade der Küche.",legal:"Rechtliche Hinweise",legal_p:"In dieser Unterkunft stehen offizielle Beschwerdeformulare zur Verfügung. Frist: 3 Monate.",electric:"Sicherungskasten",water:"Hauptwasserhahn",manager_title:"Verantwortlicher von 3 Villas",manager_hours:"Erreichbarkeit: 09:00–14:00 und 16:00–19:00. Außerhalb nur für Notfälle (Brände, Überschwemmungen oder verlorene Schlüssel)."}
+};
+
+const RULES={
+ca:["Mantenir una política mediambiental responsable: No llenceu fems ni al jardí ni a espais naturals.","Fer un ús adequat dels equips que ofereix la propietat (aire condicionat, aigua calenta, electricitat, etc.)","No deixar llums enceses ni aparells d'aire condicionat en marxa quan la casa estigui desocupada.","Està terminantment prohibit fumar a l'interior de la vivenda, així com encendre espelmes.","Check-in a les 16h i check-out a les 10h. Canvis sols amb permís escrit a bookings@3villas.com","Mantenir la casa i les instal·lacions netes en tot moment per evitar deterioraments.","No llençar res per l'inodor excepte paper higiènic.","No causar danys per ús negligent (parets, portes, finestres, jardí…). En cas de desperfectes, avisar l'equip.","No es permeten festes ni esdeveniments sense permís previ, clar i per escrit.","No es permet superar el nombre de persones autoritzades sense acord previ i escrit.","Prendre totes les mesures necessàries per protegir els objectes personals. 3 Villas no es fa responsable.","No es permeten mascotes, excepte si s'ha autoritzat prèviament per escrit amb dipòsit addicional.","Permetre l'accés del personal de manteniment en qualsevol moment raonable de l'estada."],
+es:["Conservar una política medioambiental responsable: No tiren basura ni en los jardines ni en los espacios naturales.","Cuiden el uso de los equipamientos que la propiedad ofrece (aire acondicionado, agua caliente, electricidad, etc.)","No dejen luces encendidas o aparatos de aire en funcionamiento cuando no esté ocupada la casa.","Está terminantemente prohibido fumar en el interior de la vivienda, así como encender velas.","El check-in es a las 16h y el check-out a las 10h. Cambios solo con permiso escrito a bookings@3villas.com","Mantener la casa y las instalaciones limpias en todo momento para evitar su deterioro.","No se puede tirar nada por el inodoro, excepto papel higiénico.","No causar ningún daño por uso negligente (paredes, puertas, ventanas, jardín…). En caso de desperfectos, avisar cuanto antes.","No se permiten fiestas ni eventos sin permiso previo, claro y por escrito.","No se permite que la propiedad sea ocupada por más personas de las autorizadas sin acuerdo escrito.","Adoptar todas las medidas para salvaguardar sus propiedades personales. 3 Villas no se hace responsable.","No se admiten mascotas, salvo autorización previa por escrito con depósito adicional.","Permita el acceso al personal de mantenimiento en cualquier momento razonable durante su estancia."],
+en:["Maintain an environmentally responsible policy: Do not litter in the gardens or natural areas.","Use the property's equipment properly (air conditioning, hot water, electricity, etc.)","Do not leave lights or air conditioning running when the house is unoccupied.","Smoking and lighting candles inside the property is strictly prohibited.","Check-in is at 16:00 and check-out at 10:00. Changes only with written permission at bookings@3villas.com","Keep the house and facilities clean at all times to prevent deterioration.","Do not flush anything down the toilet except toilet paper.","Avoid any damage due to negligent use (walls, doors, windows, garden). In case of damage, notify our team.","Parties and events are not allowed without prior written permission.","The property may not be occupied by more people than authorized without written agreement.","Take all necessary precautions to safeguard your personal belongings. 3 Villas is not responsible.","Pets are not allowed unless prior written authorization has been given with an additional security deposit.","Allow access to maintenance personnel at any reasonable time during your stay."],
+fr:["Maintenir une politique environnementale responsable : ne jetez pas de déchets dans le jardin ou les espaces naturels.","Utilisez les équipements de la propriété de manière appropriée (climatisation, eau chaude, électricité, etc.)","Ne laissez pas les lumières ni la climatisation allumées lorsque la maison est vide.","Il est strictement interdit de fumer à l'intérieur, ainsi que d'allumer des bougies.","Check-in à 16h00 et check-out à 10h00. Changements uniquement avec autorisation écrite à bookings@3villas.com","Maintenez la maison et ses installations propres à tout moment.","Ne jetez rien dans les toilettes à l'exception du papier hygiénique.","N'endommagez pas les murs, portes, fenêtres ou le jardin. En cas de dommage, informez notre équipe.","Les fêtes et événements sont interdits sans autorisation écrite préalable.","Le nombre d'occupants ne peut dépasser celui autorisé sans accord écrit préalable.","Protégez vos objets de valeur. 3 Villas n'est pas responsable des pertes ou vols.","Les animaux ne sont pas autorisés, sauf autorisation écrite avec dépôt de garantie.","Autorisez l'accès au personnel d'entretien pour réparations, jardin et piscine."],
+de:["Pflegen Sie einen verantwortungsvollen Umgang mit der Umwelt: Werfen Sie keinen Müll in den Garten.","Verwenden Sie die Ausstattung des Hauses sachgerecht (Klimaanlage, Warmwasser, Strom usw.)","Lassen Sie keine Lichter oder Klimaanlage eingeschaltet, wenn das Haus unbeaufsichtigt ist.","Es ist strengstens verboten, im Inneren des Hauses zu rauchen oder Kerzen anzuzünden.","Check-in um 16:00 Uhr, Check-out um 10:00 Uhr. Änderungen nur schriftlich an bookings@3villas.com","Halten Sie das Haus und seine Einrichtungen jederzeit sauber.","Werfen Sie nichts außer Toilettenpapier in die Toilette.","Beschädigen Sie keine Wände, Türen, Fenster oder Gartenelemente. Melden Sie Schäden sofort.","Partys und Veranstaltungen sind ohne vorherige schriftliche Genehmigung verboten.","Die Anzahl der Gäste darf ohne vorherige schriftliche Zustimmung nicht überschritten werden.","Bewahren Sie Ihre Wertsachen sicher auf. 3 Villas übernimmt keine Haftung.","Haustiere sind nicht erlaubt, außer mit vorheriger schriftlicher Genehmigung und Kaution.","Ermöglichen Sie dem Wartungspersonal den Zugang zu jeder zumutbaren Zeit."]
+};
 
 function lbar(activeLang){
   const ls=getLangs();
-  return"<div class=\"lbar\">"+ls.map(l=>"<div class=\"li"+(l===activeLang?" act":"")+"\" >"+LANG_LABELS[l]+"</div>").join("")+"</div>";
+  return'<div class="lbar">'+ls.map(l=>'<div class="li'+(l===activeLang?' act':'')+'" >'+LANG_LABELS[l]+'</div>').join('')+'</div>';
 }
-
 function page(lang,content,num){
-  return"<div class=\"pg\">"+lbar(lang)+"<div class=\"pc\">"+content+"<div class=\"pn\">"+num+"</div></div></div>";
+  return'<div class="pg">'+lbar(lang)+'<div class="pc">'+content+'<div class="pn">'+num+'</div></div></div>';
 }
-
-function bl(text){return"<div class=\"bl\"><span class=\"ar\">›</span><span>"+text+"</span></div>";}
-function rl(n,text){return"<div class=\"rl\"><div class=\"rn\">"+n+"</div><div>"+text+"</div></div>";}
+function bl(text){return'<div class="bl"><span class="ar">›</span><span>'+text+'</span></div>';}
+function rl(n,text){return'<div class="rl"><div class="rn">'+n+'</div><div>'+text+'</div></div>';}
 
 function renderLang(d,lang){
   const t=T[lang];
   const rules=RULES[lang];
-  const farm=d.farm?d.farm.split("\n"):[];
-  const farmN=farm[0]||"";
-  
-  // P1 portada
-  const p1="<div class=\"pg pg-cover\"><div class=\"cv-h\">"+
-    (d.nombre?d.nombre.split(" ").slice(0,3).join(" "):"Propiedad")+"<span class=\"cv-dot\">.</span></div>"+
-    (d.photo?"<img class=\"cv-img\" src=\""+d.photo+"\" alt=\""+d.nombre+"\" onerror=\"this.style.display='none';this.nextElementSibling.style.display='flex'\">":"")+
-    "<div class=\"cv-ph\" "+(d.photo?"style=\"display:none\"":"")+">📷 Fotografía</div>"+
-    "<div class=\"cv-bot\"><div class=\"qr-ph\">QR<br>+info</div>"+
-    "<img src=\"data:image/png;base64,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\" alt=\"3villas\" style=\"height:38px\"></div></div>";
+  const farm=d.farm?d.farm.split('\n'):[];
+  const farmN=farm[0]||'';
 
-  // P2 datos rápidos
-  const p2html="<div class=\"ig\"><div class=\"ib\"><h2>"+t.appliances+"</h2><p>"+t.appliances_p+"</p></div>"+
-    "<div class=\"ib\"><h2>"+t.legal+"</h2><p>"+t.legal_p+"</p></div>"+
-    "<div class=\"ib\"><h2>"+t.electric+"</h2><p>"+(d.cuadro||"—")+"</p></div>"+
-    "<div class=\"ib\"><h2>"+t.water+"</h2><p>"+(d.llave||"—")+"</p></div></div>"+
-    "<div class=\"wifi-wrap\"><div class=\"wifi-t\">Wifi</div><div class=\"wifi-box\">"+
-    "<div class=\"wifi-row\">Nombre: <span class=\"wifi-val\">"+(d.wifi_n||"—")+"</span></div>"+
-    "<div class=\"wifi-row\" style=\"margin-top:5px\">Contraseña: <span class=\"wifi-val\">"+(d.wifi_p||"—")+"</span></div></div></div>"+
-    "<div class=\"mgr-t\">"+t.manager_title+"</div>"+
-    "<div class=\"mgr-card\"><div class=\"mgr-av\">"+(d.manager?d.manager[0]:"?")+"</div>"+
-    "<div class=\"mgr-name\">"+(d.manager||"Villa Manager")+"</div>"+
-    "<div class=\"mgr-role\">Vila Manager</div>"+
-    "<div class=\"mgr-hrs\">"+t.manager_hours+"</div>"+
-    "<div class=\"mgr-phone\">+34 644 84 85 43</div></div>";
-  const p2=page(lang,p2html,2);
+  const p1='<div class="pg pg-cover">'+
+    '<div class="cv-h">'+(d.nombre||d.pid)+'<span class="cv-dot">.</span></div>'+
+    (d.photo?'<img class="cv-img" src="'+d.photo+'" alt="'+d.nombre+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">':'')+
+    '<div class="cv-ph" '+(d.photo?'style="display:none"':'')+'>📷 Fotografía de la propiedad</div>'+
+    '<div class="cv-bot"><div class="qr-ph">QR<br>+info</div>'+
+    '<img src="'+LOGO_N+'" alt="3villas" style="height:36px"></div></div>';
 
-  // P3 bienvenida
-  const p3html="<div class=\"two\"><div>"+
-    "<h1>"+t.welcome_title+"<br><span style=\"color:#D32E2E\">"+(d.nombre||d.pid)+"</span></h1>"+
-    "<p>"+t.welcome_p+"</p><p><strong>"+t.no_parties+"</strong></p>"+
-    "<h2 style=\"margin-top:12px\">"+t.environment+"</h2>"+
-    (d.views?bl(d.views):"")+
-    (d.bus?bl(d.bus):"")+
-    (d.parking?bl(d.parking.split("\n")[0]):"")+
-    "</div><div><h2>"+t.practical+"</h2>"+
-    (d.playa?bl("<strong>"+t.beach+":</strong> "+d.playa):"")+
-    (d.rest?bl("<strong>"+t.restaurant+":</strong> "+d.rest):"")+
-    (d.super?bl("<strong>"+t.supermarket+":</strong> "+d.super):"")+
-    (farmN?bl("<strong>"+t.pharmacy+":</strong> "+farmN):"")+
-    (d.aero?bl("<strong>"+t.airport+":</strong> "+d.aero):"")+
-    bl("<strong>"+t.hospital+":</strong> Hospital Mateu Orfila")+
-    (d.keybox?bl("<strong>"+t.keybox_code+":</strong> <strong>"+d.keybox+"</strong>"):"")+
-    "<div class=\"mbox\">📍 "+(d.address||"Menorca")+"</div></div></div>";
-  const p3=page(lang,p3html,3);
+  const p2=page(lang,
+    '<div class="ig">'+
+    '<div class="ib"><h2>'+t.appliances+'</h2><p>'+t.appliances_p+'</p></div>'+
+    '<div class="ib"><h2>'+t.legal+'</h2><p>'+t.legal_p+'</p></div>'+
+    '<div class="ib"><h2>'+t.electric+'</h2><p>'+(d.cuadro||'—')+'</p></div>'+
+    '<div class="ib"><h2>'+t.water+'</h2><p>'+(d.llave||'—')+'</p></div></div>'+
+    '<div class="wifi-wrap"><div class="wifi-t">Wifi</div>'+
+    '<div class="wifi-box">'+
+    '<div class="wifi-row">Nombre: <span class="wifi-val">'+(d.wifi_n||'—')+'</span></div>'+
+    '<div class="wifi-row" style="margin-top:5px">Contraseña: <span class="wifi-val">'+(d.wifi_p||'—')+'</span></div></div></div>'+
+    '<div class="mgr-t">'+t.manager_title+'</div>'+
+    '<div class="mgr-card"><div class="mgr-av">'+(d.manager?d.manager[0]:'?')+'</div>'+
+    '<div class="mgr-name">'+(d.manager||'Villa Manager')+'</div>'+
+    '<div class="mgr-role">Vila Manager</div>'+
+    '<div class="mgr-hrs">'+t.manager_hours+'</div>'+
+    '<div class="mgr-phone">+34 644 84 85 43</div></div>',2);
 
-  // P4 reglamento
-  const p4html="<h1>"+t.rules_title+"</h1><p style=\"margin-bottom:10px\">"+t.rules_intro+"</p>"+
-    "<div class=\"two\"><div>"+rules.slice(0,7).map((r,i)=>rl(i+1,r)).join("")+"</div>"+
-    "<div>"+rules.slice(7).map((r,i)=>rl(i+8,r)).join("")+"</div></div>";
-  const p4=page(lang,p4html,4);
+  const p3=page(lang,
+    '<div class="two"><div>'+
+    '<h1>'+t.welcome_title+'<br><span style="color:#D32E2E">'+(d.nombre||d.pid)+'</span></h1>'+
+    '<p>'+t.welcome_p+'</p><p><strong>'+t.no_parties+'</strong></p>'+
+    '<h2 style="margin-top:12px">'+t.environment+'</h2>'+
+    (d.views?bl(d.views):'')+
+    (d.bus?bl(d.bus):'')+
+    (d.parking?bl(d.parking.split('\n')[0]):'')+
+    '</div><div><h2>'+t.practical+'</h2>'+
+    (d.playa?bl('<strong>'+t.beach+':</strong> '+d.playa):'')+
+    (d.rest?bl('<strong>'+t.restaurant+':</strong> '+d.rest):'')+
+    (d.super?bl('<strong>'+t.supermarket+':</strong> '+d.super):'')+
+    (farmN?bl('<strong>'+t.pharmacy+':</strong> '+farmN):'')+
+    (d.aero?bl('<strong>'+t.airport+':</strong> '+d.aero):'')+
+    bl('<strong>'+t.hospital+':</strong> Hospital Mateu Orfila')+
+    (d.keybox?bl('<strong>'+t.keybox_code+':</strong> <strong>'+d.keybox+'</strong>'):'')+
+    '<div class="mbox">📍 '+(d.address||'Menorca')+'</div></div></div>',3);
 
-  // P5 servicios
-  const p5html="<h1>"+t.services_title+"</h1><div class=\"two\"><div>"+
-    "<h2>"+t.wifi_section+"</h2><p>"+t.wifi_p+"</p><div class=\"sep\"></div>"+
-    "<h2>"+t.pool_title+"</h2><p>"+t.pool_p+"</p>"+(d.piscina?"<p><em>"+d.piscina+"</em></p>":"")+
-    "<div class=\"sep\"></div><h2>"+t.smoking_title+"</h2><p>"+t.smoking_p+"</p>"+
-    "</div><div>"+
-    "<h2>"+t.aircon_title+"</h2><p>"+t.aircon_p+"</p>"+(d.aircon?"<p><em>"+d.aircon+"</em></p>":"")+
-    "<div class=\"sep\"></div><h2>"+t.cleaning_title+"</h2><p>"+t.cleaning_p+"</p>"+
-    "<div class=\"sep\"></div><h2>"+t.firstaid_title+"</h2><p>"+t.firstaid_p+(d.botiquin?" Ubicación: "+d.botiquin+".":"")+"</p>"+
-    "<div class=\"sep\"></div><h2>"+t.bbq_title+"</h2><p>"+(d.bbq||"—")+"</p>"+
-    "</div></div>";
-  const p5=page(lang,p5html,5);
+  const p4=page(lang,
+    '<h1>'+t.rules_title+'</h1>'+
+    '<p style="margin-bottom:10px">'+t.rules_intro+'</p>'+
+    '<div class="two"><div>'+rules.slice(0,7).map((r,i)=>rl(i+1,r)).join('')+'</div>'+
+    '<div>'+rules.slice(7).map((r,i)=>rl(i+8,r)).join('')+'</div></div>',4);
 
-  // P6 checkout
-  const p6html="<h1>"+t.checkout_title+"</h1><p style=\"margin-bottom:8px\">"+t.checkout_intro+"</p>"+
+  const p5=page(lang,
+    '<h1>'+t.services_title+'</h1><div class="two"><div>'+
+    '<h2>'+t.wifi_section+'</h2><p>'+t.wifi_p+'</p><div class="sep"></div>'+
+    '<h2>'+t.pool_title+'</h2><p>'+t.pool_p+'</p>'+(d.piscina?'<p><em>'+d.piscina+'</em></p>':'')+
+    '<div class="sep"></div><h2>'+t.smoking_title+'</h2><p>'+t.smoking_p+'</p>'+
+    '</div><div>'+
+    '<h2>'+t.aircon_title+'</h2><p>'+t.aircon_p+'</p>'+(d.aircon?'<p><em>'+d.aircon+'</em></p>':'')+
+    '<div class="sep"></div><h2>'+t.cleaning_title+'</h2><p>'+t.cleaning_p+'</p>'+
+    '<div class="sep"></div><h2>'+t.firstaid_title+'</h2><p>'+t.firstaid_p+(d.botiquin?' '+d.botiquin+'.':'')+'</p>'+
+    '<div class="sep"></div><h2>'+t.bbq_title+'</h2><p>'+(d.bbq||'—')+'</p></div></div>',5);
+
+  const p6=page(lang,
+    '<h1>'+t.checkout_title+'</h1><p style="margin-bottom:8px">'+t.checkout_intro+'</p>'+
     bl(t.checkout1)+bl(t.checkout2)+bl(t.checkout3)+bl(t.checkout4)+bl(t.checkout5)+bl(t.checkout6)+
-    (d.keybox?bl(t.keybox_code+": <strong>"+d.keybox+"</strong>"):"");
-  const p6=page(lang,p6html,6);
+    (d.keybox?bl(t.keybox_code+': <strong>'+d.keybox+'</strong>'):'')+
+    (d.keybox?bl(lang==='ca'?'Deixau la clau al keybox en sortir':lang==='en'?'Leave the key in the keybox when leaving':lang==='fr'?'Laissez la clé dans le keybox en quittant':lang==='de'?'Schlüssel beim Verlassen in den Schlüsselkasten legen':'Dejen la llave en el keybox al salir de la propiedad.'):'')+
+    '',6);
 
-  // P7 info práctica
-  const p7html="<h1>"+t.info_title+"</h1><div class=\"two\"><div>"+
-    "<h2>"+t.medical_title+"</h2><p>"+t.medical_p+"</p><p>"+t.medical_p2+"</p>"+
-    "<h2 style=\"margin-top:10px\">"+t.hospital_title+"</h2><p>"+t.hospital_p+"</p><p>"+t.hospital_p2+"</p>"+
-    "<h2 style=\"margin-top:10px\">"+t.transport_title+"</h2>"+(d.bus?"<p>"+d.bus+"</p>":"<p>Menorca dispone de un servicio de autobús eficiente. Estación principal en Mahón.</p>")+
-    "<h2 style=\"margin-top:10px\">"+t.taxi_title+"</h2><p>"+t.taxi_p+"</p>"+
-    "</div><div>"+
-    "<h2>"+t.tourist_title+"</h2><p>"+t.tourist_p+"</p>"+
-    bl("Aeropuerto: <strong>+34 971 157 115</strong>")+
-    bl("Estación Mahón: <strong>+34 971 363 790</strong>")+
-    bl("Puerto Mahón: <strong>+34 971 355 952</strong>")+
-    bl("Ciutadella: <strong>+34 971 382 693</strong>")+
-    (d.listing?"<div style=\"margin-top:12px\"><h2>Listing</h2><p style=\"color:#2563EB;font-size:8pt;word-break:break-all\">"+d.listing+"</p></div>":"")+
-    "</div></div>";
-  const p7=page(lang,p7html,7);
+  const p7=page(lang,
+    '<h1>'+t.info_title+'</h1><div class="two"><div>'+
+    '<h2>'+t.medical_title+'</h2><p>'+t.medical_p+'</p><p>'+t.medical_p2+'</p>'+
+    '<h2 style="margin-top:10px">'+t.hospital_title+'</h2><p>'+t.hospital_p+'</p><p>'+t.hospital_p2+'</p>'+
+    '<h2 style="margin-top:10px">'+t.transport_title+'</h2>'+(d.bus?'<p>'+d.bus+'</p>':'<p>Menorca dispone de un servicio de autobús eficiente. Estación principal en Mahón (C/ Josep Anselm Clavé).</p>')+
+    '<p style="margin-top:4px">www.tmsa.es · +34 971 360 475</p>'+
+    '<h2 style="margin-top:10px">'+t.taxi_title+'</h2><p>'+t.taxi_p+'</p>'+
+    '</div><div>'+
+    '<h2>'+t.tourist_title+'</h2><p>'+t.tourist_p+'</p>'+
+    bl('Aeropuerto: <strong>+34 971 157 115</strong>')+
+    bl('Estación Mahón: <strong>+34 971 363 790</strong>')+
+    bl('Puerto Mahón: <strong>+34 971 355 952</strong>')+
+    bl('Ciutadella: <strong>+34 971 382 693</strong>')+
+    (d.listing?'<div style="margin-top:12px"><h2>Listing</h2><p style="color:#2563EB;font-size:8pt;word-break:break-all">'+d.listing+'</p></div>':'')+
+    '</div></div>',7);
 
-  // P8 emergencias
-  const p8html="<h1>"+t.emergency_title+"</h1><div class=\"two\"><div>"+
-    "<h2>"+t.evacuation_title+"</h2><p>"+t.evacuation_p+"</p>"+
+  const p8=page(lang,
+    '<h1>'+t.emergency_title+'</h1><div class="two"><div>'+
+    '<h2>'+t.evacuation_title+'</h2><p>'+t.evacuation_p+'</p>'+
     bl(t.evac1)+bl(t.evac2)+bl(t.evac3)+bl(t.evac4)+bl(t.evac5)+
-    "<div class=\"sep\"></div>"+
-    "<h2>"+t.fire_title+"</h2><p>"+t.fire_p+(d.extintores?" "+d.extintores:"")+"</p>"+
+    '<div class="sep"></div>'+
+    '<h2>'+t.fire_title+'</h2><p>'+t.fire_p+(d.extintores?' '+d.extintores:'')+'</p>'+
     bl(t.fire1)+bl(t.fire2)+bl(t.fire3)+bl(t.fire4)+bl(t.fire5)+bl(t.fire6)+
-    "</div><div>"+
-    "<div class=\"ebox\"><div class=\"el\">"+("TELÉFONO DE EMERGENCIAS")+"</div><div class=\"en\">112</div></div>"+
-    "<div class=\"hbox\"><div class=\"hl\">3 Villas Atención al Cliente</div><div class=\"hv\">+34 659 93 34 34</div></div>"+
-    "<div class=\"hbox\"><div class=\"hl\">Villa Manager · "+(d.manager||"")+"</div><div class=\"hv\">+34 644 84 85 43</div></div>"+
-    "<h2 style=\"margin-top:12px\">"+t.forbidden_title+"</h2>"+
-    "<div class=\"bl\"><span class=\"ar\" style=\"color:#D32E2E\">✗</span><span>"+t.forbidden1+"</span></div>"+
-    "<div class=\"bl\"><span class=\"ar\" style=\"color:#D32E2E\">✗</span><span>"+t.forbidden2+"</span></div>"+
-    "<div class=\"sep\"></div>"+
-    "<h2>Hospital Mateu Orfila</h2>"+
-    "<p>Ronda Malbúger → Sant Lluís</p>"+
-    "<p>General: <strong>+34 971 487 000</strong></p>"+
-    "<p>Urgencias: <strong>+34 971 487 030</strong></p>"+
-    "<img src=\"data:image/png;base64,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\" alt=\"3villas\" style=\"height:24px;margin-top:18px;opacity:.6\">"+
-    "</div></div>";
-  const p8=page(lang,p8html,8);
+    '</div><div>'+
+    '<div class="ebox"><div class="el">TELÉFONO DE EMERGENCIAS</div><div class="en">112</div></div>'+
+    '<div class="hbox"><div class="hl">3 Villas Atención al Cliente</div><div class="hv">+34 659 93 34 34</div></div>'+
+    '<div class="hbox"><div class="hl">Villa Manager · '+(d.manager||'')+'</div><div class="hv">+34 644 84 85 43</div></div>'+
+    '<h2 style="margin-top:12px">'+t.forbidden_title+'</h2>'+
+    '<div class="bl"><span class="ar" style="color:#D32E2E">✗</span><span>'+t.forbidden1+'</span></div>'+
+    '<div class="bl"><span class="ar" style="color:#D32E2E">✗</span><span>'+t.forbidden2+'</span></div>'+
+    '<div class="sep"></div>'+
+    '<h2>Hospital Mateu Orfila</h2>'+
+    '<p>Ronda Malbúger → Sant Lluís, Mahón</p>'+
+    '<p>General: <strong>+34 971 487 000</strong></p>'+
+    '<p>Urgencias: <strong>+34 971 487 030</strong></p>'+
+    '<img src="'+LOGO_N+'" alt="3villas" style="height:22px;margin-top:16px;opacity:.65">'+
+    '</div></div>',8);
 
   return p1+p2+p3+p4+p5+p6+p7+p8;
 }
 
 function render(d){
   const ls=getLangs();
-  if(!ls.length){st("error","Selecciona al menos un idioma");return;}
-  let html="";
-  ls.forEach(lang=>{ html+=renderLang(d,lang); });
-  document.getElementById("pv").innerHTML="<div id=\"manual\">"+html+"</div>";
+  if(!ls.length){st('error','Selecciona al menos un idioma');return;}
+  let html='';
+  ls.forEach(lang=>{html+=renderLang(d,lang);});
+  document.getElementById('pv').innerHTML='<div id="manual">'+html+'</div>';
+}
+
+function printManual(){
+  window.print();
 }
 
 function dlHTML(){
   if(!CD)return;
-  const out=document.getElementById("manual");
+  const out=document.getElementById('manual');
   if(!out)return;
-  const html="<!DOCTYPE html><html lang=\"es\"><head><meta charset=\"UTF-8\">"+
-    "<link href=\"https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Open+Sans:wght@400;600&display=swap\" rel=\"stylesheet\">"+
-    "<style>body{margin:16px;background:#888}"+document.querySelector("style").textContent+"</style>"+
-    "<title>Manual "+CD.nombre+"</title></head><body>"+out.outerHTML+"</body></html>";
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([html],{type:"text/html"}));
-  a.download="manual_"+(CD.nombre||CD.pid).replace(/\s/g,"_")+".html";
+  // Build standalone HTML with all styles and print fixes
+  const styles=document.querySelector('style').textContent;
+  const html='<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'+
+    '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">'+
+    '<style>@page{margin:0;size:A4}body{margin:0;background:#888;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+styles+'</style>'+
+    '<title>Manual '+CD.nombre+'</title></head><body>'+
+    '<div style="padding:12px;background:#888">'+out.outerHTML+'</div>'+
+    '</body></html>';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+  a.download='manual_'+(CD.nombre||CD.pid).replace(/\s/g,'_')+'.html';
   a.click();
 }
 
 loadConfig();
-document.getElementById("pid").addEventListener("keydown",e=>{if(e.key==="Enter")gen();});
+document.getElementById('pid').addEventListener('keydown',e=>{if(e.key==='Enter')gen();});
 </script>
 </body>
 </html>
