@@ -883,18 +883,9 @@ async function generateManual() {
 
   try {
     let propData;
-    const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-    const hasCaspio = cfg.clientId && cfg.clientSecret;
-
-    if (hasCaspio) {
-      showStatus('loading', 'Obteniendo datos de Caspio...');
-      propData = await fetchPropertyFromCaspio(propertyId);
-    } else {
-      showStatus('loading', 'Usando datos de demostración...');
-      await new Promise(r => setTimeout(r, 800));
-      propData = getDemoData(propertyId);
-      if (!propData) throw new Error(`Propiedad ${propertyId} no encontrada. Configura Caspio para propiedades reales.`);
-    }
+    // Siempre usa Caspio con las credenciales por defecto
+    showStatus('loading', 'Obteniendo datos de Caspio...');
+    propData = await fetchPropertyFromCaspio(propertyId);
 
     showStatus('loading', 'Cargando fotos del listing...');
     const photos = await fetchPropertyPhotos(propertyId);
