@@ -579,7 +579,7 @@
         </div>
         <div class="field-group">
           <label>Nombre de la tabla</label>
-          <input type="text" id="caspio-table" placeholder="ej: propiedades" value="propiedades">
+          <input type="text" id="caspio-table" placeholder="ej: TaVillas" value="TaVillas">
         </div>
         <button class="btn btn-outline btn-sm" onclick="saveConfig()" style="width:100%">Guardar configuración</button>
       </div>
@@ -594,7 +594,7 @@
 
       <div class="badge-info">
         <span>ℹ</span>
-        <span>El código es el ID de la propiedad en 3villas.com/listings/<strong>165528</strong></span>
+        <span>El código es el <strong>Hostawayid</strong> de la propiedad en TaVillas</span>
       </div>
 
       <div id="status" class="status-bar"></div>
@@ -677,7 +677,7 @@ function loadConfig() {
   document.getElementById('caspio-account').value = cfg.account || '';
   document.getElementById('caspio-client-id').value = cfg.clientId || '';
   document.getElementById('caspio-client-secret').value = cfg.clientSecret || '';
-  document.getElementById('caspio-table').value = cfg.table || 'propiedades';
+  document.getElementById('caspio-table').value = cfg.table || 'TaVillas';
 }
 
 function toggleConfig() {
@@ -711,16 +711,48 @@ async function getCaspioToken() {
   return { token: data.access_token, account: cfg.account, table: cfg.table };
 }
 
+// ── MAPEO DE CAMPOS CASPIO → TaVillas ──
+function mapRecord(raw) {
+  const d = {};
+  d.property_id            = raw['Hostawayid'] || '';
+  d.nombre                 = raw['Name_villa_para_inquilinos'] || '';
+  d.tipo                   = raw['tipo'] || '';               // pendiente nombre real
+  d.zona                   = raw['Zone'] || '';
+  d.descripcion_entorno_es = raw['descripcion_entorno_es'] || ''; // pendiente
+  d.descripcion_entorno_en = raw['descripcion_entorno_en'] || ''; // pendiente
+  d.wifi_nombre            = raw['Wifi_user'] || '';
+  d.wifi_password          = raw['Wifi_password'] || '';
+  d.distancia_centro_es    = raw['distancia_centro_es'] || ''; // pendiente
+  d.distancia_playa_referencia_es = raw['distancia_playa_referencia_es'] || ''; // pendiente
+  d.playa_cercana_nombre   = raw['playa_cercana_nombre'] || ''; // pendiente
+  d.playa_cercana_distancia = raw['playa_cercana_distancia'] || ''; // pendiente
+  d.restaurante_nombre     = raw['restaurante_nombre'] || ''; // pendiente
+  d.restaurante_distancia  = raw['restaurante_distancia'] || ''; // pendiente
+  d.supermercado_nombre    = raw['supermercado_nombre'] || ''; // pendiente
+  d.supermercado_distancia = raw['supermercado_distancia'] || ''; // pendiente
+  d.farmacia_nombre        = raw['farmacia_nombre'] || ''; // pendiente
+  d.farmacia_horario       = raw['farmacia_horario'] || ''; // pendiente
+  d.distancia_aeropuerto   = raw['distancia_aeropuerto'] || ''; // pendiente
+  d.distancia_hospital     = raw['distancia_hospital'] || ''; // pendiente
+  d.puntos_interes_extra_es = raw['puntos_interes_extra_es'] || ''; // pendiente
+  d.lineas_bus_especificas = raw['lineas_bus_especificas'] || ''; // pendiente
+  d.cuadro_electrico_es    = raw['where_is_mainpower'] || '';
+  d.llave_de_paso_es       = raw['wher_is_water_stopcock'] || '';
+  d.villa_manager_nombre   = raw['KeyHolder_person'] || '';
+  d.villa_manager_telefono = raw['villa_manager_telefono'] || ''; // pendiente
+  return d;
+}
+
 async function fetchPropertyFromCaspio(propertyId) {
   const { token, account, table } = await getCaspioToken();
-  const url = `https://${account}.caspio.com/rest/v2/tables/${table}/records?q.where=property_id='${propertyId}'`;
+  const url = `https://${account}.caspio.com/rest/v2/tables/${table}/records?q.where=Hostawayid%3D'${propertyId}'&q.limit=1`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
   });
   if (!res.ok) throw new Error('Error obteniendo datos de Caspio');
   const data = await res.json();
-  if (!data.Result || data.Result.length === 0) throw new Error(`Propiedad ${propertyId} no encontrada en Caspio`);
-  return data.Result[0];
+  if (!data.Result || data.Result.length === 0) throw new Error(`Propiedad ${propertyId} no encontrada en TaVillas`);
+  return mapRecord(data.Result[0]);
 }
 
 async function fetchPropertyPhotos(propertyId) {
