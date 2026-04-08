@@ -701,13 +701,12 @@ async function getCaspioToken() {
   if (!cfg.clientId || !cfg.clientSecret) {
     throw new Error('Configura primero las credenciales de Caspio');
   }
-  const bodyStr = 'grant_type=client_credentials'
+  const tokenUrl = PROXY_URL
+    + '?path=/oauth/token'
     + '&client_id=' + encodeURIComponent(cfg.clientId)
     + '&client_secret=' + encodeURIComponent(cfg.clientSecret);
-  const res = await fetch(PROXY_URL + '?path=/oauth/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: bodyStr
+  const res = await fetch(tokenUrl, {
+    method: 'GET'
   });
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
