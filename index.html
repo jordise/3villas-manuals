@@ -661,7 +661,7 @@ const CONFIG_KEY = '3villas_caspio_config';
 
 function saveConfig() {
   const cfg = {
-    account: document.getElementById('caspio-account').value,
+    account: '',
     clientId: document.getElementById('caspio-client-id').value,
     clientSecret: document.getElementById('caspio-client-secret').value,
     table: document.getElementById('caspio-table').value
@@ -674,7 +674,7 @@ function loadConfig() {
   const raw = localStorage.getItem(CONFIG_KEY);
   if (!raw) return;
   const cfg = JSON.parse(raw);
-  document.getElementById('caspio-account').value = cfg.account || '';
+  // account field removed
   document.getElementById('caspio-client-id').value = cfg.clientId || '';
   document.getElementById('caspio-client-secret').value = cfg.clientSecret || '';
   document.getElementById('caspio-table').value = cfg.table || 'TaVillas';
