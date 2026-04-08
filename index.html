@@ -703,12 +703,13 @@ const DEFAULT_TABLE = 'TaVillas';
 
 async function getCaspioToken() {
   const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-  const clientId = cfg.clientId || DEFAULT_CLIENT_ID;
-  const clientSecret = cfg.clientSecret || DEFAULT_CLIENT_SECRET;
+  const clientId = (cfg.clientId && cfg.clientId.length > 10) ? cfg.clientId : DEFAULT_CLIENT_ID;
+  const clientSecret = (cfg.clientSecret && cfg.clientSecret.length > 10) ? cfg.clientSecret : DEFAULT_CLIENT_SECRET;
   const tokenUrl = PROXY_URL
     + '?path=/oauth/token'
-    + '&client_id=' + encodeURIComponent(clientId)
-    + '&client_secret=' + encodeURIComponent(clientSecret);
+    + '&client_id=' + clientId
+    + '&client_secret=' + clientSecret;
+  console.log('Token URL:', tokenUrl);
   const res = await fetch(tokenUrl, {
     method: 'GET'
   });
