@@ -696,15 +696,19 @@ function showStatus(type, msg) {
 // ── CASPIO API ──
 const PROXY_URL = 'https://caspio-proxy.jordi-89b.workers.dev';
 
+// Credenciales por defecto (se sobreescriben si se guardan en configuración)
+const DEFAULT_CLIENT_ID = '7940b2a813ac4f75778f76cb56311e7c0fb185c35af70dd15';
+const DEFAULT_CLIENT_SECRET = 'd0ea1b6508f5499486af4559e389e1a5e9d0e4df8b991cc1b8';
+const DEFAULT_TABLE = 'TaVillas';
+
 async function getCaspioToken() {
   const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-  if (!cfg.clientId || !cfg.clientSecret) {
-    throw new Error('Configura primero las credenciales de Caspio');
-  }
+  const clientId = cfg.clientId || DEFAULT_CLIENT_ID;
+  const clientSecret = cfg.clientSecret || DEFAULT_CLIENT_SECRET;
   const tokenUrl = PROXY_URL
     + '?path=/oauth/token'
-    + '&client_id=' + encodeURIComponent(cfg.clientId)
-    + '&client_secret=' + encodeURIComponent(cfg.clientSecret);
+    + '&client_id=' + encodeURIComponent(clientId)
+    + '&client_secret=' + encodeURIComponent(clientSecret);
   const res = await fetch(tokenUrl, {
     method: 'GET'
   });
@@ -750,8 +754,10 @@ function mapRecord(raw) {
 }
 
 async function fetchPropertyFromCaspio(propertyId) {
-  const { token, table } = await getCaspioToken();
-  const path = '/rest/v2/tables/' + table + '/records?q.where=Hostawayid%3D%27' + propertyId + '%27&q.limit=1';
+  const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+  const { token } = await getCaspioToken();
+  const tableName = cfg.table || DEFAULT_TABLE;
+  const path = '/rest/v2/tables/' + tableName + '/records?q.where=Hostawayid%3D%27' + propertyId + '%27&q.limit=1';
   const res = await fetch(PROXY_URL + '?path=' + encodeURIComponent(path), {
     headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' }
   });
