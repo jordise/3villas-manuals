@@ -1,190 +1,100 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manual Lavadora Villa Maria - 3Villas</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #f0f2f5;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .search-container {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-            width: 100%;
-            max-width: 600px;
-            display: flex;
-            gap: 10px;
-        }
-        input[type="text"] {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #0056b3;
-            border-radius: 5px;
-            font-size: 16px;
-            outline: none;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #0056b3;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-        button:hover { background-color: #004494; }
-
-        #manual-render {
-            width: 100%;
-            max-width: 800px;
-        }
-
-        /* Estilos del Manual Generado */
-        .manual-card {
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            border-top: 8px solid #0056b3;
-            position: relative;
-        }
-        .logo-container {
-            text-align: center;
-            margin-bottom: 20px;
-            background-color: #fff; /* Aseguramos fondo blanco para el logo transparente */
-            padding: 10px;
-            border-radius: 8px;
-        }
-        .logo-img {
-            max-width: 200px;
-            height: auto;
-        }
-        h1 { color: #0056b3; margin-top: 10px; font-size: 26px; text-align: center; }
-        .intro-text {
-            text-align: center;
-            font-style: italic;
-            color: #555;
-            margin-bottom: 30px;
-            line-height: 1.5;
-        }
-        .specs-tag {
-            display: inline-block;
-            background: #e7f3ff;
-            color: #0056b3;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
-        .warning-box {
-            background: #fff3cd;
-            border-left: 5px solid #ffc107;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-            color: #856404;
-        }
-        h3 { border-bottom: 2px solid #eee; padding-bottom: 5px; color: #444; margin-top: 25px; }
-        ul { line-height: 1.8; padding-left: 20px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .search-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; width: 100%; max-width: 600px; display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px; border: 2px solid #0056b3; border-radius: 5px; }
+        button { padding: 10px 20px; background-color: #0056b3; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .manual-card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-top: 8px solid #0056b3; max-width: 800px; }
+        .logo-container { text-align: center; margin-bottom: 20px; }
+        .logo-img { max-width: 180px; }
+        h1 { color: #0056b3; text-align: center; margin-bottom: 5px; }
+        .intro-text { text-align: center; color: #555; font-style: italic; margin-bottom: 25px; }
+        .warning-box { background: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
         .btn-links { display: flex; gap: 15px; margin-top: 30px; }
-        .btn-pdf {
-            flex: 1;
-            text-align: center;
-            padding: 14px;
-            border-radius: 8px;
-            text-decoration: none;
-            color: white !important;
-            font-weight: bold;
-        }
-        .es { background-color: #d32f2f; }
-        .en { background-color: #1976d2; }
-        .footer { margin-top:30px; font-size:12px; color:gray; text-align:center; width: 100%; }
+        .btn-pdf { flex: 1; text-align: center; padding: 14px; border-radius: 8px; text-decoration: none; color: white !important; font-weight: bold; }
+        .es { background-color: #d32f2f; } .en { background-color: #1976d2; }
     </style>
 </head>
 <body>
 
     <div class="search-container">
-        <input type="text" id="input-modelo" placeholder="Introduce marca y modelo...">
+        <input type="text" id="input-modelo" placeholder="Ej: Wonder WDL09710D o Lavavajillas Balay...">
         <button onclick="generarManual()">Actualizar Manual</button>
     </div>
 
-    <div id="manual-render">
-        <!-- El manual se generará aquí -->
-    </div>
-
-    <div class="footer">
-        &copy; 2026 Sistema de Gestión de Villas - 3Villas Menorca
-    </div>
+    <div id="manual-render"></div>
 
 <script>
+    // BASE DE DATOS DE TUS ELECTRODOMÉSTICOS
+    const catalogo = {
+        "wonder wdl09710d": {
+            titulo: "Lavadora Wonder WDL09710D",
+            guia: [
+                "Carga: Máximo 7kg de ropa.",
+                "Detergente: Cajetín izquierdo (II). No usar demasiado jabón.",
+                "Filtro: Limpiar el tapón inferior derecho cada 3 meses.",
+                "Finalización: Espere al desbloqueo (2 min) tras el pitido final."
+            ],
+            aviso: "Fabricado por Svan. El manual oficial puede llevar el logo de SVAN.",
+            pdf_es: "https://comercialprieto.com/WebRoot/Store/Shops/ComercialPrieto/602B/DFEC/48D2/8D6A/95D0/0A6E/2802/3A09/DOCS/manual%20pdf.pdf",
+            pdf_en: "https://www.svanelectro.com/en/manuals/"
+        },
+        "lavavajillas balay": {
+            titulo: "Lavavajillas Balay Serie 3",
+            guia: [
+                "Sal: Compruebe el indicador de sal antes de empezar.",
+                "Filtro: Limpiar restos de comida después de cada uso.",
+                "Pastilla: Colocar en el compartimento seco de la puerta."
+            ],
+            aviso: "Use detergentes de calidad para evitar manchas en el cristal.",
+            pdf_es: "https://www.balay.es/servicio-al-cliente/manuales-de-instrucciones",
+            pdf_en: "https://www.balay.es/en/customer-service/manuals"
+        }
+    };
+
     function generarManual() {
-        const input = document.getElementById('input-modelo');
-        const textoBusqueda = input.value.trim() || "Wonder WDL09710D 7kg 1200RPM";
-        const renderArea = document.getElementById('manual-render');
+        const input = document.getElementById('input-modelo').value.toLowerCase().trim();
+        const render = document.getElementById('manual-render');
         
-        const esWonder = textoBusqueda.toLowerCase().includes('wonder');
-        
-        let html = `
+        // Buscamos si el modelo existe en nuestro catálogo, si no, usamos uno genérico
+        const datos = catalogo[input] || {
+            titulo: "Manual de Usuario: " + input.toUpperCase(),
+            guia: ["Verifique la conexión eléctrica.", "Consulte el manual para programas específicos.", "Mantenga el equipo limpio."],
+            aviso: "Guía básica genérica preparada por 3Villas.",
+            pdf_es: "https://www.google.com/search?q=manual+pdf+español+" + input,
+            pdf_en: "https://www.google.com/search?q=manual+pdf+english+" + input
+        };
+
+        render.innerHTML = `
             <div class="manual-card">
                 <div class="logo-container">
-                    <img src="https://raw.githubusercontent.com/jordise/3villas-manuals/main/logo-negro.png" alt="3Villas Logo" class="logo-img">
+                    <img src="https://raw.githubusercontent.com/jordise/3villas-manuals/main/logo-negro.png" class="logo-img">
                 </div>
-                
                 <h1>Manual Lavadora Villa Maria</h1>
+                <p class="intro-text">Desde 3Villas hemos preparado una pequeña guía para el modelo <b>${datos.titulo}</b>...</p>
                 
-                <p class="intro-text">
-                    Desde <strong>3Villas</strong> hemos preparado una pequeña guía para usar este electrodoméstico y facilitarle su estancia. 
-                    A continuación encontrará los pasos básicos y el manual original del fabricante por si le hiciera falta.
-                </p>
+                <div class="warning-box"><strong>Nota:</strong> ${datos.aviso}</div>
 
-                <div class="specs-tag">Modelo detectado: ${textoBusqueda}</div>
-        `;
-
-        if (esWonder) {
-            html += `
-                <div class="warning-box">
-                    <strong>Nota del Fabricante:</strong> Los productos <strong>Wonder</strong> son fabricados por <strong>Svan Trading</strong>. 
-                    Es posible que el manual PDF original contenga el logo de Svan; es el documento correcto para este modelo.
-                </div>
-            `;
-        }
-
-        html += `
                 <h3>GUÍA RÁPIDA DE USO</h3>
-                <ul>
-                    <li><strong>Carga:</strong> Introduzca la ropa sin sobrecargar el tambor.</li>
-                    <li><strong>Detergente:</strong> Compartimento IZQUIERDO (II) para lavado y CENTRAL (Flor) para suavizante.</li>
-                    <li><strong>Inicio:</strong> Seleccione el programa con la rueda y pulse el botón de Inicio/Pausa.</li>
-                    <li><strong>Bloqueo:</strong> Al finalizar, espere 2-3 minutos hasta que la puerta se desbloquee automáticamente.</li>
-                </ul>
+                <ul>${datos.guia.map(item => `<li>${item}</li>`).join('')}</ul>
 
-                <h3>MANUALES ORIGINALES DEL FABRICANTE</h3>
+                <h3>DESCARGAR MANUAL COMPLETO</h3>
                 <div class="btn-links">
-                    <a href="https://www.google.com/search?q=manual+instrucciones+pdf+castellano+${encodeURIComponent(textoBusqueda)}" target="_blank" class="btn-pdf es">Manual en Español</a>
-                    <a href="https://www.google.com/search?q=user+manual+pdf+english+${encodeURIComponent(textoBusqueda)}" target="_blank" class="btn-pdf en">Manual in English</a>
+                    <a href="${datos.pdf_es}" target="_blank" class="btn-pdf es">Manual en Español</a>
+                    <a href="${datos.pdf_en}" target="_blank" class="btn-pdf en">Manual in English</a>
                 </div>
             </div>
         `;
-
-        renderArea.innerHTML = html;
     }
 
     window.onload = () => {
-        document.getElementById('input-modelo').value = "Wonder WDL09710D 7kg 1200RPM";
+        document.getElementById('input-modelo').value = "Wonder WDL09710D";
         generarManual();
     };
 </script>
-
 </body>
 </html>
