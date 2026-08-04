@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v19 | Historial completo al final -->
+<!-- VERSIÓN ACTUAL: v20 | Historial completo al final -->
 <head>
 <meta charset="UTF-8">
 <link rel="manifest" href="manifest.json">
@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/png" href="https://www.3villas.com/intranet/icon-corazon-rojo-fondo-transparente.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Villa Info v19 — 3Villas</title>
+<title>Villa Info v20 — 3Villas</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -651,6 +651,19 @@ function buildForm(d){
     body.appendChild(pg);
   }));
 
+  // ── 3b. KEYBOX EQUIPO (v20 — solo uso interno, no visible por el cliente) ──
+  main.appendChild(buildSection('kbeq','🔑','Keybox equipo',body=>{
+    body.appendChild(subgroup('🔒 Solo para uso del equipo de 3Villas','sg-internal',
+      buildInput('Keybox_equipo','Keybox equipo',d,'text',2),
+      buildTA('Key_Commentsequipo','Instrucciones keybox equipo',d,2,2)
+    ));
+    const pg=document.createElement('div');pg.className='photo-group';
+    pg.appendChild(buildNewOnly('cloudflare_foto1_keyboxequipo','Foto 1 keybox equipo',d,2));
+    pg.appendChild(buildNewOnly('cloudflare_foto2_keyboxequipo','Foto 2 keybox equipo',d,2));
+    pg.appendChild(buildNewOnly('cloudflare_foto3_keyboxequipo','Foto 3 keybox equipo',d,2));
+    body.appendChild(pg);
+  }));
+
   // ── 4. VILLA — NOMBRES Y UBICACIÓN ─────────────────────────
   main.appendChild(buildSection('villa','🏠','Villa — Nombres y ubicación',body=>{
     body.appendChild(buildTA('Important_comments','Comentarios importantes',d,2,2));
@@ -756,9 +769,23 @@ function buildForm(d){
   main.appendChild(buildSection('emerg','🔌','Emergencias',body=>{
     body.appendChild(buildTA('where_is_mainpower','Cuadro eléctrico — dónde está',d,2,1,'Explicar dónde está y cualquier indicación importante'));
     body.appendChild(buildPair('foto_where_is_mainpower','cloudflare_foto_cuadro_electrico',d,1));
+    body.appendChild((()=>{const pg=document.createElement('div');pg.className='photo-group';
+      pg.appendChild(buildNewOnly('cloudflare_fotocuadroelectrico2','Foto cuadro eléctrico 2',d,2));
+      pg.appendChild(buildNewOnly('cloudflare_fotocuadroelectrico3','Foto cuadro eléctrico 3',d,2));
+      pg.appendChild(buildNewOnly('cloudflare_fotocuadroelectrico4','Foto cuadro eléctrico 4',d,2));
+      pg.appendChild(buildNewOnly('cloudflare_fotocuadroelectrico5','Foto cuadro eléctrico 5',d,2));
+      pg.appendChild(buildNewOnly('cloudflare_fotocuadroelectrico6','Foto cuadro eléctrico 6',d,2));
+      return pg;})());
     body.appendChild(hr());
     body.appendChild(buildTA('wher_is_water_stopcock','Llave general del agua',d,2,1,'Explicar dónde está y cualquier indicación importante'));
     body.appendChild(buildPair('foto_wher_is_water_stopcock','cloudflare_foto_llave_agua',d,1));
+    body.appendChild((()=>{const pg=document.createElement('div');pg.className='photo-group';
+      pg.appendChild(buildNewOnly('cloudflare_foto_llave_agua2','Foto llave agua 2',d,2));
+      pg.appendChild(buildNewOnly('cloudflare_foto_llave_agua3','Foto llave agua 3',d,2));
+      pg.appendChild(buildNewOnly('cloudflare_foto_llave_agua4','Foto llave agua 4',d,2));
+      pg.appendChild(buildNewOnly('cloudflare_foto_llave_agua5','Foto llave agua 5',d,2));
+      pg.appendChild(buildNewOnly('cloudflare_foto_llave_agua6','Foto llave agua 6',d,2));
+      return pg;})());
     body.appendChild(buildTA('where_is_water_stopcock_street','Llave del agua en la calle',d,2,1,'Explicar dónde está y cualquier indicación importante'));
     body.appendChild(buildNewOnly('cloudflare_foto_llave_agua_calle','Foto llave agua calle',d,1));
     body.appendChild(hr());
@@ -905,4 +932,4 @@ document.addEventListener('DOMContentLoaded',loadVilla);
 </script>
 </body>
 </html>
-<!-- HISTORIAL: v19 - Fix: el historial de la v18 contenía literalmente la secuencia de tres guiones seguida de mayor-que al documentar la errata corregida; esa secuencia incluye el cierre de comentario HTML, por lo que el comentario se cerraba prematuramente y todo el texto restante del historial se renderizaba como texto visible al final de la página en cada carga. Reformulada la frase sin la secuencia literal. Regla a futuro: nunca escribir el cierre de comentario dentro del texto del HISTORIAL | v18 - Fotos de la antigua intranet visibles como en editar-villa: buildPair rehecho — cuando el campo antiguo tiene foto, se muestra el par con la antigua a mitad de tamaño (grid 1fr 2fr, max-height 110px vs 220px, atenuada con borde discontinuo), título "{Nombre} (antigua intranet)" y botón ℹ️ (mkInfoBtn/showInfoModal ya existentes) con el aviso "Las fotos de la antigua intranet se eliminarán el próximo 15 de Noviembre". Se añaden los mismos helpers de editar-villa v20/v21: caspioFileUrl (reescribe las rutas antiguas /Informacion Villas/ y las URLs con 3villas.com al CDN de Caspio eucdn.caspio.com/353F7000 — antes esas rutas relativas ni se veían) y photoLabelFromField (título en español derivado del campo: cloudflare_foto1_keybox1 → "Foto1 keybox1"). Las fotos SIN antigua pasan de la etiqueta genérica "📷 Foto" al nombre real en español. Corregida también la errata de tres guiones en el cierre del comentario de versión de cabecera | v17 - Botón "✏️ Editar Villa": se quita target="_blank" para que navegue en la misma pestaña, en vez de abrir una nueva (en Chrome con la app instalada, abrir en pestaña nueva una URL dentro del scope de la app hacía que saltara a la app en lugar de quedarse en el navegador). El resto de botones (Mapa, Hostaway, 3villas.com, Drive, Manual Villa, Preparar Manual) mantienen target="_blank" tal cual, no se ha tocado nada más. | v16 - FIX REAL: onSearch, clearSearch, searchNav, openLegendModal, closeLegendModal, closeInfoModal y closeLB no estaban expuestas a "window". Todo el script vive dentro de un IIFE, y los onclick/oninput del HTML se ejecutan en el ámbito global, así que esas funciones no se encontraban al pulsar/escribir (mismo patrón que ya usa editar-villa.html, que sí las expone). Por eso el buscador y los botones de leyenda/modales no reaccionaban en la v15 aunque el código estuviera bien escrito. | v15 - Añadido el sistema de búsqueda completo de editar-villa.html (mismo HTML/CSS/JS: input con botón limpiar, contador de resultados, flechas anterior/siguiente, resaltado .hi-match), colocado entre las dos filas de botones (barra de acciones y barra de secciones). Adaptado sin applyFilter() porque esta página no tiene filtro de pendientes: al limpiar la búsqueda se restauran todas las tarjetas visibles directamente. Añadido fixStickyTops() (igual que villa.html v12) para posicionar dinámicamente el top de cada barra pegajosa según la altura real de las anteriores. | v14 - Fix: el parámetro de la URL ahora acepta tanto "villa_id" (con guion bajo) como "villaid", en el mismo orden de prioridad que usaba villa.html v12 (villa_id primero, villaid como fallback). En v13 solo se aceptaba "villaid", por lo que los enlaces que pasaban "villa_id" (como hacía villa.html) no encontraban la villa. | v13 - Nueva versión de solo lectura basada en la estructura de editar-villa.html (mismo orden de 18 secciones, mismas 37 tablas lookup, mismos campos), para sustituir a villa.html. Cabecera igual que editar-villa.html (título = Name, "Código llavero N", botón "Ver en Hostaway") + Villamanager (KeyHolder_person resuelto contra TaContacts, igual que hacía villa.html). Debajo de la cabecera, barra de botones con todos los que tenía villa.html: 📍 Mapa, 🏠 Hostaway, 🌐 3villas.com, 📁 Drive, 📖 Manual Villa, 📋 Preparar Manual, ✏️ Editar Villa (mismas condiciones y URLs que villa.html v12). Todos los campos se muestran como texto de solo lectura (sin inputs/selects/textareas editables) con la misma leyenda de colores de editar-villa.html (amarillo=visible por el cliente, blanco=interno, rojo=pendiente de rellenar). Sin barra de guardado, sin subida de fotos, sin buscador ni flechas de pendientes (funciones de edición, no aplican en una ficha de solo lectura). -->
+<!-- HISTORIAL: v20 - Añadidos en solo lectura (idéntico a editar-villa.html v23), todos de uso interno (vis-internal): (1) 5 fotos adicionales de cuadro eléctrico (cloudflare_fotocuadroelectrico2..6) tras la foto existente en Emergencias; (2) 5 fotos adicionales de llave de agua (cloudflare_foto_llave_agua2..6) tras la foto existente de llave de agua (antes de "llave del agua en la calle", que queda intacto); (3) nueva sección "Keybox equipo" (id kbeq, 3er botón junto a Keybox 1 y 2) con Keybox_equipo, Key_Commentsequipo y 3 fotos (cloudflare_foto1/2/3_keyboxequipo), sin subgrupo de cliente. Página de solo lectura: no hay guardado, por lo que no aplica ninguna lista TEXT_FIELDS/CF_FIELDS. | v19 - Fix: el historial de la v18 contenía literalmente la secuencia de tres guiones seguida de mayor-que al documentar la errata corregida; esa secuencia incluye el cierre de comentario HTML, por lo que el comentario se cerraba prematuramente y todo el texto restante del historial se renderizaba como texto visible al final de la página en cada carga. Reformulada la frase sin la secuencia literal. Regla a futuro: nunca escribir el cierre de comentario dentro del texto del HISTORIAL | v18 - Fotos de la antigua intranet visibles como en editar-villa: buildPair rehecho — cuando el campo antiguo tiene foto, se muestra el par con la antigua a mitad de tamaño (grid 1fr 2fr, max-height 110px vs 220px, atenuada con borde discontinuo), título "{Nombre} (antigua intranet)" y botón ℹ️ (mkInfoBtn/showInfoModal ya existentes) con el aviso "Las fotos de la antigua intranet se eliminarán el próximo 15 de Noviembre". Se añaden los mismos helpers de editar-villa v20/v21: caspioFileUrl (reescribe las rutas antiguas /Informacion Villas/ y las URLs con 3villas.com al CDN de Caspio eucdn.caspio.com/353F7000 — antes esas rutas relativas ni se veían) y photoLabelFromField (título en español derivado del campo: cloudflare_foto1_keybox1 → "Foto1 keybox1"). Las fotos SIN antigua pasan de la etiqueta genérica "📷 Foto" al nombre real en español. Corregida también la errata de tres guiones en el cierre del comentario de versión de cabecera | v17 - Botón "✏️ Editar Villa": se quita target="_blank" para que navegue en la misma pestaña, en vez de abrir una nueva (en Chrome con la app instalada, abrir en pestaña nueva una URL dentro del scope de la app hacía que saltara a la app en lugar de quedarse en el navegador). El resto de botones (Mapa, Hostaway, 3villas.com, Drive, Manual Villa, Preparar Manual) mantienen target="_blank" tal cual, no se ha tocado nada más. | v16 - FIX REAL: onSearch, clearSearch, searchNav, openLegendModal, closeLegendModal, closeInfoModal y closeLB no estaban expuestas a "window". Todo el script vive dentro de un IIFE, y los onclick/oninput del HTML se ejecutan en el ámbito global, así que esas funciones no se encontraban al pulsar/escribir (mismo patrón que ya usa editar-villa.html, que sí las expone). Por eso el buscador y los botones de leyenda/modales no reaccionaban en la v15 aunque el código estuviera bien escrito. | v15 - Añadido el sistema de búsqueda completo de editar-villa.html (mismo HTML/CSS/JS: input con botón limpiar, contador de resultados, flechas anterior/siguiente, resaltado .hi-match), colocado entre las dos filas de botones (barra de acciones y barra de secciones). Adaptado sin applyFilter() porque esta página no tiene filtro de pendientes: al limpiar la búsqueda se restauran todas las tarjetas visibles directamente. Añadido fixStickyTops() (igual que villa.html v12) para posicionar dinámicamente el top de cada barra pegajosa según la altura real de las anteriores. | v14 - Fix: el parámetro de la URL ahora acepta tanto "villa_id" (con guion bajo) como "villaid", en el mismo orden de prioridad que usaba villa.html v12 (villa_id primero, villaid como fallback). En v13 solo se aceptaba "villaid", por lo que los enlaces que pasaban "villa_id" (como hacía villa.html) no encontraban la villa. | v13 - Nueva versión de solo lectura basada en la estructura de editar-villa.html (mismo orden de 18 secciones, mismas 37 tablas lookup, mismos campos), para sustituir a villa.html. Cabecera igual que editar-villa.html (título = Name, "Código llavero N", botón "Ver en Hostaway") + Villamanager (KeyHolder_person resuelto contra TaContacts, igual que hacía villa.html). Debajo de la cabecera, barra de botones con todos los que tenía villa.html: 📍 Mapa, 🏠 Hostaway, 🌐 3villas.com, 📁 Drive, 📖 Manual Villa, 📋 Preparar Manual, ✏️ Editar Villa (mismas condiciones y URLs que villa.html v12). Todos los campos se muestran como texto de solo lectura (sin inputs/selects/textareas editables) con la misma leyenda de colores de editar-villa.html (amarillo=visible por el cliente, blanco=interno, rojo=pendiente de rellenar). Sin barra de guardado, sin subida de fotos, sin buscador ni flechas de pendientes (funciones de edición, no aplican en una ficha de solo lectura). -->
