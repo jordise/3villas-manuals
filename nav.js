@@ -1,6 +1,7 @@
 // ================================================================
-//  nav.js — MENÚS POR ROL  3Villas  v6
+//  nav.js — MENÚS POR ROL  3Villas  v7
 // ================================================================
+// VERSIÓN ACTUAL: v7 | Historial completo al final de este archivo
 
 var _NAV_WORKER = 'https://caspio-proxy.jordi-89b.workers.dev';
 
@@ -128,4 +129,33 @@ var NAV_MENU = (function () {
   } catch (e) {}
 })();
 
-// HISTORIAL: v6 - Fix error de sintaxis en children de Configuración (comas faltantes); eliminado duplicado "Roles y permisos"; URL hostaway-comprobar-fechas-reservas.html añadida con .html | v5 - versión anterior
+// ── AUTO-DETECCIÓN DE VERSIÓN ─────────────────────────────────────
+// Comprueba en 2º plano si el servidor tiene una versión más nueva
+// de nav.js (lee el comentario "VERSIÓN ACTUAL: vXX" de la copia
+// fresca) y, si es así, recarga la página UNA sola vez por versión
+// (marca en sessionStorage para no entrar nunca en bucle). Como
+// nav.js es compartido por todas las páginas, esto corrige el menú
+// desactualizado en todo el intranet, no solo en la página actual.
+// No bloquea la carga ni rompe nada si falla. Mismo mecanismo ya
+// probado en checkin-pasos.html (v76) y en reuniones.html (v14).
+(function () {
+  var NAV_VERSION = 7; /* debe coincidir con la versión de este archivo */
+  try {
+    if (location.protocol.indexOf('http') !== 0) return; /* file:// u otros: no aplicar */
+    fetch('nav.js', { cache: 'reload' }) /* red directa + actualiza la caché HTTP */
+      .then(function (r) { return r.ok ? r.text() : ''; })
+      .then(function (js) {
+        var m = js.match(/VERSI\u00d3N ACTUAL:\s*v(\d+)/i);
+        if (!m) return;
+        var srvV = parseInt(m[1], 10);
+        if (!(srvV > NAV_VERSION)) return; /* solo recargar si el servidor va POR DELANTE */
+        var key = '3v_vchk_nav.js_v' + srvV;
+        if (sessionStorage.getItem(key)) return; /* ya se intentó esta versión: evitar bucle */
+        sessionStorage.setItem(key, '1');
+        location.reload(); /* recarga la página actual completa (toma el nav.js fresco) */
+      })
+      .catch(function () { /* sin red o error: seguir con la versión actual */ });
+  } catch (e) { /* esta comprobación jamás debe romper la página */ }
+})();
+
+// HISTORIAL: v7 - Auto-detección de versión nueva (mismo mecanismo "Opción B" ya implementado y probado en checkin-pasos.html desde su v76 y en reuniones.html desde su v14, pedido por Jordi para replicarlo aquí): nueva IIFE al final del archivo que hace un fetch de 'nav.js' con cache:'reload' (va a red saltándose la caché del navegador), lee el nuevo comentario "VERSIÓN ACTUAL: vXX" (añadido en la cabecera, junto al comentario de nombre/versión existente) de la copia fresca del servidor y lo compara con la constante embebida NAV_VERSION (=7, actualizar en cada nueva versión junto con el número en la cabecera y en el historial). Si el servidor va por delante, recarga la página actual completa una sola vez por versión (marca antibucle en sessionStorage '3v_vchk_nav.js_v<XX>'); si va por detrás o falla (sin red, file://), no hace nada. A diferencia de las páginas HTML (que se recargan a sí mismas), aquí la recarga es de la página que esté cargando nav.js en ese momento — como nav.js lo cargan prácticamente todas las páginas del intranet, esto corrige de raíz el problema de menú desactualizado en TODO el sitio, no solo en una página. Coste: +1 fetch a nav.js por carga de página en todo el intranet (avisado y aceptado por Jordi). Recuerda: nav.js es de nombre fijo (excepción, como checkin-auth.js) — la versión va solo en la cabecera y el historial, nunca en el nombre del archivo. | v6 - Fix error de sintaxis en children de Configuración (comas faltantes); eliminado duplicado "Roles y permisos"; URL hostaway-comprobar-fechas-reservas.html añadida con .html | v5 - versión anterior
