@@ -30,7 +30,8 @@ var _menuAdmin = [
     label: 'Administración', icon: '📖',
     children: [
       { label: 'Nueva Villa',       url: 'crear-villa.html',                     icon: '🏠' },
-      { label: 'Control Waiver',      url: 'control-waiver.html',             icon: '🔧' }
+      { label: 'Control Waiver',      url: 'control-waiver.html',             icon: '🔧' },
+      { label: 'Reuniones',          url: 'reuniones.html',   icon: '📅' }
     ]
   },
   {
@@ -66,6 +67,14 @@ var _menuSales = [
     children: [
       { label: 'Villas',    url: 'buscar-villa.html', icon: '🏡' },
       { label: 'Contactos', url: 'contactos.html',    icon: '👥' }
+    ]
+  },
+      {
+    label: 'Administración', icon: '📖',
+    children: [
+      { label: 'Nueva Villa',       url: 'crear-villa.html',                     icon: '🏠' },
+      { label: 'Control Waiver',      url: 'control-waiver.html',             icon: '🔧' },
+      { label: 'Reuniones',          url: 'reuniones.html',   icon: '📅' }
     ]
   },
   { label: 'Login', url: 'login.html', icon: '🔑' }
