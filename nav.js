@@ -20,6 +20,7 @@ var _menuAdmin = [
   { label: 'Tareas',             url: 'tareas.html',              icon: '✅' },
   { label: 'Ocupación',          url: 'listado-ocupacion.html',   icon: '📅' },
   { label: 'WelcomePacks',       url: 'pedir-wellcomepacks.html', icon: '📦' },
+  { label: 'Guardias',           url: 'guardias-e-intervenciones.html', icon: '🚨' },
   _itemEquipo,
   {
     label: 'Listados', icon: '📖',
