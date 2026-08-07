@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v02 | Historial completo al final -->
+<!-- VERSIÓN ACTUAL: v03 | Historial completo al final -->
 <head>
   <base href="/intranet/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Guardias e Intervenciones v02 — 3Villas</title>
+  <title>Guardias e Intervenciones v03 — 3Villas</title>
   <link rel="icon" type="image/png" href="https://www.3villas.com/intranet/icon-corazon-rojo-fondo-transparente.png">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <script>
     // ── AUTO-DETECCIÓN DE VERSIÓN (Opción B) ──
     (function(){
-      const PAGE_VERSION='v02';
+      const PAGE_VERSION='v03';
       try{
         if(location.protocol==='file:') return;
         fetch(location.pathname,{cache:'reload'}).then(r=>r.text()).then(html=>{
@@ -130,11 +130,67 @@
     .toggle-row.terminada-row label{font-weight:700;color:var(--gray-5);cursor:pointer}
     .modal-banner{background:var(--red-light);color:var(--red-dark);border-radius:8px;padding:12px 14px;font-size:12px;line-height:1.5}
     .modal-banner strong{font-weight:700}
-    .photo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-    .photo-slot{aspect-ratio:1;border:2px dashed var(--gray-3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--gray-3);cursor:pointer;position:relative;overflow:hidden;background:var(--gray-1)}
-    .photo-slot img{width:100%;height:100%;object-fit:cover}
-    .photo-slot input{display:none}
-    .photo-x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer}
+    .req{color:var(--red)}
+    /* ── Toggle cards (Desplazamiento / Terminada) ── */
+    .toggle-card{background:var(--gray-1);border-radius:10px;padding:12px 14px}
+    .terminada-card{background:var(--green-light)}
+    .toggle-switch-row{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+    .toggle-switch-label{font-size:13px;font-weight:700;color:var(--gray-5)}
+    .toggle-switch{position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0}
+    .toggle-switch input{opacity:0;width:0;height:0}
+    .toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--gray-3);border-radius:26px;transition:.2s}
+    .toggle-slider::before{content:"";position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+    .toggle-switch input:checked+.toggle-slider{background:var(--green)}
+    .toggle-switch input:checked+.toggle-slider::before{transform:translateX(18px)}
+    /* ── Mic button ── */
+    .input-wrap{display:flex;gap:6px;align-items:stretch}
+    .mic-btn{flex-shrink:0;width:42px;border:1.5px solid var(--gray-3);border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all .15s;color:var(--gray-4)}
+    .mic-btn:hover{border-color:var(--red);color:var(--red)}
+    .mic-btn.recording{border-color:var(--red);background:var(--red-light);animation:mic-pulse .8s ease-in-out infinite}
+    @keyframes mic-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    .mic-btn.hidden{display:none}
+    /* ── Lista editable (tl) ── */
+    .tl-wrap{flex:1;display:flex;flex-direction:column;gap:7px}
+    .tl-list{display:flex;flex-direction:column;gap:5px;min-height:8px}
+    .tl-item{display:flex;align-items:center;gap:4px;padding:7px 9px;background:var(--gray-1);border:1.5px solid var(--gray-2);border-radius:8px;transition:background .15s,border-color .15s}
+    .tl-item.dragging{opacity:.45;background:var(--gray-2)}
+    .tl-item .tl-grip{color:var(--gray-3);cursor:grab;font-size:12px;line-height:1;flex-shrink:0;user-select:none;touch-action:none;width:12px;text-align:center}
+    .tl-item .tl-grip:active{cursor:grabbing}
+    .tl-item input[type=checkbox]{flex:none;width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:var(--red);margin:0}
+    .tl-item .tl-text{flex:1;min-width:0;font-size:13px;font-family:'Open Sans',sans-serif;color:var(--gray-5);line-height:1.4;word-break:break-word;outline:none;padding:2px 4px;margin-left:2px;border:1px solid transparent;border-radius:5px;min-height:20px}
+    .tl-item .tl-text:focus{border-color:var(--gray-2);background:#fff;box-shadow:0 0 0 3px rgba(200,16,46,.08)}
+    .tl-item .tl-text:empty::before{content:attr(data-ph);color:var(--gray-3)}
+    .tl-item.done{background:var(--green-light);border-color:rgba(30,158,78,.25)}
+    .tl-item.done .tl-text{text-decoration:line-through;color:var(--gray-4)}
+    .tl-item .tl-del{flex-shrink:0;margin-left:auto;background:none;border:none;color:var(--gray-3);cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;border-radius:5px;transition:color .12s,background .12s}
+    .tl-item .tl-del:hover{color:var(--red);background:var(--red-light)}
+    .tl-add{display:flex;gap:6px}
+    .tl-add input{flex:1;border:1.5px solid var(--gray-2);border-radius:8px;padding:8px 11px;font-size:13px;font-family:'Open Sans',sans-serif;color:var(--gray-5);outline:none;transition:border-color .15s,box-shadow .15s}
+    .tl-add input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.1)}
+    .tl-add button{flex-shrink:0;background:var(--gray-1);border:1.5px solid var(--gray-2);border-radius:8px;padding:0 14px;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;color:var(--gray-4);cursor:pointer;transition:all .12s}
+    .tl-add button:hover{border-color:var(--red);color:var(--red);background:var(--red-light)}
+    /* ── Fotos (grid completo: cámara/archivo/borrar/zoom) ── */
+    .photos-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+    @media(max-width:600px){.photos-grid{grid-template-columns:repeat(3,1fr)}}
+    .photo-slot{position:relative;border-radius:10px;overflow:hidden;transition:all .2s;aspect-ratio:1}
+    .photo-slot.empty{background:var(--gray-1);border:2px dashed var(--gray-3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+    .photo-slot.empty:hover{border-color:var(--red);background:var(--red-light)}
+    .ps-btns{display:flex;gap:4px}
+    .ps-btn{background:#fff;border:1.5px solid var(--gray-2);border-radius:7px;padding:5px 7px;font-size:14px;cursor:pointer;line-height:1;transition:all .15s}
+    .ps-btn:hover{border-color:var(--red);background:var(--red-light)}
+    .ps-num{font-family:'Montserrat',sans-serif;font-size:9px;font-weight:800;color:var(--gray-3)}
+    .photo-slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:zoom-in}
+    .del-btn{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);border:none;color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px;display:none;align-items:center;justify-content:center;z-index:2;line-height:1}
+    .photo-slot.has-img .del-btn{display:flex}
+    .photo-slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;display:none}
+    .up-ov{position:absolute;inset:0;background:rgba(255,255,255,.85);display:none;align-items:center;justify-content:center}
+    .up-ov.show{display:flex}
+    .up-spin{width:22px;height:22px;border:3px solid var(--gray-2);border-top-color:var(--red);border-radius:50%;animation:ps-spin .6s linear infinite}
+    @keyframes ps-spin{to{transform:rotate(360deg)}}
+    #lbOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;align-items:center;justify-content:center}
+    #lbOverlay.open{display:flex}
+    #lbOverlay img{max-width:96vw;max-height:86vh;border-radius:10px;display:block}
+    #lbClose{position:fixed;top:16px;right:16px;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.4);color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10000;font-family:Montserrat,sans-serif;line-height:1}
     .modal-foot{padding:16px 20px;border-top:1px solid var(--gray-2);display:flex;justify-content:flex-end;gap:10px}
     .btn-primary{background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-weight:700;font-size:13px;cursor:pointer}
     .btn-primary:disabled{opacity:.6;cursor:default}
@@ -144,7 +200,6 @@
     #toast.ok{background:var(--green)}
     @media(max-width:760px){
       .gi-row{grid-template-columns:1fr;gap:6px}
-      .photo-grid{grid-template-columns:repeat(3,1fr)}
     }
   </style>
 </head>
@@ -166,6 +221,8 @@
 <div id="filterPanel">
   <div class="main-bar">
     <input type="text" id="fBuscar" placeholder="Buscar" autocomplete="off">
+    <div class="f-group narrow" style="flex:0 0 140px"><label class="f-label">Desde</label><input type="date" id="fDesde" class="f-input"></div>
+    <div class="f-group narrow" style="flex:0 0 140px"><label class="f-label">Hasta</label><input type="date" id="fHasta" class="f-input"></div>
     <div class="pill-group">
       <span class="pill-label">Estado</span>
       <div class="pill-opts">
@@ -206,8 +263,6 @@
             </div>
           </div>
         </div>
-        <div class="f-group narrow"><label class="f-label">Desde</label><input type="date" id="fDesde" class="f-input"></div>
-        <div class="f-group narrow"><label class="f-label">Hasta</label><input type="date" id="fHasta" class="f-input"></div>
       </div>
       <div class="filter-row">
         <div class="f-group">
@@ -310,7 +365,7 @@
             <div id="mAsignadoDd" class="manager-panel" style="display:none;max-height:200px"></div>
           </div>
           <div class="form-group" style="position:relative">
-            <label class="form-label">Villa</label>
+            <label class="form-label">Villa <span class="req">*</span></label>
             <input type="text" id="mVillaSearch" class="form-input" placeholder="Buscar villa..." autocomplete="off">
             <input type="hidden" id="mVilla">
             <div id="mVillaDd" class="manager-panel" style="display:none;max-height:200px"></div>
@@ -318,7 +373,7 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Reserva (opcional)</label>
+            <label class="form-label">Reserva <span class="req">*</span></label>
             <input type="text" id="mReserva" class="form-input" placeholder="Código de reserva">
           </div>
         </div>
@@ -341,51 +396,61 @@
             <input type="time" id="mHoraFin" class="form-input">
           </div>
         </div>
+        <p style="font-size:11px;color:var(--gray-4);margin-top:-6px">Las 3 horas son obligatorias para poder marcar la intervención como Terminada.</p>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Tipo de intervención</label>
+            <label class="form-label">Tipo de intervención <span class="req">*</span></label>
             <select id="mTipo" class="form-select"></select>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Descripción</label>
-          <textarea id="mDescripcion" class="form-textarea" placeholder="Descripción de la incidencia..."></textarea>
+          <label class="form-label">Descripción <span class="req">*</span></label>
+          <div class="input-wrap"><div class="tl-wrap" id="mDescripcion_tl"></div><button class="mic-btn hidden" id="micDescripcion" type="button" title="Dictar">🎤</button></div>
+          <textarea id="mDescripcion" style="display:none"></textarea>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Acción realizada / Resultado</label>
-          <textarea id="mResolucion" class="form-textarea" placeholder="Qué se hizo y cómo quedó..."></textarea>
+          <label class="form-label">Acción realizada / Resultado <span class="req">*</span></label>
+          <div class="input-wrap"><div class="tl-wrap" id="mResolucion_tl"></div><button class="mic-btn hidden" id="micResolucion" type="button" title="Dictar">🎤</button></div>
+          <textarea id="mResolucion" style="display:none"></textarea>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Estado del huésped</label>
-          <input type="text" id="mEstadoHuesped" class="form-input" placeholder="ej. tranquilo, molesto...">
+          <label class="form-label">Estado del huésped <span class="req">*</span></label>
+          <div class="input-wrap"><div class="tl-wrap" id="mEstadoHuesped_tl"></div><button class="mic-btn hidden" id="micEstadoHuesped" type="button" title="Dictar">🎤</button></div>
+          <textarea id="mEstadoHuesped" style="display:none"></textarea>
         </div>
 
-        <div class="form-row">
-          <div class="toggle-row"><input type="checkbox" id="mDesplazamiento"><label for="mDesplazamiento">Hubo desplazamiento</label></div>
-          <div class="toggle-row"><input type="checkbox" id="mImportante"><label for="mImportante">🚩 Importante</label></div>
-          <div class="toggle-row"><input type="checkbox" id="mUrgente"><label for="mUrgente">🏁 Urgente</label></div>
-        </div>
-        <div class="form-group" id="mDespExplicarWrap" style="display:none">
-          <label class="form-label">Explicar desplazamiento</label>
-          <input type="text" id="mDespExplicar" class="form-input">
+        <div class="toggle-card">
+          <label class="toggle-switch-row">
+            <span class="toggle-switch-label">🚗 Hubo desplazamiento</span>
+            <span class="toggle-switch"><input type="checkbox" id="mDesplazamiento"><span class="toggle-slider"></span></span>
+          </label>
+          <div class="form-group" id="mDespExplicarWrap" style="display:none;margin-top:10px">
+            <label class="form-label">Explicar desplazamiento</label>
+            <input type="text" id="mDespExplicar" class="form-input">
+          </div>
         </div>
 
-        <div class="toggle-row terminada-row">
-          <input type="checkbox" id="mTerminada">
-          <label for="mTerminada">Terminada</label>
+        <div class="toggle-card terminada-card">
+          <label class="toggle-switch-row">
+            <span class="toggle-switch-label">✔️ Terminada</span>
+            <span class="toggle-switch"><input type="checkbox" id="mTerminada"><span class="toggle-slider"></span></span>
+          </label>
         </div>
+
+        <input type="checkbox" id="mImportante" checked style="display:none">
+        <input type="checkbox" id="mUrgente" checked style="display:none">
 
         <div class="form-group">
           <label class="form-label">Fotos — antes</label>
-          <div class="photo-grid" id="photosBefore"></div>
+          <div class="photos-grid" id="photosBefore"></div>
         </div>
         <div class="form-group">
           <label class="form-label">Fotos — después</label>
-          <div class="photo-grid" id="photosAfter"></div>
+          <div class="photos-grid" id="photosAfter"></div>
         </div>
       </div>
     </div>
@@ -395,6 +460,8 @@
     </div>
   </div>
 </div>
+
+<div id="lbOverlay" onclick="if(event.target===this||event.target.id==='lbImg2')closeLB()"><button id="lbClose" onclick="closeLB()">✕</button><img id="lbImg2" src="" alt=""></div>
 
 <div id="toast"></div>
 
@@ -416,6 +483,8 @@ var VIEW='Vi_TaTasks_villas_user_mu';
 function g(id){return document.getElementById(id);}
 function val(id){return (g(id)||{}).value||'';}
 function todayStr(){return new Date().toISOString().split('T')[0];}
+function endOfYearStr(){return new Date().getFullYear()+'-12-31';}
+function applyDefaultDates(){ g('fDesde').value=todayStr(); g('fHasta').value=endOfYearStr(); }
 function toast(msg,type){var t=g('toast');t.textContent=msg;t.className=type||'';t.style.display='block';clearTimeout(window._toastTO);window._toastTO=setTimeout(function(){t.style.display='none';},3000);}
 function esc(s){return (s||'').toString().replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function fmtDate(s){if(!s)return '—';var d=new Date(s.includes('T')?s:s+'T00:00:00');return isNaN(d)?s:d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});}
@@ -501,7 +570,7 @@ window.toggleMas=function(){
 
 /* ── Limpiar todo ── */
 window.clearAll=function(){
-  g('fBuscar').value='';g('fDesde').value='';g('fHasta').value='';g('fVilla').value='';
+  g('fBuscar').value='';applyDefaultDates();g('fVilla').value='';
   g('fTaskId').value='';g('fReserva').value='';g('fTipo').value='';
   g('fImportante').checked=false;g('fUrgente').checked=false;
   selectedManagers={};renderUserList();updateUserLabel();
@@ -511,7 +580,7 @@ window.clearAll=function(){
 
 /* ── buildWhere ── */
 function buildWhere(){
-  var parts=['Intervencion_guardia=1'];
+  var parts=["Intervencion_guardia_tipo_ID IS NOT NULL","Intervencion_guardia_tipo_ID<>''"];
   var tid=(val('fTaskId')||'').trim();
   if(tid && /^\d+$/.test(tid)){ parts.push('taskid='+parseInt(tid,10)); return parts.join(' AND '); }
   var keys=Object.keys(selectedManagers);
@@ -689,30 +758,61 @@ var currentTaskDataCreated=null;
 var isLocked=false;
 var selectedVillaIdModal='';
 
-function renderPhotoGrid(containerId, existingUrls, arr){
-  var html='';
+function buildPhotoGrid(containerId, existingUrls, arr){
+  var wrap=g(containerId); wrap.innerHTML='';
   for(var i=0;i<5;i++){
-    var url=existingUrls[i]||'';
-    html+='<div class="photo-slot" id="'+containerId+'_'+i+'" onclick="if(!isLocked)document.getElementById(\''+containerId+'_input_'+i+'\').click()">';
-    if(url){ html+='<img src="'+esc(url)+'"><button class="photo-x" onclick="event.stopPropagation();clearPhotoSlot(\''+containerId+'\','+i+')">✕</button>'; }
-    else { html+='+'; }
-    html+='<input type="file" accept="image/*" id="'+containerId+'_input_'+i+'" onchange="onPhotoSelected(\''+containerId+'\','+i+',this)">';
-    html+='</div>';
+    wrap.appendChild(makePhotoSlot(containerId,i,existingUrls[i]||'',arr));
   }
-  g(containerId).innerHTML=html;
 }
-window.onPhotoSelected=function(containerId,idx,input){
-  var file=input.files[0]; if(!file) return;
-  var arr = containerId==='photosBefore'?photosBefore:photosAfter;
+function makePhotoSlot(containerId,idx,existingUrl,arr){
+  var slot=document.createElement('div');
+  slot.className='photo-slot'+(existingUrl?' has-img':' empty');
+  slot.id=containerId+'_'+idx;
+
+  var inpCam=document.createElement('input'); inpCam.type='file'; inpCam.accept='image/*'; inpCam.setAttribute('capture','environment');
+  var inpFile=document.createElement('input'); inpFile.type='file'; inpFile.accept='image/*';
+  inpCam.addEventListener('change',function(e){ if(e.target.files&&e.target.files[0]) setPhotoSlot(containerId,idx,e.target.files[0],arr); });
+  inpFile.addEventListener('change',function(e){ if(e.target.files&&e.target.files[0]) setPhotoSlot(containerId,idx,e.target.files[0],arr); });
+  slot.appendChild(inpCam); slot.appendChild(inpFile);
+
+  if(existingUrl){
+    var img=document.createElement('img'); img.src=existingUrl;
+    img.onclick=function(){ openLB(existingUrl); };
+    slot.appendChild(img);
+  } else {
+    var numLbl=document.createElement('span'); numLbl.className='ps-num'; numLbl.textContent=String(idx+1);
+    var btnsDiv=document.createElement('div'); btnsDiv.className='ps-btns';
+    var btnCam=document.createElement('button'); btnCam.type='button'; btnCam.className='ps-btn'; btnCam.textContent='📷'; btnCam.title='Hacer foto';
+    var btnFile=document.createElement('button'); btnFile.type='button'; btnFile.className='ps-btn'; btnFile.textContent='📂'; btnFile.title='Subir archivo';
+    btnCam.addEventListener('click',function(e){ if(isLocked)return; e.stopPropagation(); inpCam.value=''; inpCam.click(); });
+    btnFile.addEventListener('click',function(e){ if(isLocked)return; e.stopPropagation(); inpFile.value=''; inpFile.click(); });
+    btnsDiv.appendChild(btnCam); btnsDiv.appendChild(btnFile);
+    slot.appendChild(numLbl); slot.appendChild(btnsDiv);
+  }
+  slot.insertAdjacentHTML('beforeend','<div class="up-ov"><div class="up-spin"></div></div><button class="del-btn" type="button">✕</button>');
+  slot.querySelector('.del-btn').addEventListener('click',function(e){ e.stopPropagation(); clearPhotoSlot(containerId,idx,arr); });
+  return slot;
+}
+function setPhotoSlot(containerId,idx,file,arr){
+  var slot=g(containerId+'_'+idx);
+  var ov=slot.querySelector('.up-ov'); if(ov) ov.className='up-ov show';
   compressImage(file,1200,0.80).then(function(compressed){
     arr[idx]={file:compressed,url:null};
     var reader=new FileReader();
     reader.onload=function(e){
-      var slot=g(containerId+'_'+idx);
-      slot.innerHTML='<img src="'+e.target.result+'"><button class="photo-x" onclick="event.stopPropagation();clearPhotoSlot(\''+containerId+'\','+idx+')">✕</button><input type="file" accept="image/*" id="'+containerId+'_input_'+idx+'" onchange="onPhotoSelected(\''+containerId+'\','+idx+',this)">';
+      var oldSlot=g(containerId+'_'+idx);
+      var newSlot=makePhotoSlot(containerId,idx,e.target.result,arr);
+      oldSlot.replaceWith(newSlot);
     };
     reader.readAsDataURL(compressed);
   });
+}
+window.clearPhotoSlot=function(containerId,idx,arr){
+  arr=arr||(containerId==='photosBefore'?photosBefore:photosAfter);
+  arr[idx]=null;
+  var oldSlot=g(containerId+'_'+idx);
+  var newSlot=makePhotoSlot(containerId,idx,'',arr);
+  oldSlot.replaceWith(newSlot);
 };
 function compressImage(file,maxPx,quality){
   maxPx=maxPx||1200;quality=quality||0.80;
@@ -733,12 +833,6 @@ function compressImage(file,maxPx,quality){
     img.src=url;
   });
 }
-window.clearPhotoSlot=function(containerId,idx){
-  var arr = containerId==='photosBefore'?photosBefore:photosAfter;
-  arr[idx]=null;
-  var slot=g(containerId+'_'+idx);
-  slot.innerHTML='+<input type="file" accept="image/*" id="'+containerId+'_input_'+idx+'" onchange="onPhotoSelected(\''+containerId+'\','+idx+',this)">';
-};
 function uploadPhoto(item,idxLabel){
   if(!item || !item.file) return Promise.resolve(item&&item.url?item.url:null);
   var year=String(new Date().getFullYear());
@@ -751,6 +845,149 @@ function uploadPhoto(item,idxLabel){
     .then(function(j){return j.url||j.publicUrl||null;})
     .catch(function(){return null;});
 }
+function openLB(src){if(!src)return;var o=g('lbOverlay'),i=g('lbImg2');if(!o||!i)return;i.src=src;o.classList.add('open');document.body.style.overflow='hidden';}
+function closeLB(){var o=g('lbOverlay');if(o)o.classList.remove('open');document.body.style.overflow='';}
+window.closeLB=closeLB;
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLB();});
+
+/* ══════════════════════════════════════════════════════════
+   EDITOR DE LISTA EDITABLE + MICRÓFONO (mismo sistema que nueva-tarea.html)
+   ══════════════════════════════════════════════════════════ */
+(function(){
+  var _lists={};
+  function parse(text){
+    if(!text) return [];
+    return String(text).split('\n').map(function(line){
+      if(/^\[x\] /i.test(line)) return {text:line.slice(4),done:true};
+      if(/^\[ \] /.test(line)) return {text:line.slice(4),done:false};
+      if(/^\u2022 /.test(line)) return {text:line.slice(2),done:false};
+      return {text:line,done:false};
+    }).filter(function(it){return it.text.trim()!=='';});
+  }
+  function serialize(listEl){
+    var lines=[];
+    listEl.querySelectorAll('.tl-item').forEach(function(it){
+      var span=it.querySelector('.tl-text');
+      var t=(span.innerText||span.textContent||'').replace(/\n/g,' ').trim();
+      if(!t) return;
+      var done=it.querySelector('input[type=checkbox]').checked;
+      lines.push((done?'[x] ':'[ ] ')+t);
+    });
+    return lines.join('\n');
+  }
+  function placeAdd(fId){
+    var L=_lists[fId]; if(!L||!L.add) return;
+    var firstDone=L.list.querySelector('.tl-item.done');
+    if(firstDone) L.list.insertBefore(L.add,firstDone); else L.list.appendChild(L.add);
+  }
+  function sync(fId){
+    var L=_lists[fId]; if(!L) return;
+    placeAdd(fId);
+    L.ta.value=serialize(L.list);
+  }
+  function makeItem(fId,text,done){
+    var L=_lists[fId];
+    var item=document.createElement('div');
+    item.className='tl-item'+(done?' done':'');
+    item.draggable=true;
+    var grip=document.createElement('span'); grip.className='tl-grip'; grip.textContent='\u283F'; grip.title='Arrastrar para reordenar';
+    var cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!done;
+    var span=document.createElement('span'); span.className='tl-text'; span.contentEditable='true'; span.setAttribute('data-ph','Escribe…'); span.textContent=text||'';
+    var del=document.createElement('button'); del.type='button'; del.className='tl-del'; del.textContent='×'; del.title='Eliminar';
+    span.addEventListener('input',function(){sync(fId);});
+    span.addEventListener('keydown',function(e){ if(e.key==='Enter'){e.preventDefault();span.blur();addItem(fId,'',false,item);} });
+    span.addEventListener('blur',function(){ if((span.textContent||'').trim()==='') item.remove(); sync(fId); });
+    cb.addEventListener('change',function(){
+      if(cb.checked){item.classList.add('done');L.list.appendChild(item);}
+      else{item.classList.remove('done');L.list.insertBefore(item,L.list.firstChild);}
+      sync(fId);
+    });
+    del.addEventListener('click',function(){item.remove();sync(fId);});
+    item.addEventListener('dragstart',function(){item.classList.add('dragging');});
+    item.addEventListener('dragend',function(){item.classList.remove('dragging');sync(fId);});
+    item.appendChild(grip);item.appendChild(cb);item.appendChild(span);item.appendChild(del);
+    return item;
+  }
+  function addItem(fId,text,done,afterEl){
+    var L=_lists[fId]; if(!L) return;
+    var item=makeItem(fId,text,done);
+    if(afterEl&&afterEl.parentNode===L.list) L.list.insertBefore(item,afterEl.nextSibling);
+    else if(L.add&&L.add.parentNode===L.list) L.list.insertBefore(item,L.add);
+    else L.list.appendChild(item);
+    sync(fId);
+    var sp=item.querySelector('.tl-text'); if(sp) sp.focus();
+    return item;
+  }
+  function getDragAfter(listEl,y){
+    var els=[].slice.call(listEl.querySelectorAll('.tl-item:not(.dragging)'));
+    return els.reduce(function(closest,child){
+      var box=child.getBoundingClientRect();
+      var offset=y-box.top-box.height/2;
+      if(offset<0 && offset>closest.offset) return {offset:offset,element:child};
+      return closest;
+    },{offset:Number.NEGATIVE_INFINITY}).element;
+  }
+  window._tlInit=function(fId,ph){
+    var ta=document.getElementById(fId);
+    var wrap=document.getElementById(fId+'_tl');
+    if(!ta||!wrap) return;
+    wrap.innerHTML='';
+    var list=document.createElement('div'); list.className='tl-list';
+    var add=document.createElement('div'); add.className='tl-add';
+    var inp=document.createElement('input'); inp.type='text'; inp.placeholder=ph||'Añadir…'; inp.autocomplete='off';
+    var btn=document.createElement('button'); btn.type='button'; btn.textContent='+ Añadir';
+    wrap.appendChild(list); list.appendChild(add); add.appendChild(inp); add.appendChild(btn);
+    _lists[fId]={list:list,ta:ta,add:add};
+    parse(ta.value).forEach(function(it){ list.insertBefore(makeItem(fId,it.text,it.done),add); });
+    sync(fId);
+    function commit(){ var v=inp.value.trim(); if(!v) return; addItem(fId,v,false); inp.value=''; }
+    btn.addEventListener('click',function(){commit();inp.focus();});
+    inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){e.preventDefault();commit();} });
+    list.addEventListener('dragover',function(e){
+      e.preventDefault();
+      var dragging=list.querySelector('.tl-item.dragging'); if(!dragging) return;
+      var after=getDragAfter(list,e.clientY);
+      if(after==null){ if(add.parentNode===list) list.insertBefore(dragging,add); else list.appendChild(dragging); }
+      else list.insertBefore(dragging,after);
+    });
+    ta.style.display='none';
+  };
+  window._tlGet=function(fId){
+    var L=_lists[fId];
+    if(L) return serialize(L.list);
+    return (document.getElementById(fId)||{}).value||'';
+  };
+  window._tlAddItem=function(fId,text){
+    if(!_lists[fId]||!text) return;
+    addItem(fId,text.trim(),false);
+  };
+})();
+function initMic(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return;
+  var rec=new SR(); rec.lang='es-ES'; rec.continuous=false; rec.interimResults=false;
+  var activeBtn=null,activeField=null,activeTl=null,isRec=false;
+  function startRec(btn,field,tlId){
+    if(isRec){rec.stop();return;}
+    activeBtn=btn;activeField=field;activeTl=tlId||null;isRec=true;
+    btn.classList.add('recording');
+    try{rec.start();}catch(e){stopRec();}
+  }
+  function stopRec(){ isRec=false; if(activeBtn) activeBtn.classList.remove('recording'); activeBtn=null;activeField=null;activeTl=null; }
+  rec.onresult=function(e){
+    var t=e.results[0][0].transcript;
+    if(activeTl && window._tlAddItem){ window._tlAddItem(activeTl,t); return; }
+    if(activeField) activeField.value=(activeField.value?activeField.value+' ':'')+t;
+  };
+  rec.onend=stopRec;
+  rec.onerror=function(){ stopRec(); toast('Error de micrófono','err'); };
+  [['micDescripcion','mDescripcion','mDescripcion'],['micResolucion','mResolucion','mResolucion'],['micEstadoHuesped','mEstadoHuesped','mEstadoHuesped']].forEach(function(p){
+    var btn=g(p[0]),field=g(p[1]);
+    if(!btn) return;
+    btn.classList.remove('hidden');
+    btn.addEventListener('click',function(){ startRec(btn,field,p[2]); });
+  });
+}
+initMic();
 
 /* Villa Manager autocomplete en el modal (por defecto usuario actual, igual que nueva-tarea.html) */
 var selectedAsignadoModal='';
@@ -779,6 +1016,10 @@ function defaultAsignadoActual(){
     g('mAsignado').value=me.id;
     selectedAsignadoModal=me.id;
   }
+}
+function aplicarBloqueoVillaManager(){
+  var puede = myRole==='admin' || myRole==='manager';
+  g('mAsignadoSearch').disabled=!puede;
 }
 
 /* Villa autocomplete en el modal */
@@ -814,11 +1055,15 @@ window.abrirModal=function(taskId){
     g('mImportante').checked=true;
     g('mUrgente').checked=true;
     defaultAsignadoActual();
+    aplicarBloqueoVillaManager();
     g('lockMsg').style.display='none';
     g('formFields').style.display='block';
     g('modalFoot').style.display='flex';
-    renderPhotoGrid('photosBefore',[],photosBefore);
-    renderPhotoGrid('photosAfter',[],photosAfter);
+    buildPhotoGrid('photosBefore',[],photosBefore);
+    buildPhotoGrid('photosAfter',[],photosAfter);
+    _tlInit('mDescripcion','Añadir detalle…');
+    _tlInit('mResolucion','Añadir detalle…');
+    _tlInit('mEstadoHuesped','Añadir detalle…');
 
     /* Pre-relleno desde parámetros URL (botón "Intervención 🚨" de entradas-equipo.html) */
     var p=new URLSearchParams(location.search);
@@ -848,6 +1093,7 @@ window.abrirModal=function(taskId){
   g('mAsignadoSearch').value=allUsersMap[row.TaTasks_UserID_asigned_alfanum]||row.TaTasks_UserID_asigned_alfanum||'';
   g('mAsignado').value=row.TaTasks_UserID_asigned_alfanum||'';
   selectedAsignadoModal=row.TaTasks_UserID_asigned_alfanum||'';
+  aplicarBloqueoVillaManager();
   g('mVillaSearch').value=row.TaVillas_Name_villa_para_inquilinos||'';
   g('mVilla').value=row.TaTasks_villaid||'';
   selectedVillaIdModal=row.TaTasks_villaid||'';
@@ -868,13 +1114,21 @@ window.abrirModal=function(taskId){
   g('mUrgente').checked=isFlagOn(row.TaTasks_urgente);
   g('mTerminada').checked=isFlagOn(row.TaTasks_Tarea_terminada);
 
-  renderPhotoGrid('photosBefore', PHOTO_BEFORE.map(function(f){return row['TaTasks_'+f]||'';}), photosBefore);
-  renderPhotoGrid('photosAfter', PHOTO_AFTER.map(function(f){return row['TaTasks_'+f]||'';}), photosAfter);
+  buildPhotoGrid('photosBefore', PHOTO_BEFORE.map(function(f){return row['TaTasks_'+f]||'';}), photosBefore);
+  buildPhotoGrid('photosAfter', PHOTO_AFTER.map(function(f){return row['TaTasks_'+f]||'';}), photosAfter);
+  _tlInit('mDescripcion','Añadir detalle…');
+  _tlInit('mResolucion','Añadir detalle…');
+  _tlInit('mEstadoHuesped','Añadir detalle…');
 
   if(isLocked){
     document.querySelectorAll('#formFields input,#formFields select,#formFields textarea').forEach(function(el){el.disabled=true;});
+    document.querySelectorAll('#formFields .tl-text').forEach(function(el){el.contentEditable='false';});
+    document.querySelectorAll('#formFields .tl-add,#formFields .tl-del,#formFields .mic-btn').forEach(function(el){el.style.display='none';});
   } else {
     document.querySelectorAll('#formFields input,#formFields select,#formFields textarea').forEach(function(el){el.disabled=false;});
+    document.querySelectorAll('#formFields .tl-text').forEach(function(el){el.contentEditable='true';});
+    document.querySelectorAll('#formFields .tl-add,#formFields .tl-del').forEach(function(el){el.style.display='';});
+    aplicarBloqueoVillaManager();
   }
 };
 function extractTime(dt){
@@ -897,7 +1151,19 @@ window.guardarModal=function(){
   if(isLocked) return;
   var fecha=val('mFecha');
   if(!fecha){ toast('⚠️ Indica la fecha','err'); return; }
-  if(g('mVillaSearch').value.trim() && !g('mVilla').value){ toast('⚠️ Selecciona una villa de la lista','err'); return; }
+  if(!g('mVilla').value){ toast('⚠️ La villa es obligatoria — selecciónala de la lista','err'); g('mVillaSearch').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  if(!val('mReserva').trim()){ toast('⚠️ La reserva es obligatoria','err'); g('mReserva').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  if(!val('mTipo')){ toast('⚠️ Selecciona el tipo de intervención','err'); return; }
+  var descTxt=_tlGet('mDescripcion').trim();
+  if(!descTxt){ toast('⚠️ La descripción es obligatoria','err'); g('mDescripcion_tl').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  var resolTxt=_tlGet('mResolucion').trim();
+  if(!resolTxt){ toast('⚠️ La acción realizada / resultado es obligatoria','err'); g('mResolucion_tl').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  var estadoTxt=_tlGet('mEstadoHuesped').trim();
+  if(!estadoTxt){ toast('⚠️ El estado del huésped es obligatorio','err'); g('mEstadoHuesped_tl').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  if(g('mTerminada').checked && (!val('mHoraAviso')||!val('mHoraInicio')||!val('mHoraFin'))){
+    toast('⚠️ Para marcar como Terminada, rellena las 3 horas (aviso, inicio y fin)','err');
+    return;
+  }
 
   var btn=g('btnGuardarModal'); btn.disabled=true; btn.classList.add('loading');
 
@@ -909,16 +1175,16 @@ window.guardarModal=function(){
     var record={
       Intervencion_guardia:true,
       villaid: selectedVillaIdModal?parseInt(selectedVillaIdModal):null,
-      Idreserva: val('mReserva').trim()||null,
+      Idreserva: val('mReserva').trim(),
       Data_to_be_done_fixed: fecha+' 00:00:00',
       Intervencion_guardia_hora_primer: val('mHoraAviso')? fecha+'T'+val('mHoraAviso')+':00' : null,
       Intervencion_guardia_hora_inicio: val('mHoraInicio')? fecha+'T'+val('mHoraInicio')+':00' : null,
       Intervencion_guardia_hora_fin: val('mHoraFin')? fecha+'T'+val('mHoraFin')+':00' : null,
-      Intervencion_guardia_tipo_ID: val('mTipo')||'otros',
-      Intervencion_guardia_estado_hues: val('mEstadoHuesped').trim(),
+      Intervencion_guardia_tipo_ID: val('mTipo'),
+      Intervencion_guardia_estado_hues: estadoTxt,
       Taskname: 'Intervención de guardia',
-      Taskdescription: val('mDescripcion').trim(),
-      Solutiondescription: val('mResolucion').trim(),
+      Taskdescription: descTxt,
+      Solutiondescription: resolTxt,
       Desplazamientos: g('mDesplazamiento').checked,
       Explicardesplazamientos: val('mDespExplicar').trim(),
       importante: g('mImportante').checked,
@@ -954,6 +1220,7 @@ window.guardarModal=function(){
 };
 
 /* ── Init ── */
+applyDefaultDates();
 Promise.all([loadVillas(),loadUsers(),loadTipos()]).then(function(){
   doSearch();
   var p=new URLSearchParams(location.search);
@@ -970,4 +1237,4 @@ Promise.all([loadVillas(),loadUsers(),loadTipos()]).then(function(){
 
 </body>
 </html>
-<!-- HISTORIAL: v02 - Cambios pedidos por Jordi tras probar v01: (1) Compresión de fotos: portada compressImage(file,1200,0.80) de nueva-tarea.html/editar-tarea.html, aplicada en onPhotoSelected antes de guardar el archivo en memoria (mismo comportamiento que las otras páginas de tareas). (2) "Nueva guardia" deja de crear el registro con 1 clic: ahora abre un modal pequeño (#guardiaModalOverlay) con Villa Manager (fijo, usuario actual) y Fecha (por defecto hoy); el texto de la tarea pasa a ser 'Hoy estoy de guardia' (antes 'Guardia sin intervención'); si el rol no es admin/manager, el campo fecha tiene min=hoy (no deja escoger fecha anterior en el date picker) y además hay una validación JS por si acaso que muestra el aviso 'Para poner la guardia con fecha anterior a hoy debes contactar a tu manager.' y resetea la fecha a hoy; admin/manager sin restricción de fecha. Sigue creándose con Intervencion_guardia=1 y Tarea_terminada=1, por lo que aparece en el listado igual que antes. (3) Modal de 'Añadir intervención': añadido banner informativo fijo arriba del formulario (mBanner) con el texto pedido sobre usar el botón de Intervención desde la reserva — se oculta cuando se abre el modal para editar/ver una intervención ya existente, solo se muestra al crear una nueva. Campo 'Estado del huésped' movido de su sitio original (junto a Tipo de intervención) a después de 'Acción realizada / Resultado'. Importante y Urgente ahora marcados por defecto al crear una intervención nueva (no al editar una existente, donde se respeta el valor guardado). Checkbox 'Terminada' rediseñado: quitado el emoji ✅ del texto (inducía a pensar que ya estaba terminada aunque no lo estuviera) y agrandado visualmente (fondo gris, checkbox 22×22px, en fila propia debajo de Desplazamiento/Importante/Urgente en vez de compartir fila con ellos). (4) Nuevo campo 'Villa Manager' (autocompletado, mAsignadoSearch/mAsignado) en el modal de intervención — por defecto se autorrellena con el usuario actual (busca por email en TaUsers, mismo patrón que nueva-tarea.html), pero permite cambiarlo; al guardar, UserID_asigned_alfanum/UserID_responsible_alfanum usan este campo en lugar de forzar siempre el usuario que crea. Al editar una intervención existente, el campo se rellena con el UserID_asigned_alfanum guardado (resuelto a nombre vía allUsersMap). (5) Soporte de parámetros de URL para llegar directamente a 'nueva intervención' desde el nuevo botón de entradas-equipo.html: si la URL trae accion=nueva-intervencion, se abre el modal automáticamente tras cargar los lookups; si trae villaid+villaname, se prerellena la villa; si trae reserva, se prerellena el código de reserva. PENDIENTE: falta modificar entradas-equipo.html para añadir el botón "Intervención 🚨" en las 3 vistas (fichas/listado/semanal) de entradas y salidas, que enlace aquí con esos parámetros — se entrega en archivo aparte. | v01 - Primera versión de la página. Listado de intervenciones de guardia (lee TaTasks vía la vista Vi_TaTasks_villas_user_mu filtrando siempre por Intervencion_guardia=1) con los mismos filtros que tareas.html (buscar, estado Todas/Pendientes/Terminadas —por defecto Todas—, villa manager multi-select, desde/hasta, villa, nº tarea, id reserva), con dos diferencias acordadas con Jordi: (1) Importante/Urgente se mueven dentro del panel colapsable "Filtros" en vez de pastillas siempre visibles; (2) los filtros "Tipo tarea"/"Tipo reserva" (Limpieza/WP/Cierre, específicos del flujo de limpieza) se sustituyen por un único filtro "Tipo de intervención" alimentado por la tabla lookup Ta_tipo_intervencion_guardia. Columnas del listado: botón ver/editar, fecha, villa, tipo de intervención (badge), descripción/resolución, estado del huésped — todas truncadas con fila expandible (toggleExpand); al expandir se muestra el texto completo y, si la tarea tiene Idreserva, un botón que abre entradas-equipo.html?cod=CODIGO en pestaña nueva. Botón "+ Nueva guardia": crea con un solo clic un registro en TaTasks con Intervencion_guardia=1, Intervencion_guardia_tipo_ID='guardia sin intervencion', Tarea_terminada=true y UserID_created/UserID_asigned_alfanum/UserID_responsible_alfanum = usuario actual (sin abrir formulario), replicando el caso "sin incidencias" del registro en papel. Botón "+ Añadir intervención": abre modal con todos los campos (villa, reserva opcional, fecha, hora primer aviso/inicio/fin, tipo de intervención, estado del huésped, descripción, resolución, desplazamiento+explicación, importante/urgente/terminada) más 5 fotos antes (Picture_cloudfare1-5) y 5 después (Picture_cloudfare_after1-5), mismo patrón de subida a R2 que nueva-tarea.html/editar-tarea.html (action=upload, comprime en el navegador antes de subir — nota: compressImage no incluido en esta v01, pendiente de portar desde editar-tarea.html si los ficheros pesan demasiado). Botón ver/editar en cada fila abre el mismo modal precargado; BLOQUEO 24H: si han pasado más de 24h desde TaTasks_DataCreated y el rol del usuario (Auth.role()) no es 'admin' ni 'manager', el formulario se deshabilita y se muestra el mensaje 'Las intervenciones solo se pueden editar durante 24 horas, contacta con tu manager si quieres editar esta intervención.' en vez de los botones de guardar. NOTA IMPORTANTE PENDIENTE: esta página usa Auth.require('guardias-e-intervenciones'), una clave que TODAVÍA NO EXISTE en auth.js — hay que añadir la entrada de permisos en auth.js antes de desplegar esta página o Auth.require lanzará 'Sin permiso' para todos los usuarios. Se entrega por separado la línea exacta a añadir. Campos reales de Caspio con nombre truncado a 32 caracteres usados tal cual: Intervencion_guardia_estado_hues (no _estado_huesped) e Intervencion_guardia_hora_primer (no _hora_primer_aviso). -->
+<!-- HISTORIAL: v03 - Cambios pedidos por Jordi tras probar v02: (1) FIX CRÍTICO — las guardias creadas no aparecían en el listado: buildWhere filtraba con Intervencion_guardia=1 (campo YES/NO); Caspio no admite fiablemente esa comparación en WHERE vía REST (es la misma razón por la que tareas.html filtra Tarea_terminada en cliente en vez de en el WHERE, ver comentario v32 de ese archivo). Sustituido por Intervencion_guardia_tipo_ID IS NOT NULL AND Intervencion_guardia_tipo_ID<>'' — campo STRING, comparación fiable ya usada en el resto del proyecto (mismo patrón que TaBookings2021_BookingStatus<>'cancelled'), y funcionalmente equivalente porque ese campo solo se rellena en registros de guardia. (2) Filtro de fechas Desde/Hasta movido de dentro de 'Filtros' a la barra principal, siempre visible sin desplegar nada; valor por defecto al cargar la página y al pulsar 'Limpiar': Desde=hoy, Hasta=31/12 del año en curso (constante endOfYearStr()). (3) Modal de intervención — validaciones obligatorias añadidas en guardarModal(): Villa (debe seleccionarse de la lista), Reserva (ya no opcional, texto obligatorio), Tipo de intervención, Descripción, Acción realizada/Resultado y Estado del huésped; si falta alguno se avisa con toast y no se guarda. Las 3 horas (aviso/inicio/fin) NO son obligatorias para guardar, pero si se intenta marcar el checkbox Terminada sin las 3 rellenas, se bloquea el guardado con aviso explicativo. (4) Campo Villa Manager: nueva función aplicarBloqueoVillaManager() que deshabilita el input si el rol (Auth.role()) no es 'admin' ni 'manager' — el resto de roles ven su propio nombre pero no pueden reasignar la intervención a otro compañero; se aplica tanto al crear como al editar (salvo que ya esté bloqueada por el candado de 24h, en cuyo caso todo el formulario queda deshabilitado igualmente). (5) Descripción, Acción realizada/Resultado y Estado del huésped: portado COMPLETO el sistema de lista editable + dictado por voz de nueva-tarea.html/editar-tarea.html (funciones parse/serialize/makeItem/addItem/sync/placeAdd/getDragAfter/_tlInit/_tlGet/_tlAddItem, checkboxes + edición inline + drag&drop + botón eliminar + fila añadir, más initMic() con Web Speech API para dictado — 3 botones de micrófono nuevos, uno por campo). Mismo formato de texto guardado ([x]/[ ]/línea plana) que las otras páginas, así que estos campos se leen y editan igual en cualquier página que los use. (6) Fotos: sustituido el sistema simple (click para abrir selector, sin zoom) por el sistema completo de nueva-tarea.html: cada slot tiene botón 📷 (cámara, capture=environment) y 📂 (archivo), número de slot, overlay de subida con spinner, botón ✕ de borrar, y click en la miniatura abre lightbox de pantalla completa (#lbOverlay/openLB/closeLB, tecla Escape para cerrar) — antes las fotos no hacían zoom ni tenían esos botones. Funciones nuevas buildPhotoGrid/makePhotoSlot/setPhotoSlot sustituyen a renderPhotoGrid/onPhotoSelected (eliminadas, sin más referencias). (7) 'Hubo desplazamiento' y 'Terminada' rediseñados como toggle-switch (interruptor deslizante verde/gris) dentro de una tarjeta con fondo propio (.toggle-card), en vez del checkbox pequeño con texto plano de antes — mucho más visible y con mejor jerarquía visual; 'Terminada' usa fondo verde claro para diferenciarla. (8) Importante y Urgente: ya no se muestran en el modal (checkboxes ocultos display:none) pero se guardan siempre como true — deja de ser una decisión del usuario y pasa a ser el comportamiento por defecto de toda intervención de guardia, tal como se pidió. LIMPIEZA de huérfanos: eliminadas las funciones/CSS de la v02 sustituidas (renderPhotoGrid, onPhotoSelected(window), clases .photo-grid/.photo-x/.photo-slot antiguas — la nueva versión de .photo-slot convive con el resto de clases ps-*/del-btn/up-ov ya documentadas). | v02 - Cambios pedidos por Jordi tras probar v01: (1) Compresión de fotos: portada compressImage(file,1200,0.80) de nueva-tarea.html/editar-tarea.html, aplicada en onPhotoSelected antes de guardar el archivo en memoria (mismo comportamiento que las otras páginas de tareas). (2) "Nueva guardia" deja de crear el registro con 1 clic: ahora abre un modal pequeño (#guardiaModalOverlay) con Villa Manager (fijo, usuario actual) y Fecha (por defecto hoy); el texto de la tarea pasa a ser 'Hoy estoy de guardia' (antes 'Guardia sin intervención'); si el rol no es admin/manager, el campo fecha tiene min=hoy (no deja escoger fecha anterior en el date picker) y además hay una validación JS por si acaso que muestra el aviso 'Para poner la guardia con fecha anterior a hoy debes contactar a tu manager.' y resetea la fecha a hoy; admin/manager sin restricción de fecha. Sigue creándose con Intervencion_guardia=1 y Tarea_terminada=1, por lo que aparece en el listado igual que antes. (3) Modal de 'Añadir intervención': añadido banner informativo fijo arriba del formulario (mBanner) con el texto pedido sobre usar el botón de Intervención desde la reserva — se oculta cuando se abre el modal para editar/ver una intervención ya existente, solo se muestra al crear una nueva. Campo 'Estado del huésped' movido de su sitio original (junto a Tipo de intervención) a después de 'Acción realizada / Resultado'. Importante y Urgente ahora marcados por defecto al crear una intervención nueva (no al editar una existente, donde se respeta el valor guardado). Checkbox 'Terminada' rediseñado: quitado el emoji ✅ del texto (inducía a pensar que ya estaba terminada aunque no lo estuviera) y agrandado visualmente (fondo gris, checkbox 22×22px, en fila propia debajo de Desplazamiento/Importante/Urgente en vez de compartir fila con ellos). (4) Nuevo campo 'Villa Manager' (autocompletado, mAsignadoSearch/mAsignado) en el modal de intervención — por defecto se autorrellena con el usuario actual (busca por email en TaUsers, mismo patrón que nueva-tarea.html), pero permite cambiarlo; al guardar, UserID_asigned_alfanum/UserID_responsible_alfanum usan este campo en lugar de forzar siempre el usuario que crea. Al editar una intervención existente, el campo se rellena con el UserID_asigned_alfanum guardado (resuelto a nombre vía allUsersMap). (5) Soporte de parámetros de URL para llegar directamente a 'nueva intervención' desde el nuevo botón de entradas-equipo.html: si la URL trae accion=nueva-intervencion, se abre el modal automáticamente tras cargar los lookups; si trae villaid+villaname, se prerellena la villa; si trae reserva, se prerellena el código de reserva. PENDIENTE: falta modificar entradas-equipo.html para añadir el botón "Intervención 🚨" en las 3 vistas (fichas/listado/semanal) de entradas y salidas, que enlace aquí con esos parámetros — se entrega en archivo aparte. | v01 - Primera versión de la página. Listado de intervenciones de guardia (lee TaTasks vía la vista Vi_TaTasks_villas_user_mu filtrando siempre por Intervencion_guardia=1) con los mismos filtros que tareas.html (buscar, estado Todas/Pendientes/Terminadas —por defecto Todas—, villa manager multi-select, desde/hasta, villa, nº tarea, id reserva), con dos diferencias acordadas con Jordi: (1) Importante/Urgente se mueven dentro del panel colapsable "Filtros" en vez de pastillas siempre visibles; (2) los filtros "Tipo tarea"/"Tipo reserva" (Limpieza/WP/Cierre, específicos del flujo de limpieza) se sustituyen por un único filtro "Tipo de intervención" alimentado por la tabla lookup Ta_tipo_intervencion_guardia. Columnas del listado: botón ver/editar, fecha, villa, tipo de intervención (badge), descripción/resolución, estado del huésped — todas truncadas con fila expandible (toggleExpand); al expandir se muestra el texto completo y, si la tarea tiene Idreserva, un botón que abre entradas-equipo.html?cod=CODIGO en pestaña nueva. Botón "+ Nueva guardia": crea con un solo clic un registro en TaTasks con Intervencion_guardia=1, Intervencion_guardia_tipo_ID='guardia sin intervencion', Tarea_terminada=true y UserID_created/UserID_asigned_alfanum/UserID_responsible_alfanum = usuario actual (sin abrir formulario), replicando el caso "sin incidencias" del registro en papel. Botón "+ Añadir intervención": abre modal con todos los campos (villa, reserva opcional, fecha, hora primer aviso/inicio/fin, tipo de intervención, estado del huésped, descripción, resolución, desplazamiento+explicación, importante/urgente/terminada) más 5 fotos antes (Picture_cloudfare1-5) y 5 después (Picture_cloudfare_after1-5), mismo patrón de subida a R2 que nueva-tarea.html/editar-tarea.html (action=upload, comprime en el navegador antes de subir — nota: compressImage no incluido en esta v01, pendiente de portar desde editar-tarea.html si los ficheros pesan demasiado). Botón ver/editar en cada fila abre el mismo modal precargado; BLOQUEO 24H: si han pasado más de 24h desde TaTasks_DataCreated y el rol del usuario (Auth.role()) no es 'admin' ni 'manager', el formulario se deshabilita y se muestra el mensaje 'Las intervenciones solo se pueden editar durante 24 horas, contacta con tu manager si quieres editar esta intervención.' en vez de los botones de guardar. NOTA IMPORTANTE PENDIENTE: esta página usa Auth.require('guardias-e-intervenciones'), una clave que TODAVÍA NO EXISTE en auth.js — hay que añadir la entrada de permisos en auth.js antes de desplegar esta página o Auth.require lanzará 'Sin permiso' para todos los usuarios. Se entrega por separado la línea exacta a añadir. Campos reales de Caspio con nombre truncado a 32 caracteres usados tal cual: Intervencion_guardia_estado_hues (no _estado_huesped) e Intervencion_guardia_hora_primer (no _hora_primer_aviso). -->
