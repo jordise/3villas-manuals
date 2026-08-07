@@ -33,7 +33,7 @@ var _menuAdmin = [
     children: [
       { label: 'Nueva Villa',       url: 'crear-villa.html',                     icon: '🏠' },
       { label: 'Control Waiver',      url: 'control-waiver.html',             icon: '🔧' },
-      { label: 'Listado Guardias',          url: 'listado-guardias-e-intervenciones.html',   icon: '🚨' }
+      { label: 'Listado Guardias',          url: 'listado-guardias-e-intervenciones.html',   icon: '🚨' },
       { label: 'Reuniones',          url: 'reuniones.html',   icon: '📅' }
     ]
   },
