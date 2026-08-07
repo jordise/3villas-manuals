@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="es">
+<!-- VERSIÓN ACTUAL: v01 | Historial completo al final -->
+<head>
+  <base href="/intranet/">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guardias e Intervenciones v01 — 3Villas</title>
+  <link rel="icon" type="image/png" href="https://www.3villas.com/intranet/icon-corazon-rojo-fondo-transparente.png">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <script>
+    // ── AUTO-DETECCIÓN DE VERSIÓN (Opción B) ──
+    (function(){
+      const PAGE_VERSION='v01';
+      try{
+        if(location.protocol==='file:') return;
+        fetch(location.pathname,{cache:'reload'}).then(r=>r.text()).then(html=>{
+          const m=html.match(/VERSIÓN ACTUAL:\s*(v\d+)/);
+          if(!m) return;
+          const serverVer=m[1];
+          if(serverVer!==PAGE_VERSION){
+            const flag='3v_vchk_'+location.pathname+'_'+serverVer;
+            if(!sessionStorage.getItem(flag)){
+              sessionStorage.setItem(flag,'1');
+              location.reload();
+            }
+          }
+        }).catch(()=>{});
+      }catch(e){}
+    })();
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--red:#C8102E;--red-dark:#9e0c24;--red-light:#fce8eb;--green:#1e9e4e;--green-dark:#157039;--green-light:#e6f7ee;--orange:#e07b00;--orange-light:#fff4e0;--gray-1:#f4f5f7;--gray-2:#e8eaed;--gray-3:#c4c9d4;--gray-4:#7a8194;--gray-5:#2d3142;--shadow-sm:0 1px 4px rgba(0,0,0,.08);--shadow-md:0 4px 14px rgba(0,0,0,.11);--shadow-lg:0 8px 28px rgba(0,0,0,.13);--r:10px}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Open Sans',sans-serif;background:var(--gray-1);color:var(--gray-5);min-height:100vh;padding-bottom:90px}
+    h1,h2,h3{font-family:'Montserrat',sans-serif}
+    a{color:inherit}
+    /* ── NAV ── */
+    nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;background:#fff;padding:10px 16px;box-shadow:var(--shadow-sm)}
+    nav img{height:26px}
+    .wp-nav-center{flex:1;text-align:center}
+    .wp-nav-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:15px;color:var(--gray-5)}
+    .wp-nav-sub{font-size:11px;color:var(--gray-4)}
+    .wp-nav-btns{display:flex;align-items:center;gap:10px}
+    .wp-nav-user{font-size:12px;color:var(--gray-4);display:flex;align-items:center;gap:4px}
+    .wp-nav-menu,.wp-nav-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--gray-5);padding:4px 8px;border-radius:6px}
+    .wp-nav-menu:hover,.wp-nav-close:hover{background:var(--gray-1)}
+    /* ── FILTROS ── */
+    #filterPanel{background:#fff;padding:10px 16px;box-shadow:var(--shadow-sm);position:sticky;top:46px;z-index:40}
+    .main-bar{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+    #fBuscar{height:34px;border:1px solid var(--gray-3);border-radius:8px;padding:0 12px;font-size:13px;min-width:160px}
+    .pill-group{display:flex;flex-direction:column;gap:3px}
+    .pill-label{font-size:10px;color:var(--gray-4);font-weight:600;text-transform:uppercase}
+    .pill-opts{display:flex;gap:4px}
+    .pill-opt{border:1px solid var(--gray-3);background:#fff;border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--gray-4);font-weight:600}
+    .pill-opt.on{background:var(--red);border-color:var(--red);color:#fff}
+    .btn-mas{border:1px solid var(--gray-3);background:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--gray-5)}
+    .btn-mas .arr{transition:transform .2s}
+    .btn-mas.open .arr{transform:rotate(180deg)}
+    .btn-clear{border:none;background:none;font-size:16px;cursor:pointer;color:var(--gray-4);padding:6px}
+    #chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .chip{background:var(--gray-1);border-radius:20px;padding:4px 10px;font-size:11px;display:flex;align-items:center;gap:6px;color:var(--gray-5)}
+    .chip button{border:none;background:none;cursor:pointer;color:var(--gray-4);font-size:12px}
+    #masFiltros{max-height:0;overflow:hidden;transition:max-height .25s ease}
+    #masFiltros.open{max-height:400px}
+    .mas-inner{padding-top:10px;display:flex;flex-direction:column;gap:10px}
+    .filter-row{display:flex;gap:10px;flex-wrap:wrap}
+    .f-group{display:flex;flex-direction:column;gap:3px;flex:1;min-width:130px}
+    .f-group.narrow{flex:0 0 130px}
+    .f-group.wide{flex:1 1 220px}
+    .f-label{font-size:10px;color:var(--gray-4);font-weight:600;text-transform:uppercase}
+    .f-input,.f-select{height:34px;border:1px solid var(--gray-3);border-radius:8px;padding:0 10px;font-size:12px;width:100%}
+    .flag-check{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-5);cursor:pointer}
+    .manager-panel{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--gray-2);border-radius:8px;box-shadow:var(--shadow-md);max-height:260px;overflow:auto;z-index:60}
+    .manager-list{max-height:180px;overflow:auto}
+    .manager-row{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;cursor:pointer}
+    .manager-row:hover{background:var(--gray-1)}
+    /* ── STATS ── */
+    #statsBar{display:flex;gap:16px;padding:8px 16px;font-size:12px;color:var(--gray-4)}
+    #statsBar strong{color:var(--gray-5)}
+    /* ── LISTADO ── */
+    main{padding:0 16px}
+    .state-box{text-align:center;padding:60px 20px;color:var(--gray-4)}
+    .spinner{width:56px;height:56px;margin:0 auto 12px;display:block}
+    #listWrap{display:flex;flex-direction:column;gap:8px}
+    .gi-row{background:#fff;border-radius:var(--r);box-shadow:var(--shadow-sm);padding:12px 14px;display:grid;grid-template-columns:40px 90px 1fr 1fr 1.4fr 1fr;gap:12px;align-items:start;font-size:12px;cursor:pointer;transition:box-shadow .15s}
+    .gi-row:hover{box-shadow:var(--shadow-md)}
+    .gi-row.expanded{grid-template-columns:1fr}
+    .gi-col{overflow:hidden}
+    .gi-col-label{font-size:9px;color:var(--gray-4);text-transform:uppercase;font-weight:700;margin-bottom:2px}
+    .gi-truncate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .btn-ver{width:34px;height:34px;border-radius:8px;border:none;background:var(--gray-1);color:var(--gray-5);font-size:15px;cursor:pointer}
+    .btn-ver:hover{background:var(--gray-2)}
+    .tipo-badge{display:inline-flex;align-items:center;gap:5px;background:var(--orange-light);color:var(--orange);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700}
+    .tipo-badge.sin{background:var(--green-light);color:var(--green-dark)}
+    .estado-pill{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700}
+    .estado-pend{background:var(--red-light);color:var(--red)}
+    .estado-done{background:var(--green-light);color:var(--green-dark)}
+    .gi-expanded-body{margin-top:10px;padding-top:10px;border-top:1px dashed var(--gray-2);display:flex;flex-direction:column;gap:8px}
+    .gi-full-field{font-size:12px;color:var(--gray-5)}
+    .gi-full-label{font-size:10px;color:var(--gray-4);text-transform:uppercase;font-weight:700;margin-bottom:2px}
+    .btn-reserva{display:inline-flex;align-items:center;gap:6px;background:var(--red);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none}
+    /* ── FABs ── */
+    .fab-wrap{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:10px;z-index:70}
+    .fab{border:none;border-radius:26px;padding:12px 18px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;box-shadow:var(--shadow-lg);cursor:pointer;display:flex;align-items:center;gap:8px;color:#fff}
+    .fab-ico{font-size:16px}
+    .fab-guardia{background:var(--green)}
+    .fab-guardia:hover{background:var(--green-dark)}
+    .fab-intervencion{background:var(--red)}
+    .fab-intervencion:hover{background:var(--red-dark)}
+    /* ── MODAL FORM ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px}
+    .modal-overlay.show{display:flex}
+    .modal-card{background:#fff;border-radius:14px;max-width:640px;width:100%;box-shadow:var(--shadow-lg);margin-bottom:40px}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--gray-2)}
+    .modal-head h2{font-size:16px}
+    .modal-close{border:none;background:none;font-size:20px;cursor:pointer;color:var(--gray-4)}
+    .modal-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+    .lock-msg{background:var(--orange-light);color:var(--orange);border-radius:8px;padding:14px;font-size:13px;font-weight:600;text-align:center}
+    .form-row{display:flex;gap:10px;flex-wrap:wrap}
+    .form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px}
+    .form-label{font-size:11px;font-weight:700;color:var(--gray-5)}
+    .form-input,.form-select,.form-textarea{border:1px solid var(--gray-3);border-radius:8px;padding:8px 10px;font-size:13px;width:100%;font-family:inherit}
+    .form-textarea{min-height:70px;resize:vertical}
+    .toggle-row{display:flex;align-items:center;gap:8px;font-size:12px}
+    .photo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+    .photo-slot{aspect-ratio:1;border:2px dashed var(--gray-3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--gray-3);cursor:pointer;position:relative;overflow:hidden;background:var(--gray-1)}
+    .photo-slot img{width:100%;height:100%;object-fit:cover}
+    .photo-slot input{display:none}
+    .photo-x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer}
+    .modal-foot{padding:16px 20px;border-top:1px solid var(--gray-2);display:flex;justify-content:flex-end;gap:10px}
+    .btn-primary{background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-weight:700;font-size:13px;cursor:pointer}
+    .btn-primary:disabled{opacity:.6;cursor:default}
+    .btn-secondary{background:var(--gray-1);color:var(--gray-5);border:none;border-radius:8px;padding:10px 22px;font-weight:700;font-size:13px;cursor:pointer}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--gray-5);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:200;display:none}
+    #toast.err{background:var(--red)}
+    #toast.ok{background:var(--green)}
+    @media(max-width:760px){
+      .gi-row{grid-template-columns:1fr;gap:6px}
+      .photo-grid{grid-template-columns:repeat(3,1fr)}
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html"><img src="https://www.3villas.com/intranet/logo-negro.png" alt="3Villas"></a>
+  <div class="wp-nav-center">
+    <div class="wp-nav-title">Guardias e Intervenciones</div>
+    <div class="wp-nav-sub" id="hSub"></div>
+  </div>
+  <div class="wp-nav-btns">
+    <div class="wp-nav-user">👤 <span id="hUserName"></span></div>
+    <button class="wp-nav-menu" onclick="NavComponent.open()" title="Menú">☰</button>
+    <button class="wp-nav-close" onclick="history.back()" title="Volver">✕</button>
+  </div>
+</nav>
+
+<div id="filterPanel">
+  <div class="main-bar">
+    <input type="text" id="fBuscar" placeholder="Buscar" autocomplete="off">
+    <div class="pill-group">
+      <span class="pill-label">Estado</span>
+      <div class="pill-opts">
+        <button class="pill-opt on" id="eAll">Todas</button>
+        <button class="pill-opt" id="ePend">Pendientes</button>
+        <button class="pill-opt" id="eDone">Terminadas</button>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+    <button class="btn-mas" id="btnMas" onclick="toggleMas()"><span>Filtros</span><span class="arr">▾</span></button>
+    <button class="btn-clear" onclick="clearAll()" title="Limpiar">✕</button>
+  </div>
+
+  <div id="chips"></div>
+
+  <div id="masFiltros">
+    <div class="mas-inner">
+      <div class="filter-row">
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:16px">
+          <label class="flag-check"><input type="checkbox" id="fImportante"> 🚩 Importante</label>
+          <label class="flag-check"><input type="checkbox" id="fUrgente"> 🏁 Urgente</label>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="f-group wide" style="position:relative">
+          <label class="f-label">Villa Manager</label>
+          <button id="fUserBtn" class="f-select" style="text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+            <span id="fUserLabel">Todos</span><span style="font-size:10px;color:var(--gray-4)">▾</span>
+          </button>
+          <div id="userPanel" class="manager-panel" style="display:none">
+            <div style="padding:8px 10px;border-bottom:1px solid var(--gray-2)">
+              <input type="text" id="userSearch" class="f-input" placeholder="Buscar usuario..." style="height:30px;font-size:12px">
+            </div>
+            <div id="userList" class="manager-list"></div>
+            <div style="padding:6px 10px;border-top:1px solid var(--gray-2);display:flex;gap:8px">
+              <button id="btnSelectAll" class="btn-clear" style="font-size:11px;color:var(--gray-4)">Todos</button>
+              <button id="btnClearUsers" class="btn-clear" style="font-size:11px;color:var(--red)">Ninguno</button>
+            </div>
+          </div>
+        </div>
+        <div class="f-group narrow"><label class="f-label">Desde</label><input type="date" id="fDesde" class="f-input"></div>
+        <div class="f-group narrow"><label class="f-label">Hasta</label><input type="date" id="fHasta" class="f-input"></div>
+      </div>
+      <div class="filter-row">
+        <div class="f-group">
+          <label class="f-label">Villa</label>
+          <input type="text" id="fVilla" class="f-input" list="villasList" placeholder="Nombre de villa..." oninput="onVillaChange()" onchange="onVillaChange()">
+          <datalist id="villasList"></datalist>
+        </div>
+        <div class="f-group narrow"><label class="f-label">Nº Tarea</label><input type="number" id="fTaskId" class="f-input" placeholder="ej. 1042" min="1" step="1"></div>
+        <div class="f-group narrow"><label class="f-label">Id Reserva</label><input type="text" id="fReserva" class="f-input" placeholder="ej. j5oQcmp4FQ"></div>
+        <div class="f-group narrow">
+          <label class="f-label">Tipo de intervención</label>
+          <select id="fTipo" class="f-select"><option value="">— Todos —</option></select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="statsBar">
+  <div><strong id="sCnt">0</strong> intervenciones</div>
+  <div id="sPendStat" style="display:none"><strong id="sPendCnt" style="color:var(--red)">0</strong> pendientes</div>
+  <div id="sDoneStat" style="display:none"><strong id="sDoneCnt" style="color:var(--green)">0</strong> terminadas</div>
+</div>
+
+<main>
+  <div id="stLoad" class="state-box">
+    <img class="spinner" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAAA" alt="">
+    <p>Cargando intervenciones…</p>
+  </div>
+  <div id="stEmpty" class="state-box" style="display:none">
+    <div style="font-size:40px;margin-bottom:10px">📋</div>
+    <p>No hay intervenciones con estos filtros.</p>
+  </div>
+  <div id="stErr" class="state-box" style="display:none">
+    <div style="font-size:40px;margin-bottom:10px">⚠️</div>
+    <p id="errMsg" style="color:var(--red);font-weight:600"></p>
+  </div>
+  <div id="listWrap"></div>
+</main>
+
+<div class="fab-wrap">
+  <button class="fab fab-guardia" id="btnNuevaGuardia" onclick="crearGuardiaSinIntervencion()">
+    <span class="fab-ico">＋</span><span>Nueva guardia</span>
+  </button>
+  <button class="fab fab-intervencion" onclick="abrirModal(null)">
+    <span class="fab-ico">＋</span><span>Añadir intervención</span>
+  </button>
+</div>
+
+<!-- ── MODAL ── -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 id="modalTitle">Nueva intervención</h2>
+      <button class="modal-close" onclick="cerrarModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <!-- Mensaje de bloqueo 24h (se muestra/oculta por JS) -->
+      <div id="lockMsg" class="lock-msg" style="display:none">
+        Las intervenciones solo se pueden editar durante 24 horas, contacta con tu manager si quieres editar esta intervención.
+      </div>
+
+      <div id="formFields">
+        <div class="form-row">
+          <div class="form-group" style="position:relative">
+            <label class="form-label">Villa</label>
+            <input type="text" id="mVillaSearch" class="form-input" placeholder="Buscar villa..." autocomplete="off">
+            <input type="hidden" id="mVilla">
+            <div id="mVillaDd" class="manager-panel" style="display:none;max-height:200px"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reserva (opcional)</label>
+            <input type="text" id="mReserva" class="form-input" placeholder="Código de reserva">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="mFecha" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Hora primer aviso</label>
+            <input type="time" id="mHoraAviso" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Hora inicio</label>
+            <input type="time" id="mHoraInicio" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Hora fin</label>
+            <input type="time" id="mHoraFin" class="form-input">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tipo de intervención</label>
+            <select id="mTipo" class="form-select"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estado del huésped</label>
+            <input type="text" id="mEstadoHuesped" class="form-input" placeholder="ej. tranquilo, molesto...">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Descripción</label>
+          <textarea id="mDescripcion" class="form-textarea" placeholder="Descripción de la incidencia..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Acción realizada / Resultado</label>
+          <textarea id="mResolucion" class="form-textarea" placeholder="Qué se hizo y cómo quedó..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="toggle-row"><input type="checkbox" id="mDesplazamiento"><label for="mDesplazamiento">Hubo desplazamiento</label></div>
+          <div class="toggle-row"><input type="checkbox" id="mImportante"><label for="mImportante">🚩 Importante</label></div>
+          <div class="toggle-row"><input type="checkbox" id="mUrgente"><label for="mUrgente">🏁 Urgente</label></div>
+          <div class="toggle-row"><input type="checkbox" id="mTerminada"><label for="mTerminada">✅ Terminada</label></div>
+        </div>
+        <div class="form-group" id="mDespExplicarWrap" style="display:none">
+          <label class="form-label">Explicar desplazamiento</label>
+          <input type="text" id="mDespExplicar" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Fotos — antes</label>
+          <div class="photo-grid" id="photosBefore"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fotos — después</label>
+          <div class="photo-grid" id="photosAfter"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot" id="modalFoot">
+      <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-primary" id="btnGuardarModal" onclick="guardarModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="auth.js"></script>
+<script src="nav.js"></script>
+<script>
+(function(){
+'use strict';
+
+Auth.require('guardias-e-intervenciones');
+var session = Auth.getSession ? Auth.getSession() : null;
+var myUserId = (session && session.payload && (session.payload.UserID || session.payload.userId)) || '';
+var myRole = Auth.role();
+var myUserName = Auth.name();
+
+var WORKER='https://caspio-proxy.jordi-89b.workers.dev';
+var VIEW='Vi_TaTasks_villas_user_mu';
+
+function g(id){return document.getElementById(id);}
+function val(id){return (g(id)||{}).value||'';}
+function todayStr(){return new Date().toISOString().split('T')[0];}
+function toast(msg,type){var t=g('toast');t.textContent=msg;t.className=type||'';t.style.display='block';clearTimeout(window._toastTO);window._toastTO=setTimeout(function(){t.style.display='none';},3000);}
+function esc(s){return (s||'').toString().replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function fmtDate(s){if(!s)return '—';var d=new Date(s.includes('T')?s:s+'T00:00:00');return isNaN(d)?s:d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});}
+function isFlagOn(v){if(!v)return false;var s=String(v).toLowerCase().trim();return['1','yes','sí','si','true','on','-1'].includes(s);}
+
+var allVillas=[], allUsers=[], allUsersMap={}, tiposMap={}, allTipos=[];
+var selectedManagers={};
+var estadoFilter='all';
+var currentRows=[];
+var expandedRows={};
+
+/* ── Carga inicial de lookups ── */
+function loadVillas(){
+  return fetch(Auth.url(WORKER+'?action=data&table=TaVillas&limit=500')).then(function(r){return r.json();}).then(function(json){
+    var rows=json.Result||json.result||[];
+    allVillas=rows.map(function(v){return{id:String(v.villaid),name:v.Name_villa_para_inquilinos||v.Name||'Villa '+v.villaid};}).sort(function(a,b){return a.name.localeCompare(b.name);});
+    g('villasList').innerHTML=allVillas.map(function(v){return '<option value="'+esc(v.name)+'">';}).join('');
+  });
+}
+function loadUsers(){
+  return fetch(Auth.url(WORKER+'?action=data&table=TaUsers&limit=200')).then(function(r){return r.json();}).then(function(json){
+    var rows=json.Result||json.result||[];
+    allUsers=rows.map(function(u){return{id:u.UserID,name:u.Name||u.UserID};}).sort(function(a,b){return a.name.localeCompare(b.name);});
+    allUsers.forEach(function(u){allUsersMap[u.id]=u.name;});
+    renderUserList();
+  });
+}
+function loadTipos(){
+  return fetch(Auth.url(WORKER+'?action=data&table=Ta_tipo_intervencion_guardia&limit=100')).then(function(r){return r.json();}).then(function(json){
+    var rows=json.Result||json.result||[];
+    allTipos=rows.map(function(t){return{id:t.Intervencion_guardia_tipo_ID,name:t.Nombre};});
+    allTipos.forEach(function(t){tiposMap[t.id]=t.name;});
+    var opts='<option value="">— Todos —</option>'+allTipos.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>';}).join('');
+    g('fTipo').innerHTML=opts;
+    g('mTipo').innerHTML=allTipos.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>';}).join('');
+  });
+}
+
+/* ── Filtro de Villa Manager (multi-select) ── */
+function renderUserList(){
+  var q=(val('userSearch')||'').toLowerCase();
+  var list=allUsers.filter(function(u){return u.name.toLowerCase().indexOf(q)!==-1;});
+  g('userList').innerHTML=list.map(function(u){
+    var checked=selectedManagers[u.id]?'checked':'';
+    return '<label class="manager-row"><input type="checkbox" data-uid="'+esc(u.id)+'" '+checked+' onchange="toggleManager(\''+esc(u.id)+'\')"> '+esc(u.name)+'</label>';
+  }).join('');
+}
+window.toggleManager=function(uid){
+  if(selectedManagers[uid]) delete selectedManagers[uid]; else selectedManagers[uid]=true;
+  updateUserLabel(); schedule();
+};
+function updateUserLabel(){
+  var keys=Object.keys(selectedManagers);
+  g('fUserLabel').textContent = keys.length===0?'Todos':(keys.length===1?(allUsersMap[keys[0]]||keys[0]):keys.length+' seleccionados');
+}
+g('fUserBtn').addEventListener('click',function(){
+  var p=g('userPanel'); p.style.display=p.style.display==='none'?'block':'none';
+});
+document.addEventListener('click',function(e){
+  if(!g('userPanel').contains(e.target) && e.target!==g('fUserBtn')) g('userPanel').style.display='none';
+});
+g('userSearch').addEventListener('input',renderUserList);
+g('btnSelectAll').addEventListener('click',function(){allUsers.forEach(function(u){selectedManagers[u.id]=true;});renderUserList();updateUserLabel();schedule();});
+g('btnClearUsers').addEventListener('click',function(){selectedManagers={};renderUserList();updateUserLabel();schedule();});
+
+/* ── Villa (filtro de texto libre con datalist) ── */
+window.onVillaChange=function(){schedule();};
+
+/* ── Estado (Todas/Pendientes/Terminadas) ── */
+['eAll','ePend','eDone'].forEach(function(id){
+  g(id).addEventListener('click',function(){
+    estadoFilter = id==='eAll'?'all':(id==='ePend'?'pend':'done');
+    ['eAll','ePend','eDone'].forEach(function(x){g(x).classList.toggle('on',x===id);});
+    schedule();
+  });
+});
+
+/* ── Toggle panel filtros ── */
+window.toggleMas=function(){
+  g('masFiltros').classList.toggle('open');
+  g('btnMas').classList.toggle('open');
+};
+
+/* ── Limpiar todo ── */
+window.clearAll=function(){
+  g('fBuscar').value='';g('fDesde').value='';g('fHasta').value='';g('fVilla').value='';
+  g('fTaskId').value='';g('fReserva').value='';g('fTipo').value='';
+  g('fImportante').checked=false;g('fUrgente').checked=false;
+  selectedManagers={};renderUserList();updateUserLabel();
+  estadoFilter='all';['eAll','ePend','eDone'].forEach(function(x){g(x).classList.toggle('on',x==='eAll');});
+  schedule();
+};
+
+/* ── buildWhere ── */
+function buildWhere(){
+  var parts=['Intervencion_guardia=1'];
+  var tid=(val('fTaskId')||'').trim();
+  if(tid && /^\d+$/.test(tid)){ parts.push('taskid='+parseInt(tid,10)); return parts.join(' AND '); }
+  var keys=Object.keys(selectedManagers);
+  if(keys.length>0){
+    var ids=keys.map(function(k){return "'"+k+"'";});
+    parts.push(ids.length===1?'UserID_asigned_alfanum='+ids[0]:'UserID_asigned_alfanum IN ('+ids.join(',')+')');
+  }
+  var desde=val('fDesde'), hasta=val('fHasta');
+  if(desde) parts.push("(Data_to_be_done_fixed IS NULL OR Data_to_be_done_fixed>='"+desde+"T00:00:00')");
+  if(hasta) parts.push("(Data_to_be_done_fixed IS NULL OR Data_to_be_done_fixed<='"+hasta+"T23:59:59')");
+  var reserva=val('fReserva').trim();
+  if(reserva) parts.push("Idreserva LIKE '%"+reserva.replace(/'/g,"''")+"%'");
+  var tipo=val('fTipo');
+  if(tipo) parts.push("Intervencion_guardia_tipo_ID='"+tipo.replace(/'/g,"''")+"'");
+  var villaQ=val('fVilla').trim().toLowerCase();
+  if(villaQ){
+    var mids=allVillas.filter(function(v){return v.name.toLowerCase().indexOf(villaQ)!==-1;}).map(function(v){return v.id;});
+    if(!mids.length) parts.push('villaid=-999');
+    else if(mids.length===1) parts.push('villaid='+mids[0]);
+    else parts.push('villaid IN ('+mids.join(',')+')');
+  }
+  var bq=(val('fBuscar')||'').trim().replace(/'/g,"''");
+  if(bq) parts.push("buscar_en_textos LIKE '%"+bq+"%'");
+  return parts.join(' AND ');
+}
+
+/* ── Búsqueda ── */
+var scheduleTO=null;
+function schedule(){ clearTimeout(scheduleTO); scheduleTO=setTimeout(doSearch,300); }
+
+function doSearch(){
+  g('stLoad').style.display='block'; g('stEmpty').style.display='none'; g('stErr').style.display='none';
+  var where=buildWhere();
+  var url=WORKER+'?action=view&view='+encodeURIComponent(VIEW)+'&where='+encodeURIComponent(where)+'&orderBy='+encodeURIComponent('TaTasks_taskid DESC')+'&limit=1000';
+  fetch(Auth.url(url)).then(function(r){return r.json();}).then(function(json){
+    var rows=json.Result||json.result||[];
+    currentRows=rows;
+    renderList(rows);
+  }).catch(function(err){
+    g('stLoad').style.display='none';
+    g('stErr').style.display='block';
+    g('errMsg').textContent=err.message||'Error cargando intervenciones';
+  });
+}
+
+function renderList(rows){
+  g('stLoad').style.display='none';
+  var filtered=rows.filter(function(r){
+    var done=isFlagOn(r.TaTasks_Tarea_terminada);
+    if(estadoFilter==='pend' && done) return false;
+    if(estadoFilter==='done' && !done) return false;
+    if(g('fImportante').checked && !isFlagOn(r.TaTasks_importante)) return false;
+    if(g('fUrgente').checked && !isFlagOn(r.TaTasks_urgente)) return false;
+    return true;
+  });
+  g('sCnt').textContent=filtered.length;
+  var pendCnt=filtered.filter(function(r){return !isFlagOn(r.TaTasks_Tarea_terminada);}).length;
+  var doneCnt=filtered.length-pendCnt;
+  g('sPendStat').style.display='block'; g('sPendCnt').textContent=pendCnt;
+  g('sDoneStat').style.display='block'; g('sDoneCnt').textContent=doneCnt;
+
+  if(!filtered.length){ g('stEmpty').style.display='block'; g('listWrap').innerHTML=''; return; }
+
+  g('listWrap').innerHTML=filtered.map(rowHTML).join('');
+}
+
+function rowHTML(r){
+  var tid=r.TaTasks_taskid;
+  var villa=r.TaVillas_Name_villa_para_inquilinos||'—';
+  var fecha=fmtDate((r.TaTasks_Data_to_be_done_fixed||'').split(' ')[0]||(r.TaTasks_Data_to_be_done_fixed||'').split('T')[0]);
+  var tipoId=r.TaTasks_Intervencion_guardia_tipo_ID||'';
+  var tipoNombre=r.Ta_tipo_intervencion_guardia_Nombre||tipoId||'—';
+  var esSinInt=tipoId==='guardia sin intervencion';
+  var desc=r.TaTasks_Taskdescription||'';
+  var resol=r.TaTasks_Solutiondescription||'';
+  var estadoHuesped=r.TaTasks_Intervencion_guardia_estado_hues||'—';
+  var done=isFlagOn(r.TaTasks_Tarea_terminada);
+  var expanded=!!expandedRows[tid];
+  var idreserva=r.TaTasks_Idreserva||'';
+
+  var html='<div class="gi-row'+(expanded?' expanded':'')+'" onclick="toggleExpand('+tid+')">';
+  if(!expanded){
+    html+='<div class="gi-col"><button class="btn-ver" onclick="event.stopPropagation();abrirModal('+tid+')" title="Ver / Editar">✎</button></div>';
+    html+='<div class="gi-col"><div class="gi-col-label">Fecha</div><div class="gi-truncate">'+esc(fecha)+'</div></div>';
+    html+='<div class="gi-col"><div class="gi-col-label">Villa</div><div class="gi-truncate">'+esc(villa)+'</div></div>';
+    html+='<div class="gi-col"><div class="gi-col-label">Intervención</div><span class="tipo-badge'+(esSinInt?' sin':'')+'">'+esc(tipoNombre)+'</span></div>';
+    html+='<div class="gi-col"><div class="gi-col-label">Descripción / Resolución</div><div class="gi-truncate">'+esc(desc||resol||'—')+'</div></div>';
+    html+='<div class="gi-col"><div class="gi-col-label">Estado huésped</div><div class="gi-truncate">'+esc(estadoHuesped)+'</div><span class="estado-pill '+(done?'estado-done':'estado-pend')+'" style="margin-top:4px;display:inline-block">'+(done?'Terminada':'Pendiente')+'</span></div>';
+  } else {
+    html+='<div class="gi-col">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center">';
+    html+='<div><strong>'+esc(villa)+'</strong> — '+esc(fecha)+' <span class="tipo-badge'+(esSinInt?' sin':'')+'">'+esc(tipoNombre)+'</span> <span class="estado-pill '+(done?'estado-done':'estado-pend')+'">'+(done?'Terminada':'Pendiente')+'</span></div>';
+    html+='<button class="btn-ver" onclick="event.stopPropagation();abrirModal('+tid+')" title="Ver / Editar">✎</button>';
+    html+='</div>';
+    html+='<div class="gi-expanded-body">';
+    html+='<div class="gi-full-field"><div class="gi-full-label">Descripción</div>'+esc(desc||'—')+'</div>';
+    html+='<div class="gi-full-field"><div class="gi-full-label">Acción realizada / Resultado</div>'+esc(resol||'—')+'</div>';
+    html+='<div class="gi-full-field"><div class="gi-full-label">Estado del huésped</div>'+esc(estadoHuesped)+'</div>';
+    if(idreserva){
+      html+='<a class="btn-reserva" onclick="event.stopPropagation()" href="entradas-equipo.html?cod='+encodeURIComponent(idreserva)+'" target="_blank">🔗 Ver reserva '+esc(idreserva)+'</a>';
+    }
+    html+='</div></div>';
+  }
+  html+='</div>';
+  return html;
+}
+window.toggleExpand=function(tid){
+  expandedRows[tid]=!expandedRows[tid];
+  renderList(currentRows);
+};
+
+/* ══════════════════════════════════════════════════════════
+   NUEVA GUARDIA SIN INTERVENCIÓN (1 clic)
+   ══════════════════════════════════════════════════════════ */
+window.crearGuardiaSinIntervencion=function(){
+  var btn=g('btnNuevaGuardia');
+  btn.disabled=true;
+  var record={
+    Intervencion_guardia:true,
+    Intervencion_guardia_tipo_ID:'guardia sin intervencion',
+    Tarea_terminada:true,
+    UserID_created:myUserId||myUserName,
+    UserID_asigned_alfanum:myUserId||myUserName,
+    UserID_responsible_alfanum:myUserId||myUserName,
+    Taskname:'Guardia sin intervención',
+    Data_to_be_done_fixed:todayStr()+' 00:00:00'
+  };
+  fetch(Auth.url(WORKER+'?action=save&table=TaTasks'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)})
+    .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.Message||e.error||'HTTP '+r.status);});return r.json();})
+    .then(function(json){
+      if(json.error||json.Message) throw new Error(json.error||json.Message);
+      toast('✅ Guardia registrada','ok');
+      btn.disabled=false;
+      doSearch();
+    })
+    .catch(function(err){
+      btn.disabled=false;
+      toast('❌ '+err.message,'err');
+    });
+};
+
+/* ══════════════════════════════════════════════════════════
+   MODAL — Añadir / Ver / Editar intervención
+   ══════════════════════════════════════════════════════════ */
+var PHOTO_BEFORE=['Picture_cloudfare1','Picture_cloudfare2','Picture_cloudfare3','Picture_cloudfare4','Picture_cloudfare5'];
+var PHOTO_AFTER=['Picture_cloudfare_after1','Picture_cloudfare_after2','Picture_cloudfare_after3','Picture_cloudfare_after4','Picture_cloudfare_after5'];
+var photosBefore=[null,null,null,null,null];
+var photosAfter=[null,null,null,null,null];
+var currentTaskId=null;
+var currentTaskDataCreated=null;
+var isLocked=false;
+var selectedVillaIdModal='';
+
+function renderPhotoGrid(containerId, existingUrls, arr){
+  var html='';
+  for(var i=0;i<5;i++){
+    var url=existingUrls[i]||'';
+    html+='<div class="photo-slot" id="'+containerId+'_'+i+'" onclick="if(!isLocked)document.getElementById(\''+containerId+'_input_'+i+'\').click()">';
+    if(url){ html+='<img src="'+esc(url)+'"><button class="photo-x" onclick="event.stopPropagation();clearPhotoSlot(\''+containerId+'\','+i+')">✕</button>'; }
+    else { html+='+'; }
+    html+='<input type="file" accept="image/*" id="'+containerId+'_input_'+i+'" onchange="onPhotoSelected(\''+containerId+'\','+i+',this)">';
+    html+='</div>';
+  }
+  g(containerId).innerHTML=html;
+}
+window.onPhotoSelected=function(containerId,idx,input){
+  var file=input.files[0]; if(!file) return;
+  var arr = containerId==='photosBefore'?photosBefore:photosAfter;
+  arr[idx]={file:file,url:null};
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var slot=g(containerId+'_'+idx);
+    slot.innerHTML='<img src="'+e.target.result+'"><button class="photo-x" onclick="event.stopPropagation();clearPhotoSlot(\''+containerId+'\','+idx+')">✕</button><input type="file" accept="image/*" id="'+containerId+'_input_'+idx+'" onchange="onPhotoSelected(\''+containerId+'\','+idx+',this)">';
+  };
+  reader.readAsDataURL(file);
+};
+window.clearPhotoSlot=function(containerId,idx){
+  var arr = containerId==='photosBefore'?photosBefore:photosAfter;
+  arr[idx]=null;
+  var slot=g(containerId+'_'+idx);
+  slot.innerHTML='+<input type="file" accept="image/*" id="'+containerId+'_input_'+idx+'" onchange="onPhotoSelected(\''+containerId+'\','+idx+',this)">';
+};
+function uploadPhoto(item,idxLabel){
+  if(!item || !item.file) return Promise.resolve(item&&item.url?item.url:null);
+  var year=String(new Date().getFullYear());
+  var ext=(item.file.name.split('.').pop()||'jpg').toLowerCase();
+  var safe=(myUserName||'usuario').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+  var fname='fotos-guardias/'+year+'_guardia_'+Date.now()+'_'+safe+'_'+idxLabel+'.'+ext;
+  var fd=new FormData(); fd.append('file',item.file,fname); fd.append('filename',fname);
+  return fetch(Auth.url(WORKER+'?action=upload'),{method:'POST',body:fd})
+    .then(function(r){return r.json();})
+    .then(function(j){return j.url||j.publicUrl||null;})
+    .catch(function(){return null;});
+}
+
+/* Villa autocomplete en el modal */
+g('mVillaSearch').addEventListener('input',function(){
+  var q=this.value.toLowerCase();
+  if(!q){ g('mVillaDd').style.display='none'; return; }
+  var res=allVillas.filter(function(v){return v.name.toLowerCase().indexOf(q)!==-1;}).slice(0,10);
+  if(!res.length){ g('mVillaDd').style.display='none'; return; }
+  g('mVillaDd').innerHTML=res.map(function(v){return '<div class="manager-row" data-id="'+esc(v.id)+'" data-name="'+esc(v.name)+'">'+esc(v.name)+'</div>';}).join('');
+  g('mVillaDd').style.display='block';
+  g('mVillaDd').querySelectorAll('[data-id]').forEach(function(opt){
+    opt.addEventListener('mousedown',function(e){
+      e.preventDefault();
+      g('mVillaSearch').value=opt.dataset.name;
+      g('mVilla').value=opt.dataset.id;
+      selectedVillaIdModal=opt.dataset.id;
+      g('mVillaDd').style.display='none';
+    });
+  });
+});
+g('mDesplazamiento').addEventListener('change',function(){ g('mDespExplicarWrap').style.display=this.checked?'block':'none'; });
+
+/* Abrir modal — taskId null = nueva intervención; taskId = editar/ver existente */
+window.abrirModal=function(taskId){
+  currentTaskId=taskId; isLocked=false; currentTaskDataCreated=null;
+  resetForm();
+  g('modalOverlay').classList.add('show');
+
+  if(!taskId){
+    g('modalTitle').textContent='Nueva intervención';
+    g('mFecha').value=todayStr();
+    g('lockMsg').style.display='none';
+    g('formFields').style.display='block';
+    g('modalFoot').style.display='flex';
+    renderPhotoGrid('photosBefore',[],photosBefore);
+    renderPhotoGrid('photosAfter',[],photosAfter);
+    return;
+  }
+
+  g('modalTitle').textContent='Intervención #'+taskId;
+  var row=currentRows.find(function(r){return String(r.TaTasks_taskid)===String(taskId);});
+  if(!row){ toast('❌ No se encontró la intervención','err'); cerrarModal(); return; }
+
+  currentTaskDataCreated=row.TaTasks_DataCreated;
+  var hoursSince = currentTaskDataCreated ? (Date.now()-new Date(currentTaskDataCreated))/3600000 : 0;
+  var canEdit = (hoursSince<=24) || myRole==='admin' || myRole==='manager';
+  isLocked=!canEdit;
+
+  g('lockMsg').style.display = isLocked?'block':'none';
+  g('formFields').style.display='block';
+  g('modalFoot').style.display = isLocked?'none':'flex';
+
+  g('mVillaSearch').value=row.TaVillas_Name_villa_para_inquilinos||'';
+  g('mVilla').value=row.TaTasks_villaid||'';
+  selectedVillaIdModal=row.TaTasks_villaid||'';
+  g('mReserva').value=row.TaTasks_Idreserva||'';
+  var fechaRaw=(row.TaTasks_Data_to_be_done_fixed||'').split(' ')[0]||(row.TaTasks_Data_to_be_done_fixed||'').split('T')[0];
+  g('mFecha').value=fechaRaw||'';
+  g('mHoraAviso').value=extractTime(row.TaTasks_Intervencion_guardia_hora_primer);
+  g('mHoraInicio').value=extractTime(row.TaTasks_Intervencion_guardia_hora_inicio);
+  g('mHoraFin').value=extractTime(row.TaTasks_Intervencion_guardia_hora_fin);
+  g('mTipo').value=row.TaTasks_Intervencion_guardia_tipo_ID||'';
+  g('mEstadoHuesped').value=row.TaTasks_Intervencion_guardia_estado_hues||'';
+  g('mDescripcion').value=row.TaTasks_Taskdescription||'';
+  g('mResolucion').value=row.TaTasks_Solutiondescription||'';
+  g('mDesplazamiento').checked=isFlagOn(row.TaTasks_Desplazamientos);
+  g('mDespExplicarWrap').style.display=g('mDesplazamiento').checked?'block':'none';
+  g('mDespExplicar').value=row.TaTasks_Explicardesplazamientos||'';
+  g('mImportante').checked=isFlagOn(row.TaTasks_importante);
+  g('mUrgente').checked=isFlagOn(row.TaTasks_urgente);
+  g('mTerminada').checked=isFlagOn(row.TaTasks_Tarea_terminada);
+
+  renderPhotoGrid('photosBefore', PHOTO_BEFORE.map(function(f){return row['TaTasks_'+f]||'';}), photosBefore);
+  renderPhotoGrid('photosAfter', PHOTO_AFTER.map(function(f){return row['TaTasks_'+f]||'';}), photosAfter);
+
+  if(isLocked){
+    document.querySelectorAll('#formFields input,#formFields select,#formFields textarea').forEach(function(el){el.disabled=true;});
+  } else {
+    document.querySelectorAll('#formFields input,#formFields select,#formFields textarea').forEach(function(el){el.disabled=false;});
+  }
+};
+function extractTime(dt){
+  if(!dt) return '';
+  var m=dt.match(/T(\d{2}:\d{2})/)||dt.match(/ (\d{2}:\d{2})/);
+  return m?m[1]:'';
+}
+function resetForm(){
+  photosBefore=[null,null,null,null,null]; photosAfter=[null,null,null,null,null];
+  g('mVillaSearch').value=''; g('mVilla').value=''; selectedVillaIdModal='';
+  g('mReserva').value=''; g('mFecha').value=''; g('mHoraAviso').value=''; g('mHoraInicio').value=''; g('mHoraFin').value='';
+  g('mTipo').value=''; g('mEstadoHuesped').value=''; g('mDescripcion').value=''; g('mResolucion').value='';
+  g('mDesplazamiento').checked=false; g('mDespExplicarWrap').style.display='none'; g('mDespExplicar').value='';
+  g('mImportante').checked=false; g('mUrgente').checked=false; g('mTerminada').checked=false;
+}
+window.cerrarModal=function(){ g('modalOverlay').classList.remove('show'); };
+
+window.guardarModal=function(){
+  if(isLocked) return;
+  var fecha=val('mFecha');
+  if(!fecha){ toast('⚠️ Indica la fecha','err'); return; }
+  if(g('mVillaSearch').value.trim() && !g('mVilla').value){ toast('⚠️ Selecciona una villa de la lista','err'); return; }
+
+  var btn=g('btnGuardarModal'); btn.disabled=true; btn.classList.add('loading');
+
+  var uploadsBefore=photosBefore.map(function(p,i){return uploadPhoto(p,'b'+(i+1));});
+  var uploadsAfter=photosAfter.map(function(p,i){return uploadPhoto(p,'a'+(i+1));});
+
+  Promise.all(uploadsBefore.concat(uploadsAfter)).then(function(urls){
+    var urlsBefore=urls.slice(0,5), urlsAfter=urls.slice(5,10);
+    var record={
+      Intervencion_guardia:true,
+      villaid: selectedVillaIdModal?parseInt(selectedVillaIdModal):null,
+      Idreserva: val('mReserva').trim()||null,
+      Data_to_be_done_fixed: fecha+' 00:00:00',
+      Intervencion_guardia_hora_primer: val('mHoraAviso')? fecha+'T'+val('mHoraAviso')+':00' : null,
+      Intervencion_guardia_hora_inicio: val('mHoraInicio')? fecha+'T'+val('mHoraInicio')+':00' : null,
+      Intervencion_guardia_hora_fin: val('mHoraFin')? fecha+'T'+val('mHoraFin')+':00' : null,
+      Intervencion_guardia_tipo_ID: val('mTipo')||'otros',
+      Intervencion_guardia_estado_hues: val('mEstadoHuesped').trim(),
+      Taskname: 'Intervención de guardia',
+      Taskdescription: val('mDescripcion').trim(),
+      Solutiondescription: val('mResolucion').trim(),
+      Desplazamientos: g('mDesplazamiento').checked,
+      Explicardesplazamientos: val('mDespExplicar').trim(),
+      importante: g('mImportante').checked,
+      urgente: g('mUrgente').checked,
+      Tarea_terminada: g('mTerminada').checked
+    };
+    PHOTO_BEFORE.forEach(function(f,i){ if(urlsBefore[i]) record[f]=urlsBefore[i]; });
+    PHOTO_AFTER.forEach(function(f,i){ if(urlsAfter[i]) record[f]=urlsAfter[i]; });
+
+    if(!currentTaskId){
+      record.UserID_created=myUserId||myUserName;
+      record.UserID_asigned_alfanum=myUserId||myUserName;
+      record.UserID_responsible_alfanum=myUserId||myUserName;
+      return fetch(Auth.url(WORKER+'?action=save&table=TaTasks'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)});
+    } else {
+      return fetch(Auth.url(WORKER+'?action=update&table=TaTasks&id='+encodeURIComponent(currentTaskId)),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)});
+    }
+  }).then(function(r){
+    if(!r.ok) return r.json().then(function(e){throw new Error(e.Message||e.error||'HTTP '+r.status);});
+    return r.json();
+  }).then(function(json){
+    if(json.error||json.Message) throw new Error(json.error||json.Message);
+    toast('✅ Intervención guardada','ok');
+    btn.disabled=false; btn.classList.remove('loading');
+    cerrarModal();
+    doSearch();
+  }).catch(function(err){
+    btn.disabled=false; btn.classList.remove('loading');
+    toast('❌ '+err.message,'err');
+  });
+};
+
+/* ── Init ── */
+Promise.all([loadVillas(),loadUsers(),loadTipos()]).then(function(){
+  doSearch();
+});
+
+['fBuscar'].forEach(function(id){ g(id).addEventListener('input',schedule); });
+['fDesde','fHasta','fTaskId','fReserva','fTipo','fImportante','fUrgente'].forEach(function(id){ g(id).addEventListener('change',schedule); });
+
+})();
+</script>
+
+</body>
+</html>
+<!-- HISTORIAL: v01 - Primera versión de la página. Listado de intervenciones de guardia (lee TaTasks vía la vista Vi_TaTasks_villas_user_mu filtrando siempre por Intervencion_guardia=1) con los mismos filtros que tareas.html (buscar, estado Todas/Pendientes/Terminadas —por defecto Todas—, villa manager multi-select, desde/hasta, villa, nº tarea, id reserva), con dos diferencias acordadas con Jordi: (1) Importante/Urgente se mueven dentro del panel colapsable "Filtros" en vez de pastillas siempre visibles; (2) los filtros "Tipo tarea"/"Tipo reserva" (Limpieza/WP/Cierre, específicos del flujo de limpieza) se sustituyen por un único filtro "Tipo de intervención" alimentado por la tabla lookup Ta_tipo_intervencion_guardia. Columnas del listado: botón ver/editar, fecha, villa, tipo de intervención (badge), descripción/resolución, estado del huésped — todas truncadas con fila expandible (toggleExpand); al expandir se muestra el texto completo y, si la tarea tiene Idreserva, un botón que abre entradas-equipo.html?cod=CODIGO en pestaña nueva. Botón "+ Nueva guardia": crea con un solo clic un registro en TaTasks con Intervencion_guardia=1, Intervencion_guardia_tipo_ID='guardia sin intervencion', Tarea_terminada=true y UserID_created/UserID_asigned_alfanum/UserID_responsible_alfanum = usuario actual (sin abrir formulario), replicando el caso "sin incidencias" del registro en papel. Botón "+ Añadir intervención": abre modal con todos los campos (villa, reserva opcional, fecha, hora primer aviso/inicio/fin, tipo de intervención, estado del huésped, descripción, resolución, desplazamiento+explicación, importante/urgente/terminada) más 5 fotos antes (Picture_cloudfare1-5) y 5 después (Picture_cloudfare_after1-5), mismo patrón de subida a R2 que nueva-tarea.html/editar-tarea.html (action=upload, comprime en el navegador antes de subir — nota: compressImage no incluido en esta v01, pendiente de portar desde editar-tarea.html si los ficheros pesan demasiado). Botón ver/editar en cada fila abre el mismo modal precargado; BLOQUEO 24H: si han pasado más de 24h desde TaTasks_DataCreated y el rol del usuario (Auth.role()) no es 'admin' ni 'manager', el formulario se deshabilita y se muestra el mensaje 'Las intervenciones solo se pueden editar durante 24 horas, contacta con tu manager si quieres editar esta intervención.' en vez de los botones de guardar. NOTA IMPORTANTE PENDIENTE: esta página usa Auth.require('guardias-e-intervenciones'), una clave que TODAVÍA NO EXISTE en auth.js — hay que añadir la entrada de permisos en auth.js antes de desplegar esta página o Auth.require lanzará 'Sin permiso' para todos los usuarios. Se entrega por separado la línea exacta a añadir. Campos reales de Caspio con nombre truncado a 32 caracteres usados tal cual: Intervencion_guardia_estado_hues (no _estado_huesped) e Intervencion_guardia_hora_primer (no _hora_primer_aviso). -->
