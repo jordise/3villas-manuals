@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v01 | Historial completo al final de este archivo -->
+<!-- VERSIÓN ACTUAL: v02 | Historial completo al final de este archivo -->
 <head>
   <base href="/intranet/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Listado Guardias e Intervenciones v01 — 3Villas</title>
+  <title>Listado Guardias e Intervenciones v02 — 3Villas</title>
   <link rel="icon" type="image/png" href="https://www.3villas.com/intranet/icon-corazon-rojo-fondo-transparente.png">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <script>
     // ── AUTO-DETECCIÓN DE VERSIÓN (Opción B) ──
     (function(){
-      const PAGE_VERSION='v01';
+      const PAGE_VERSION='v02';
       try{
         if(location.protocol==='file:') return;
         fetch(location.pathname,{cache:'reload'}).then(r=>r.text()).then(html=>{
@@ -98,6 +98,10 @@
     .report-table tbody tr:hover{background:var(--red-light)}
     .report-table tr.row-total{background:var(--red-light);font-weight:800;color:var(--red-dark)}
     .report-table tr.row-total td{border-top:2px solid var(--red);position:sticky;bottom:0}
+    .tipos-cell{white-space:normal;min-width:160px}
+    .tipo-line{line-height:1.5}
+    .tipo-line+.tipo-line{margin-top:1px}
+    .row-total .tipo-line{color:var(--red-dark)}
   </style>
 </head>
 <body>
@@ -499,11 +503,15 @@ function monthKeyLabel(monthKey){
 }
 
 /* ── Render de la tabla-resumen + fila de totales ── */
+function tiposLinesHTML(porTipo, tiposCols){
+  var lines=tiposCols.filter(function(t){return (porTipo[t.id]||0)>0;})
+    .map(function(t){return '<div class="tipo-line"><strong>'+(porTipo[t.id]||0)+'</strong> '+esc(t.name)+'</div>';});
+  return lines.length ? lines.join('') : '—';
+}
 function renderTable(rows){
   var tiposCols=allTipos.filter(function(t){return t.id!=='guardia sin intervencion';});
 
-  g('reportThead').innerHTML='<tr><th>Mes</th><th>Villa Manager</th><th class="num">Nº guardias</th><th class="num">Nº intervenciones</th><th class="num">Desplazamientos</th>'
-    + tiposCols.map(function(t){return '<th class="num">'+esc(t.name)+'</th>';}).join('') + '</tr>';
+  g('reportThead').innerHTML='<tr><th>Mes</th><th>Villa Manager</th><th class="num">Nº guardias</th><th class="num">Nº intervenciones</th><th class="num">Desplazamientos</th><th>Tipos</th></tr>';
 
   if(!rows.length){
     g('reportTbody').innerHTML='';
@@ -518,24 +526,19 @@ function renderTable(rows){
   var totals={guardias:0,intervenciones:0,desplazamientos:0,porTipo:{}};
   var bodyHtml=rows.map(function(r){
     totals.guardias+=r.guardias; totals.intervenciones+=r.intervenciones; totals.desplazamientos+=r.desplazamientos;
-    var tipoCells=tiposCols.map(function(t){
-      var c=r.porTipo[t.id]||0;
-      totals.porTipo[t.id]=(totals.porTipo[t.id]||0)+c;
-      return '<td class="num">'+(c||'—')+'</td>';
-    }).join('');
+    tiposCols.forEach(function(t){ totals.porTipo[t.id]=(totals.porTipo[t.id]||0)+(r.porTipo[t.id]||0); });
     return '<tr><td>'+esc(monthKeyLabel(r.monthKey))+'</td><td>'+esc(r.mgrName)+'</td>'
       + '<td class="num">'+(r.guardias||'—')+'</td>'
       + '<td class="num">'+(r.intervenciones||'—')+'</td>'
       + '<td class="num">'+(r.desplazamientos||'—')+'</td>'
-      + tipoCells + '</tr>';
+      + '<td class="tipos-cell">'+tiposLinesHTML(r.porTipo,tiposCols)+'</td></tr>';
   }).join('');
 
-  var totalTipoCells=tiposCols.map(function(t){return '<td class="num">'+(totals.porTipo[t.id]||0)+'</td>';}).join('');
   bodyHtml += '<tr class="row-total"><td colspan="2">TOTALES</td>'
     + '<td class="num">'+totals.guardias+'</td>'
     + '<td class="num">'+totals.intervenciones+'</td>'
     + '<td class="num">'+totals.desplazamientos+'</td>'
-    + totalTipoCells + '</tr>';
+    + '<td class="tipos-cell">'+tiposLinesHTML(totals.porTipo,tiposCols)+'</td></tr>';
 
   g('reportTbody').innerHTML=bodyHtml;
 
@@ -557,6 +560,6 @@ Promise.all([loadVillas(),loadUsers(),loadTipos()]).then(function(){
 })();
 </script>
 
-<!-- HISTORIAL: v01 - Primera versión de la página. Listado-resumen (pivote Mes × Villa Manager) de guardias e intervenciones, con los MISMOS filtros que guardias-e-intervenciones.html v08 (buscar, estado Todas/Pendientes/Terminadas, villa manager multi-select, villa, nº tarea, id reserva, tipo de intervención, importante/urgente) contra la misma vista Caspio (Vi_TaTasks_villas_user_mu) y el mismo buildWhere() (idéntico, campos con prefijo TaTasks_). ÚNICA diferencia pedida: las fechas Desde/Hasta dejan de estar siempre visibles en la barra principal y pasan, en su lugar, a un selector de MES (‹ Agosto 2026 › en la barra principal, con botón central que vuelve al mes actual) que por defecto carga el mes en curso (día 1 a último día) y permite cambiar de mes con 1 clic; los campos Desde/Hasta originales se conservan dentro del panel colapsable 'Filtros' (renombrados 'fecha exacta') para quien quiera poner fechas concretas o un rango que no coincida con un mes completo — si el rango introducido a mano coincide exactamente con un mes completo, la etiqueta del selector se sincroniza sola; si no, muestra 'Rango personalizado'. Salida: en vez del listado de tarjetas de guardias-e-intervenciones.html, esta página muestra una tabla-resumen agrupada por Mes + Villa Manager con las columnas pedidas — Mes, Villa Manager, Nº guardias (registros con Intervencion_guardia_tipo_ID='guardia sin intervencion'), Nº intervenciones (el resto), Desplazamientos (nº de registros con Desplazamientos=true) y una columna por cada Tipo de intervención existente en la tabla lookup Ta_tipo_intervencion_guardia (excluyendo 'guardia sin intervencion', que ya tiene su propia columna) con el nº de incidencias de ese tipo — más una fila final TOTALES con la suma de todas las columnas numéricas de todo el resultado filtrado. Filas ordenadas por mes (ascendente) y, dentro de cada mes, por nombre de Villa Manager (A-Z); si algún registro no tiene fecha se agrupa aparte bajo 'Sin fecha'. Optimización de llamadas respecto al patrón de guardias-e-intervenciones.html: los filtros que SOLO afectan al cliente (Estado, Importante, Urgente) ya no disparan un nuevo fetch al Worker — se reprocesan sobre currentRows ya cargado (reprocess()); solo los filtros que cambian el WHERE del servidor (Buscar, Mes/fechas, Villa Manager, Villa, Nº Tarea, Id Reserva, Tipo) disparan scheduleFetch()→doSearch() con fetch nuevo. Barra de estadísticas simplificada a 3 contadores (guardias/intervenciones/desplazamientos) sobre el total ya agregado. Sin modal de creación/edición: página de solo lectura (consulta), no se crean ni modifican tareas desde aquí — para eso sigue existiendo guardias-e-intervenciones.html. NOTA IMPORTANTE PENDIENTE: esta página usa Auth.require('listado-guardias-e-intervenciones'), una clave que TODAVÍA NO EXISTE en auth.js — hay que añadir la entrada de permisos correspondiente antes de desplegar esta página o Auth.require lanzará 'Sin permiso' para todos los usuarios (se entrega la línea exacta a añadir en cuanto se confirme). -->
+<!-- HISTORIAL: v02 - Cambio pedido por Jordi: las columnas de 'número de incidencias de cada tipo' (antes una columna por cada Tipo de intervención, con la mayoría de celdas a '—' porque cada Villa Manager solo suele tener 1-2 tipos distintos al mes) se sustituyen por UNA sola columna 'Tipos', que dentro de cada celda apila una línea por tipo — solo los tipos con cantidad distinta de 0 para ese Villa Manager ese mes, en formato '<strong>N</strong> Nombre' (ej. Juan → '2 Cerraduras' en una línea y '3 Otros' en la siguiente) — igual que en la fila de TOTALES, que suma esos mismos tipos across todas las filas filtradas. Nueva función tiposLinesHTML(porTipo,tiposCols) genera esas líneas (o '—' si el Villa Manager no tuvo ningún tipo ese mes); reemplaza el mapeo anterior de tipoCells/totalTipoCells (columna por tipo). Nuevas clases CSS .tipos-cell (white-space:normal para permitir el apilado, en vez del nowrap general de .report-table td) y .tipo-line. Sin cambios en la agregación (aggregate() sigue calculando porTipo igual que en v01) ni en los filtros/selector de mes — únicamente cambia cómo se pintan los tipos en la tabla. LIMPIEZA de huérfanos: ninguna (las funciones/variables sustituidas no se usan en ningún otro sitio del archivo). | v01 - Primera versión de la página. Listado-resumen (pivote Mes × Villa Manager) de guardias e intervenciones, con los MISMOS filtros que guardias-e-intervenciones.html v08 (buscar, estado Todas/Pendientes/Terminadas, villa manager multi-select, villa, nº tarea, id reserva, tipo de intervención, importante/urgente) contra la misma vista Caspio (Vi_TaTasks_villas_user_mu) y el mismo buildWhere() (idéntico, campos con prefijo TaTasks_). ÚNICA diferencia pedida: las fechas Desde/Hasta dejan de estar siempre visibles en la barra principal y pasan, en su lugar, a un selector de MES (‹ Agosto 2026 › en la barra principal, con botón central que vuelve al mes actual) que por defecto carga el mes en curso (día 1 a último día) y permite cambiar de mes con 1 clic; los campos Desde/Hasta originales se conservan dentro del panel colapsable 'Filtros' (renombrados 'fecha exacta') para quien quiera poner fechas concretas o un rango que no coincida con un mes completo — si el rango introducido a mano coincide exactamente con un mes completo, la etiqueta del selector se sincroniza sola; si no, muestra 'Rango personalizado'. Salida: en vez del listado de tarjetas de guardias-e-intervenciones.html, esta página muestra una tabla-resumen agrupada por Mes + Villa Manager con las columnas pedidas — Mes, Villa Manager, Nº guardias (registros con Intervencion_guardia_tipo_ID='guardia sin intervencion'), Nº intervenciones (el resto), Desplazamientos (nº de registros con Desplazamientos=true) y una columna por cada Tipo de intervención existente en la tabla lookup Ta_tipo_intervencion_guardia (excluyendo 'guardia sin intervencion', que ya tiene su propia columna) con el nº de incidencias de ese tipo — más una fila final TOTALES con la suma de todas las columnas numéricas de todo el resultado filtrado. Filas ordenadas por mes (ascendente) y, dentro de cada mes, por nombre de Villa Manager (A-Z); si algún registro no tiene fecha se agrupa aparte bajo 'Sin fecha'. Optimización de llamadas respecto al patrón de guardias-e-intervenciones.html: los filtros que SOLO afectan al cliente (Estado, Importante, Urgente) ya no disparan un nuevo fetch al Worker — se reprocesan sobre currentRows ya cargado (reprocess()); solo los filtros que cambian el WHERE del servidor (Buscar, Mes/fechas, Villa Manager, Villa, Nº Tarea, Id Reserva, Tipo) disparan scheduleFetch()→doSearch() con fetch nuevo. Barra de estadísticas simplificada a 3 contadores (guardias/intervenciones/desplazamientos) sobre el total ya agregado. Sin modal de creación/edición: página de solo lectura (consulta), no se crean ni modifican tareas desde aquí — para eso sigue existiendo guardias-e-intervenciones.html. NOTA IMPORTANTE PENDIENTE: esta página usa Auth.require('listado-guardias-e-intervenciones'), una clave que TODAVÍA NO EXISTE en auth.js — hay que añadir la entrada de permisos correspondiente antes de desplegar esta página o Auth.require lanzará 'Sin permiso' para todos los usuarios (se entrega la línea exacta a añadir en cuanto se confirme). -->
 </body>
 </html>
