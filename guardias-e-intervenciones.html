@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v03 | Historial completo al final -->
+<!-- VERSIÓN ACTUAL: v04 | Historial completo al final -->
 <head>
   <base href="/intranet/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Guardias e Intervenciones v03 — 3Villas</title>
+  <title>Guardias e Intervenciones v04 — 3Villas</title>
   <link rel="icon" type="image/png" href="https://www.3villas.com/intranet/icon-corazon-rojo-fondo-transparente.png">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <script>
     // ── AUTO-DETECCIÓN DE VERSIÓN (Opción B) ──
     (function(){
-      const PAGE_VERSION='v03';
+      const PAGE_VERSION='v04';
       try{
         if(location.protocol==='file:') return;
         fetch(location.pathname,{cache:'reload'}).then(r=>r.text()).then(html=>{
@@ -73,10 +73,14 @@
     .f-label{font-size:10px;color:var(--gray-4);font-weight:600;text-transform:uppercase}
     .f-input,.f-select{height:34px;border:1px solid var(--gray-3);border-radius:8px;padding:0 10px;font-size:12px;width:100%}
     .flag-check{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-5);cursor:pointer}
-    .manager-panel{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--gray-2);border-radius:8px;box-shadow:var(--shadow-md);max-height:260px;overflow:auto;z-index:60}
-    .manager-list{max-height:180px;overflow:auto}
+    .manager-panel{position:fixed;background:#fff;border:1.5px solid var(--red);border-radius:8px;box-shadow:var(--shadow-lg);z-index:9999;display:none;flex-direction:column;max-height:300px;min-width:220px}
+    .manager-list{overflow-y:auto;flex:1;padding:4px 0}
+    .manager-item{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px;color:var(--gray-5);transition:background .1s}
+    .manager-item:hover{background:var(--gray-1)}
+    .manager-item input[type=checkbox]{pointer-events:none}
     .manager-row{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;cursor:pointer}
     .manager-row:hover{background:var(--gray-1)}
+    .autocomplete-dd{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--gray-2);border-radius:8px;box-shadow:var(--shadow-md);max-height:200px;overflow:auto;z-index:60;display:none}
     /* ── STATS ── */
     #statsBar{display:flex;gap:16px;padding:8px 16px;font-size:12px;color:var(--gray-4)}
     #statsBar strong{color:var(--gray-5)}
@@ -249,12 +253,12 @@
       <div class="filter-row">
         <div class="f-group wide" style="position:relative">
           <label class="f-label">Villa Manager</label>
-          <button id="fUserBtn" class="f-select" style="text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <button id="fUserBtn" class="f-select" onclick="toggleUserPanel(event)" style="text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
             <span id="fUserLabel">Todos</span><span style="font-size:10px;color:var(--gray-4)">▾</span>
           </button>
           <div id="userPanel" class="manager-panel" style="display:none">
             <div style="padding:8px 10px;border-bottom:1px solid var(--gray-2)">
-              <input type="text" id="userSearch" class="f-input" placeholder="Buscar usuario..." style="height:30px;font-size:12px">
+              <input type="text" id="userSearch" class="f-input" placeholder="Buscar usuario..." oninput="filterUserList()" style="height:30px;font-size:12px">
             </div>
             <div id="userList" class="manager-list"></div>
             <div style="padding:6px 10px;border-top:1px solid var(--gray-2);display:flex;gap:8px">
@@ -362,13 +366,13 @@
             <label class="form-label">Villa Manager</label>
             <input type="text" id="mAsignadoSearch" class="form-input" placeholder="Buscar usuario..." autocomplete="off">
             <input type="hidden" id="mAsignado">
-            <div id="mAsignadoDd" class="manager-panel" style="display:none;max-height:200px"></div>
+            <div id="mAsignadoDd" class="autocomplete-dd"></div>
           </div>
           <div class="form-group" style="position:relative">
             <label class="form-label">Villa <span class="req">*</span></label>
             <input type="text" id="mVillaSearch" class="form-input" placeholder="Buscar villa..." autocomplete="off">
             <input type="hidden" id="mVilla">
-            <div id="mVillaDd" class="manager-panel" style="display:none;max-height:200px"></div>
+            <div id="mVillaDd" class="autocomplete-dd"></div>
           </div>
         </div>
         <div class="form-row">
@@ -509,6 +513,11 @@ function loadUsers(){
     var rows=json.Result||json.result||[];
     allUsers=rows.map(function(u){return{id:u.UserID,name:u.Name||u.UserID,email:u.Email||''};}).sort(function(a,b){return a.name.localeCompare(b.name);});
     allUsers.forEach(function(u){allUsersMap[u.id]=u.name;});
+    if(!myUserId){
+      var myEmail=Auth.email?Auth.email():'';
+      var me=allUsers.find(function(u){return (u.email||'').toLowerCase()===myEmail.toLowerCase();});
+      if(me) myUserId=me.id;
+    }
     renderUserList();
   });
 }
@@ -523,32 +532,65 @@ function loadTipos(){
   });
 }
 
-/* ── Filtro de Villa Manager (multi-select) ── */
-function renderUserList(){
-  var q=(val('userSearch')||'').toLowerCase();
-  var list=allUsers.filter(function(u){return u.name.toLowerCase().indexOf(q)!==-1;});
-  g('userList').innerHTML=list.map(function(u){
-    var checked=selectedManagers[u.id]?'checked':'';
-    return '<label class="manager-row"><input type="checkbox" data-uid="'+esc(u.id)+'" '+checked+' onchange="toggleManager(\''+esc(u.id)+'\')"> '+esc(u.name)+'</label>';
+/* ── Filtro de Villa Manager (multi-select) — mismo patrón que entradas-equipo.html ── */
+function renderUserList(filter){
+  var list=g('userList'); if(!list) return;
+  var q=(filter||'').toLowerCase();
+  var myMgrId=myUserId||'';
+  var items=allUsers.slice().sort(function(a,b){
+    if(a.id===myMgrId) return -1; if(b.id===myMgrId) return 1;
+    return a.name.localeCompare(b.name,'es',{sensitivity:'base'});
+  });
+  if(q) items=items.filter(function(u){return u.name.toLowerCase().indexOf(q)!==-1;});
+  var prevScroll=list.scrollTop;
+  list.innerHTML=items.map(function(u){
+    var isCurrent=(u.id===myMgrId);
+    var style=isCurrent?'background:var(--red-light)':'';
+    var marker=isCurrent?'<span style="font-size:9px;color:var(--red);font-weight:800;margin-left:6px">← tú</span>':'';
+    return '<div class="manager-item" data-mid="'+esc(u.id)+'" style="'+style+'"><input type="checkbox" id="uc_'+esc(u.id)+'" '+(selectedManagers[u.id]?'checked':'')+'><label for="uc_'+esc(u.id)+'">'+esc(u.name)+marker+'</label></div>';
   }).join('');
+  list.querySelectorAll('.manager-item').forEach(function(item){
+    item.addEventListener('click',function(e){
+      e.stopPropagation();
+      var uid=item.dataset.mid;
+      if(selectedManagers[uid]) delete selectedManagers[uid]; else selectedManagers[uid]=true;
+      var scrollTop=list.scrollTop;
+      renderUserList((g('userSearch')||{}).value||'');
+      list.scrollTop=scrollTop;
+      updateUserLabel(); schedule();
+    });
+  });
+  list.scrollTop=prevScroll;
 }
-window.toggleManager=function(uid){
-  if(selectedManagers[uid]) delete selectedManagers[uid]; else selectedManagers[uid]=true;
-  updateUserLabel(); schedule();
-};
+function filterUserList(){ renderUserList((g('userSearch')||{}).value||''); }
+function selectAllUsers(){ allUsers.forEach(function(u){selectedManagers[u.id]=true;}); renderUserList(); updateUserLabel(); schedule(); }
+function clearUsersSel(){ selectedManagers={}; renderUserList(); updateUserLabel(); schedule(); }
 function updateUserLabel(){
   var keys=Object.keys(selectedManagers);
-  g('fUserLabel').textContent = keys.length===0?'Todos':(keys.length===1?(allUsersMap[keys[0]]||keys[0]):keys.length+' seleccionados');
+  var lbl=g('fUserLabel'); if(!lbl) return;
+  if(keys.length===0) lbl.textContent='Todos';
+  else if(keys.length===1){ var nm=allUsersMap[keys[0]]||keys[0]; lbl.textContent=nm.length>25?nm.slice(0,23)+'…':nm; }
+  else lbl.textContent=keys.length+' managers';
 }
-g('fUserBtn').addEventListener('click',function(){
-  var p=g('userPanel'); p.style.display=p.style.display==='none'?'block':'none';
-});
+window.toggleUserPanel=function(e){
+  e&&e.stopPropagation();
+  var panel=g('userPanel'), btn=g('fUserBtn');
+  if(!panel||!btn) return;
+  if(panel.style.display!=='none'){ panel.style.display='none'; return; }
+  var rect=btn.getBoundingClientRect();
+  panel.style.top=(rect.bottom+4)+'px';
+  panel.style.left=rect.left+'px';
+  panel.style.width=rect.width+'px';
+  panel.style.display='flex';
+  renderUserList();
+  if(g('userSearch')){ g('userSearch').value=''; g('userSearch').focus(); }
+};
 document.addEventListener('click',function(e){
-  if(!g('userPanel').contains(e.target) && e.target!==g('fUserBtn')) g('userPanel').style.display='none';
+  var panel=g('userPanel');
+  if(panel && panel.style.display!=='none' && !panel.contains(e.target) && e.target!==g('fUserBtn')) panel.style.display='none';
 });
-g('userSearch').addEventListener('input',renderUserList);
-g('btnSelectAll').addEventListener('click',function(){allUsers.forEach(function(u){selectedManagers[u.id]=true;});renderUserList();updateUserLabel();schedule();});
-g('btnClearUsers').addEventListener('click',function(){selectedManagers={};renderUserList();updateUserLabel();schedule();});
+g('btnSelectAll').addEventListener('click',selectAllUsers);
+g('btnClearUsers').addEventListener('click',clearUsersSel);
 
 /* ── Villa (filtro de texto libre con datalist) ── */
 window.onVillaChange=function(){schedule();};
@@ -580,30 +622,30 @@ window.clearAll=function(){
 
 /* ── buildWhere ── */
 function buildWhere(){
-  var parts=["Intervencion_guardia_tipo_ID IS NOT NULL","Intervencion_guardia_tipo_ID<>''"];
+  var parts=["TaTasks_Intervencion_guardia_tipo_ID IS NOT NULL","TaTasks_Intervencion_guardia_tipo_ID<>''"];
   var tid=(val('fTaskId')||'').trim();
-  if(tid && /^\d+$/.test(tid)){ parts.push('taskid='+parseInt(tid,10)); return parts.join(' AND '); }
+  if(tid && /^\d+$/.test(tid)){ parts.push('TaTasks_taskid='+parseInt(tid,10)); return parts.join(' AND '); }
   var keys=Object.keys(selectedManagers);
   if(keys.length>0){
     var ids=keys.map(function(k){return "'"+k+"'";});
-    parts.push(ids.length===1?'UserID_asigned_alfanum='+ids[0]:'UserID_asigned_alfanum IN ('+ids.join(',')+')');
+    parts.push(ids.length===1?'TaTasks_UserID_asigned_alfanum='+ids[0]:'TaTasks_UserID_asigned_alfanum IN ('+ids.join(',')+')');
   }
   var desde=val('fDesde'), hasta=val('fHasta');
-  if(desde) parts.push("(Data_to_be_done_fixed IS NULL OR Data_to_be_done_fixed>='"+desde+"T00:00:00')");
-  if(hasta) parts.push("(Data_to_be_done_fixed IS NULL OR Data_to_be_done_fixed<='"+hasta+"T23:59:59')");
+  if(desde) parts.push("(TaTasks_Data_to_be_done_fixed IS NULL OR TaTasks_Data_to_be_done_fixed>='"+desde+"T00:00:00')");
+  if(hasta) parts.push("(TaTasks_Data_to_be_done_fixed IS NULL OR TaTasks_Data_to_be_done_fixed<='"+hasta+"T23:59:59')");
   var reserva=val('fReserva').trim();
-  if(reserva) parts.push("Idreserva LIKE '%"+reserva.replace(/'/g,"''")+"%'");
+  if(reserva) parts.push("TaTasks_Idreserva LIKE '%"+reserva.replace(/'/g,"''")+"%'");
   var tipo=val('fTipo');
-  if(tipo) parts.push("Intervencion_guardia_tipo_ID='"+tipo.replace(/'/g,"''")+"'");
+  if(tipo) parts.push("TaTasks_Intervencion_guardia_tipo_ID='"+tipo.replace(/'/g,"''")+"'");
   var villaQ=val('fVilla').trim().toLowerCase();
   if(villaQ){
     var mids=allVillas.filter(function(v){return v.name.toLowerCase().indexOf(villaQ)!==-1;}).map(function(v){return v.id;});
-    if(!mids.length) parts.push('villaid=-999');
-    else if(mids.length===1) parts.push('villaid='+mids[0]);
-    else parts.push('villaid IN ('+mids.join(',')+')');
+    if(!mids.length) parts.push('TaTasks_villaid=-999');
+    else if(mids.length===1) parts.push('TaTasks_villaid='+mids[0]);
+    else parts.push('TaTasks_villaid IN ('+mids.join(',')+')');
   }
   var bq=(val('fBuscar')||'').trim().replace(/'/g,"''");
-  if(bq) parts.push("buscar_en_textos LIKE '%"+bq+"%'");
+  if(bq) parts.push("TaTasks_buscar_en_textos LIKE '%"+bq+"%'");
   return parts.join(' AND ');
 }
 
@@ -1237,4 +1279,4 @@ Promise.all([loadVillas(),loadUsers(),loadTipos()]).then(function(){
 
 </body>
 </html>
-<!-- HISTORIAL: v03 - Cambios pedidos por Jordi tras probar v02: (1) FIX CRÍTICO — las guardias creadas no aparecían en el listado: buildWhere filtraba con Intervencion_guardia=1 (campo YES/NO); Caspio no admite fiablemente esa comparación en WHERE vía REST (es la misma razón por la que tareas.html filtra Tarea_terminada en cliente en vez de en el WHERE, ver comentario v32 de ese archivo). Sustituido por Intervencion_guardia_tipo_ID IS NOT NULL AND Intervencion_guardia_tipo_ID<>'' — campo STRING, comparación fiable ya usada en el resto del proyecto (mismo patrón que TaBookings2021_BookingStatus<>'cancelled'), y funcionalmente equivalente porque ese campo solo se rellena en registros de guardia. (2) Filtro de fechas Desde/Hasta movido de dentro de 'Filtros' a la barra principal, siempre visible sin desplegar nada; valor por defecto al cargar la página y al pulsar 'Limpiar': Desde=hoy, Hasta=31/12 del año en curso (constante endOfYearStr()). (3) Modal de intervención — validaciones obligatorias añadidas en guardarModal(): Villa (debe seleccionarse de la lista), Reserva (ya no opcional, texto obligatorio), Tipo de intervención, Descripción, Acción realizada/Resultado y Estado del huésped; si falta alguno se avisa con toast y no se guarda. Las 3 horas (aviso/inicio/fin) NO son obligatorias para guardar, pero si se intenta marcar el checkbox Terminada sin las 3 rellenas, se bloquea el guardado con aviso explicativo. (4) Campo Villa Manager: nueva función aplicarBloqueoVillaManager() que deshabilita el input si el rol (Auth.role()) no es 'admin' ni 'manager' — el resto de roles ven su propio nombre pero no pueden reasignar la intervención a otro compañero; se aplica tanto al crear como al editar (salvo que ya esté bloqueada por el candado de 24h, en cuyo caso todo el formulario queda deshabilitado igualmente). (5) Descripción, Acción realizada/Resultado y Estado del huésped: portado COMPLETO el sistema de lista editable + dictado por voz de nueva-tarea.html/editar-tarea.html (funciones parse/serialize/makeItem/addItem/sync/placeAdd/getDragAfter/_tlInit/_tlGet/_tlAddItem, checkboxes + edición inline + drag&drop + botón eliminar + fila añadir, más initMic() con Web Speech API para dictado — 3 botones de micrófono nuevos, uno por campo). Mismo formato de texto guardado ([x]/[ ]/línea plana) que las otras páginas, así que estos campos se leen y editan igual en cualquier página que los use. (6) Fotos: sustituido el sistema simple (click para abrir selector, sin zoom) por el sistema completo de nueva-tarea.html: cada slot tiene botón 📷 (cámara, capture=environment) y 📂 (archivo), número de slot, overlay de subida con spinner, botón ✕ de borrar, y click en la miniatura abre lightbox de pantalla completa (#lbOverlay/openLB/closeLB, tecla Escape para cerrar) — antes las fotos no hacían zoom ni tenían esos botones. Funciones nuevas buildPhotoGrid/makePhotoSlot/setPhotoSlot sustituyen a renderPhotoGrid/onPhotoSelected (eliminadas, sin más referencias). (7) 'Hubo desplazamiento' y 'Terminada' rediseñados como toggle-switch (interruptor deslizante verde/gris) dentro de una tarjeta con fondo propio (.toggle-card), en vez del checkbox pequeño con texto plano de antes — mucho más visible y con mejor jerarquía visual; 'Terminada' usa fondo verde claro para diferenciarla. (8) Importante y Urgente: ya no se muestran en el modal (checkboxes ocultos display:none) pero se guardan siempre como true — deja de ser una decisión del usuario y pasa a ser el comportamiento por defecto de toda intervención de guardia, tal como se pidió. LIMPIEZA de huérfanos: eliminadas las funciones/CSS de la v02 sustituidas (renderPhotoGrid, onPhotoSelected(window), clases .photo-grid/.photo-x/.photo-slot antiguas — la nueva versión de .photo-slot convive con el resto de clases ps-*/del-btn/up-ov ya documentadas). | v02 - Cambios pedidos por Jordi tras probar v01: (1) Compresión de fotos: portada compressImage(file,1200,0.80) de nueva-tarea.html/editar-tarea.html, aplicada en onPhotoSelected antes de guardar el archivo en memoria (mismo comportamiento que las otras páginas de tareas). (2) "Nueva guardia" deja de crear el registro con 1 clic: ahora abre un modal pequeño (#guardiaModalOverlay) con Villa Manager (fijo, usuario actual) y Fecha (por defecto hoy); el texto de la tarea pasa a ser 'Hoy estoy de guardia' (antes 'Guardia sin intervención'); si el rol no es admin/manager, el campo fecha tiene min=hoy (no deja escoger fecha anterior en el date picker) y además hay una validación JS por si acaso que muestra el aviso 'Para poner la guardia con fecha anterior a hoy debes contactar a tu manager.' y resetea la fecha a hoy; admin/manager sin restricción de fecha. Sigue creándose con Intervencion_guardia=1 y Tarea_terminada=1, por lo que aparece en el listado igual que antes. (3) Modal de 'Añadir intervención': añadido banner informativo fijo arriba del formulario (mBanner) con el texto pedido sobre usar el botón de Intervención desde la reserva — se oculta cuando se abre el modal para editar/ver una intervención ya existente, solo se muestra al crear una nueva. Campo 'Estado del huésped' movido de su sitio original (junto a Tipo de intervención) a después de 'Acción realizada / Resultado'. Importante y Urgente ahora marcados por defecto al crear una intervención nueva (no al editar una existente, donde se respeta el valor guardado). Checkbox 'Terminada' rediseñado: quitado el emoji ✅ del texto (inducía a pensar que ya estaba terminada aunque no lo estuviera) y agrandado visualmente (fondo gris, checkbox 22×22px, en fila propia debajo de Desplazamiento/Importante/Urgente en vez de compartir fila con ellos). (4) Nuevo campo 'Villa Manager' (autocompletado, mAsignadoSearch/mAsignado) en el modal de intervención — por defecto se autorrellena con el usuario actual (busca por email en TaUsers, mismo patrón que nueva-tarea.html), pero permite cambiarlo; al guardar, UserID_asigned_alfanum/UserID_responsible_alfanum usan este campo en lugar de forzar siempre el usuario que crea. Al editar una intervención existente, el campo se rellena con el UserID_asigned_alfanum guardado (resuelto a nombre vía allUsersMap). (5) Soporte de parámetros de URL para llegar directamente a 'nueva intervención' desde el nuevo botón de entradas-equipo.html: si la URL trae accion=nueva-intervencion, se abre el modal automáticamente tras cargar los lookups; si trae villaid+villaname, se prerellena la villa; si trae reserva, se prerellena el código de reserva. PENDIENTE: falta modificar entradas-equipo.html para añadir el botón "Intervención 🚨" en las 3 vistas (fichas/listado/semanal) de entradas y salidas, que enlace aquí con esos parámetros — se entrega en archivo aparte. | v01 - Primera versión de la página. Listado de intervenciones de guardia (lee TaTasks vía la vista Vi_TaTasks_villas_user_mu filtrando siempre por Intervencion_guardia=1) con los mismos filtros que tareas.html (buscar, estado Todas/Pendientes/Terminadas —por defecto Todas—, villa manager multi-select, desde/hasta, villa, nº tarea, id reserva), con dos diferencias acordadas con Jordi: (1) Importante/Urgente se mueven dentro del panel colapsable "Filtros" en vez de pastillas siempre visibles; (2) los filtros "Tipo tarea"/"Tipo reserva" (Limpieza/WP/Cierre, específicos del flujo de limpieza) se sustituyen por un único filtro "Tipo de intervención" alimentado por la tabla lookup Ta_tipo_intervencion_guardia. Columnas del listado: botón ver/editar, fecha, villa, tipo de intervención (badge), descripción/resolución, estado del huésped — todas truncadas con fila expandible (toggleExpand); al expandir se muestra el texto completo y, si la tarea tiene Idreserva, un botón que abre entradas-equipo.html?cod=CODIGO en pestaña nueva. Botón "+ Nueva guardia": crea con un solo clic un registro en TaTasks con Intervencion_guardia=1, Intervencion_guardia_tipo_ID='guardia sin intervencion', Tarea_terminada=true y UserID_created/UserID_asigned_alfanum/UserID_responsible_alfanum = usuario actual (sin abrir formulario), replicando el caso "sin incidencias" del registro en papel. Botón "+ Añadir intervención": abre modal con todos los campos (villa, reserva opcional, fecha, hora primer aviso/inicio/fin, tipo de intervención, estado del huésped, descripción, resolución, desplazamiento+explicación, importante/urgente/terminada) más 5 fotos antes (Picture_cloudfare1-5) y 5 después (Picture_cloudfare_after1-5), mismo patrón de subida a R2 que nueva-tarea.html/editar-tarea.html (action=upload, comprime en el navegador antes de subir — nota: compressImage no incluido en esta v01, pendiente de portar desde editar-tarea.html si los ficheros pesan demasiado). Botón ver/editar en cada fila abre el mismo modal precargado; BLOQUEO 24H: si han pasado más de 24h desde TaTasks_DataCreated y el rol del usuario (Auth.role()) no es 'admin' ni 'manager', el formulario se deshabilita y se muestra el mensaje 'Las intervenciones solo se pueden editar durante 24 horas, contacta con tu manager si quieres editar esta intervención.' en vez de los botones de guardar. NOTA IMPORTANTE PENDIENTE: esta página usa Auth.require('guardias-e-intervenciones'), una clave que TODAVÍA NO EXISTE en auth.js — hay que añadir la entrada de permisos en auth.js antes de desplegar esta página o Auth.require lanzará 'Sin permiso' para todos los usuarios. Se entrega por separado la línea exacta a añadir. Campos reales de Caspio con nombre truncado a 32 caracteres usados tal cual: Intervencion_guardia_estado_hues (no _estado_huesped) e Intervencion_guardia_hora_primer (no _hora_primer_aviso). -->
+<!-- HISTORIAL: v04 - FIX RAÍZ del bug reportado (los registros creados no aparecían en el listado pese a tener Intervencion_guardia marcado en Caspio): buildWhere() usaba nombres de campo SIN el prefijo de tabla (Intervencion_guardia_tipo_ID, UserID_asigned_alfanum, Data_to_be_done_fixed, Idreserva, villaid, buscar_en_textos, taskid), pero esta página consulta una VISTA de Caspio (Vi_TaTasks_villas_user_mu), no la tabla directamente — las vistas de Caspio exponen los campos con el nombre alias con prefijo (TaTasks_...), exactamente como ya hace editar-tarea.html (var where='TaTasks_taskid='+parseInt(taskId) contra su vista Vi_Tasks_and_Villas). Sin el prefijo correcto la condición no encontraba ninguna fila. Corregidos TODOS los campos del WHERE con el prefijo TaTasks_ (incluida la condición base TaTasks_Intervencion_guardia_tipo_ID IS NOT NULL/<>'' introducida en v03) y el orderBy, que ya estaba correcto (TaTasks_taskid DESC). La teoría de Jordi sobre el JOIN a TaUsers no era la causa (es LEFT JOIN, nunca excluye filas de TaTasks aunque el usuario no cruce). | Filtro Villa Manager: sustituido el desplegable propio (position:absolute dentro de #masFiltros, que tiene overflow:hidden y max-height — por eso 'no se veía bien', quedaba cortado) por el MISMO patrón que usa entradas-equipo.html: panel .manager-panel con position:fixed calculado en JS a partir de getBoundingClientRect() del botón (toggleUserPanel, nueva, sustituye al listener inline anterior), lo que escapa de cualquier overflow:hidden ancestro. Lista de usuarios ordenada A-Z con el usuario actual siempre primero y marcador '← tú' en rojo (mismo criterio que renderManagerList de entradas-equipo.html); click en toda la fila (no solo el checkbox) alterna la selección y preserva el scroll; botones 'Todos'/'Ninguno' con las mismas funciones selectAllUsers/clearUsersSel. Para que 'usuario actual primero' funcione de forma fiable, loadUsers() ahora también resuelve myUserId por email si no venía ya del JWT (mismo fallback que ya usaba defaultAsignadoActual() del modal de intervención). LIMPIEZA de huérfanos: eliminada la clase .manager-row genérica reutilizada indebidamente por el filtro (ahora es .manager-item, con su propio estilo con hover y marcador de usuario actual); los desplegables de autocompletado de Villa/Villa Manager DENTRO del modal (mVillaDd/mAsignadoDd), que sí necesitan quedarse position:absolute relativos a su campo, pasan a una clase nueva .autocomplete-dd para no heredar el position:fixed que ahora tiene .manager-panel (si hubieran seguido usando .manager-panel se habrían roto). Función global window.toggleManager (v01, sin uso ya en ningún sitio) eliminada. | v03 - Cambios pedidos por Jordi tras probar v02: (1) FIX CRÍTICO — las guardias creadas no aparecían en el listado: buildWhere filtraba con Intervencion_guardia=1 (campo YES/NO); Caspio no admite fiablemente esa comparación en WHERE vía REST (es la misma razón por la que tareas.html filtra Tarea_terminada en cliente en vez de en el WHERE, ver comentario v32 de ese archivo). Sustituido por Intervencion_guardia_tipo_ID IS NOT NULL AND Intervencion_guardia_tipo_ID<>'' — campo STRING, comparación fiable ya usada en el resto del proyecto (mismo patrón que TaBookings2021_BookingStatus<>'cancelled'), y funcionalmente equivalente porque ese campo solo se rellena en registros de guardia. (2) Filtro de fechas Desde/Hasta movido de dentro de 'Filtros' a la barra principal, siempre visible sin desplegar nada; valor por defecto al cargar la página y al pulsar 'Limpiar': Desde=hoy, Hasta=31/12 del año en curso (constante endOfYearStr()). (3) Modal de intervención — validaciones obligatorias añadidas en guardarModal(): Villa (debe seleccionarse de la lista), Reserva (ya no opcional, texto obligatorio), Tipo de intervención, Descripción, Acción realizada/Resultado y Estado del huésped; si falta alguno se avisa con toast y no se guarda. Las 3 horas (aviso/inicio/fin) NO son obligatorias para guardar, pero si se intenta marcar el checkbox Terminada sin las 3 rellenas, se bloquea el guardado con aviso explicativo. (4) Campo Villa Manager: nueva función aplicarBloqueoVillaManager() que deshabilita el input si el rol (Auth.role()) no es 'admin' ni 'manager' — el resto de roles ven su propio nombre pero no pueden reasignar la intervención a otro compañero; se aplica tanto al crear como al editar (salvo que ya esté bloqueada por el candado de 24h, en cuyo caso todo el formulario queda deshabilitado igualmente). (5) Descripción, Acción realizada/Resultado y Estado del huésped: portado COMPLETO el sistema de lista editable + dictado por voz de nueva-tarea.html/editar-tarea.html (funciones parse/serialize/makeItem/addItem/sync/placeAdd/getDragAfter/_tlInit/_tlGet/_tlAddItem, checkboxes + edición inline + drag&drop + botón eliminar + fila añadir, más initMic() con Web Speech API para dictado — 3 botones de micrófono nuevos, uno por campo). Mismo formato de texto guardado ([x]/[ ]/línea plana) que las otras páginas, así que estos campos se leen y editan igual en cualquier página que los use. (6) Fotos: sustituido el sistema simple (click para abrir selector, sin zoom) por el sistema completo de nueva-tarea.html: cada slot tiene botón 📷 (cámara, capture=environment) y 📂 (archivo), número de slot, overlay de subida con spinner, botón ✕ de borrar, y click en la miniatura abre lightbox de pantalla completa (#lbOverlay/openLB/closeLB, tecla Escape para cerrar) — antes las fotos no hacían zoom ni tenían esos botones. Funciones nuevas buildPhotoGrid/makePhotoSlot/setPhotoSlot sustituyen a renderPhotoGrid/onPhotoSelected (eliminadas, sin más referencias). (7) 'Hubo desplazamiento' y 'Terminada' rediseñados como toggle-switch (interruptor deslizante verde/gris) dentro de una tarjeta con fondo propio (.toggle-card), en vez del checkbox pequeño con texto plano de antes — mucho más visible y con mejor jerarquía visual; 'Terminada' usa fondo verde claro para diferenciarla. (8) Importante y Urgente: ya no se muestran en el modal (checkboxes ocultos display:none) pero se guardan siempre como true — deja de ser una decisión del usuario y pasa a ser el comportamiento por defecto de toda intervención de guardia, tal como se pidió. LIMPIEZA de huérfanos: eliminadas las funciones/CSS de la v02 sustituidas (renderPhotoGrid, onPhotoSelected(window), clases .photo-grid/.photo-x/.photo-slot antiguas — la nueva versión de .photo-slot convive con el resto de clases ps-*/del-btn/up-ov ya documentadas). | v02 - Cambios pedidos por Jordi tras probar v01: (1) Compresión de fotos: portada compressImage(file,1200,0.80) de nueva-tarea.html/editar-tarea.html, aplicada en onPhotoSelected antes de guardar el archivo en memoria (mismo comportamiento que las otras páginas de tareas). (2) "Nueva guardia" deja de crear el registro con 1 clic: ahora abre un modal pequeño (#guardiaModalOverlay) con Villa Manager (fijo, usuario actual) y Fecha (por defecto hoy); el texto de la tarea pasa a ser 'Hoy estoy de guardia' (antes 'Guardia sin intervención'); si el rol no es admin/manager, el campo fecha tiene min=hoy (no deja escoger fecha anterior en el date picker) y además hay una validación JS por si acaso que muestra el aviso 'Para poner la guardia con fecha anterior a hoy debes contactar a tu manager.' y resetea la fecha a hoy; admin/manager sin restricción de fecha. Sigue creándose con Intervencion_guardia=1 y Tarea_terminada=1, por lo que aparece en el listado igual que antes. (3) Modal de 'Añadir intervención': añadido banner informativo fijo arriba del formulario (mBanner) con el texto pedido sobre usar el botón de Intervención desde la reserva — se oculta cuando se abre el modal para editar/ver una intervención ya existente, solo se muestra al crear una nueva. Campo 'Estado del huésped' movido de su sitio original (junto a Tipo de intervención) a después de 'Acción realizada / Resultado'. Importante y Urgente ahora marcados por defecto al crear una intervención nueva (no al editar una existente, donde se respeta el valor guardado). Checkbox 'Terminada' rediseñado: quitado el emoji ✅ del texto (inducía a pensar que ya estaba terminada aunque no lo estuviera) y agrandado visualmente (fondo gris, checkbox 22×22px, en fila propia debajo de Desplazamiento/Importante/Urgente en vez de compartir fila con ellos). (4) Nuevo campo 'Villa Manager' (autocompletado, mAsignadoSearch/mAsignado) en el modal de intervención — por defecto se autorrellena con el usuario actual (busca por email en TaUsers, mismo patrón que nueva-tarea.html), pero permite cambiarlo; al guardar, UserID_asigned_alfanum/UserID_responsible_alfanum usan este campo en lugar de forzar siempre el usuario que crea. Al editar una intervención existente, el campo se rellena con el UserID_asigned_alfanum guardado (resuelto a nombre vía allUsersMap). (5) Soporte de parámetros de URL para llegar directamente a 'nueva intervención' desde el nuevo botón de entradas-equipo.html: si la URL trae accion=nueva-intervencion, se abre el modal automáticamente tras cargar los lookups; si trae villaid+villaname, se prerellena la villa; si trae reserva, se prerellena el código de reserva. PENDIENTE: falta modificar entradas-equipo.html para añadir el botón "Intervención 🚨" en las 3 vistas (fichas/listado/semanal) de entradas y salidas, que enlace aquí con esos parámetros — se entrega en archivo aparte. | v01 - Primera versión de la página. Listado de intervenciones de guardia (lee TaTasks vía la vista Vi_TaTasks_villas_user_mu filtrando siempre por Intervencion_guardia=1) con los mismos filtros que tareas.html (buscar, estado Todas/Pendientes/Terminadas —por defecto Todas—, villa manager multi-select, desde/hasta, villa, nº tarea, id reserva), con dos diferencias acordadas con Jordi: (1) Importante/Urgente se mueven dentro del panel colapsable "Filtros" en vez de pastillas siempre visibles; (2) los filtros "Tipo tarea"/"Tipo reserva" (Limpieza/WP/Cierre, específicos del flujo de limpieza) se sustituyen por un único filtro "Tipo de intervención" alimentado por la tabla lookup Ta_tipo_intervencion_guardia. Columnas del listado: botón ver/editar, fecha, villa, tipo de intervención (badge), descripción/resolución, estado del huésped — todas truncadas con fila expandible (toggleExpand); al expandir se muestra el texto completo y, si la tarea tiene Idreserva, un botón que abre entradas-equipo.html?cod=CODIGO en pestaña nueva. Botón "+ Nueva guardia": crea con un solo clic un registro en TaTasks con Intervencion_guardia=1, Intervencion_guardia_tipo_ID='guardia sin intervencion', Tarea_terminada=true y UserID_created/UserID_asigned_alfanum/UserID_responsible_alfanum = usuario actual (sin abrir formulario), replicando el caso "sin incidencias" del registro en papel. Botón "+ Añadir intervención": abre modal con todos los campos (villa, reserva opcional, fecha, hora primer aviso/inicio/fin, tipo de intervención, estado del huésped, descripción, resolución, desplazamiento+explicación, importante/urgente/terminada) más 5 fotos antes (Picture_cloudfare1-5) y 5 después (Picture_cloudfare_after1-5), mismo patrón de subida a R2 que nueva-tarea.html/editar-tarea.html (action=upload, comprime en el navegador antes de subir — nota: compressImage no incluido en esta v01, pendiente de portar desde editar-tarea.html si los ficheros pesan demasiado). Botón ver/editar en cada fila abre el mismo modal precargado; BLOQUEO 24H: si han pasado más de 24h desde TaTasks_DataCreated y el rol del usuario (Auth.role()) no es 'admin' ni 'manager', el formulario se deshabilita y se muestra el mensaje 'Las intervenciones solo se pueden editar durante 24 horas, contacta con tu manager si quieres editar esta intervención.' en vez de los botones de guardar. NOTA IMPORTANTE PENDIENTE: esta página usa Auth.require('guardias-e-intervenciones'), una clave que TODAVÍA NO EXISTE en auth.js — hay que añadir la entrada de permisos en auth.js antes de desplegar esta página o Auth.require lanzará 'Sin permiso' para todos los usuarios. Se entrega por separado la línea exacta a añadir. Campos reales de Caspio con nombre truncado a 32 caracteres usados tal cual: Intervencion_guardia_estado_hues (no _estado_huesped) e Intervencion_guardia_hora_primer (no _hora_primer_aviso). -->
