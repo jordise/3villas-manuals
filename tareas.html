@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v81 | Historial completo al final  -->
+<!-- VERSIÓN ACTUAL: v82 | Historial completo al final  -->
 <head>
   <meta charset="UTF-8">
   <!-- ══ PWA ══ -->
@@ -21,8 +21,31 @@
   }
 </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tareas v81 — 3Villas</title>
+  <title>Tareas v82 — 3Villas</title>
   <link rel="icon" type="image/png" href="https://www.3villas.com/intranet/icon-corazon-rojo-fondo-transparente.png">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <script>
+    // ── AUTO-DETECCIÓN DE VERSIÓN (Opción B) — retrofit v82 ──
+    (function(){
+      const PAGE_VERSION='v82';
+      try{
+        if(location.protocol==='file:') return;
+        fetch(location.pathname,{cache:'reload'}).then(r=>r.text()).then(html=>{
+          const m=html.match(/VERSIÓN ACTUAL:\s*(v\d+)/);
+          if(!m) return;
+          const serverVer=m[1];
+          if(serverVer!==PAGE_VERSION){
+            const flag='3v_vchk_'+location.pathname+'_'+serverVer;
+            if(!sessionStorage.getItem(flag)){
+              sessionStorage.setItem(flag,'1');
+              location.reload();
+            }
+          }
+        }).catch(()=>{});
+      }catch(e){}
+    })();
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root{--red:#C8102E;--red-dark:#9e0c24;--red-light:#fce8eb;--green:#1e9e4e;--green-light:#e6f7ee;--orange:#e07b00;--orange-light:#fff4e0;--blue:#1967d2;--blue-light:#e8f0fe;--purple:#5e35b1;--purple-light:#ede7f6;--gray-1:#f4f5f7;--gray-2:#e8eaed;--gray-3:#c4c9d4;--gray-4:#7a8194;--gray-5:#2d3142;--shadow-sm:0 1px 4px rgba(0,0,0,.08);--shadow-md:0 4px 14px rgba(0,0,0,.11);--shadow-lg:0 8px 28px rgba(0,0,0,.13);--r:10px}
@@ -651,8 +674,12 @@ function toggleDesc(btn){
     window.location.href = 'nueva-tarea.html?' + params;
   };
 
-  window.openEditTask = function(rawId, reserva) {
+  window.openEditTask = function(rawId, reserva, esInterv) {
     if (!rawId) { alert('Sin ID de tarea.'); return; }
+    if (esInterv) {
+      window.location.href = 'guardias-e-intervenciones.html?editar=' + encodeURIComponent(rawId);
+      return;
+    }
     var params = 'taskid=' + encodeURIComponent(rawId);
     if (reserva) params += '&Idreserva=' + encodeURIComponent(reserva);
     window.location.href = 'editar-tarea.html?' + params;
@@ -1234,6 +1261,7 @@ function toggleDesc(btn){
     var taskId  = getTaskId(t);
     var villaName = t._villaName||'—';
     var userName  = t._userName||'';
+    var esInterv = !!(t.Intervencion_guardia_tipo_ID && String(t.Intervencion_guardia_tipo_ID).trim());
 
     var rowBg='';
     if(!done_t && extraClass!=='prox-task-row'){
@@ -1247,13 +1275,13 @@ function toggleDesc(btn){
     }
 
     var btnEdit = taskId
-      ? '<button class="act-btn act-btn-edit" onclick="openEditTask(\''+taskId+'\',\''+(reserva||'')+'\');" title="Editar">✏️ Editar</button>'
+      ? '<button class="act-btn act-btn-edit" onclick="openEditTask(\''+taskId+'\',\''+(reserva||'')+'\','+(esInterv?'true':'false')+');" title="Editar">✏️ Editar</button>'
       : '';
 
     /* v46: info-card — centrada, sin villa, sin "Pendiente" */
     var isUrg = isFlagOn(t.urgente);
     var isImp = isFlagOn(t.importante);
-    var editUrl=taskId?'editar-tarea.html?taskid='+encodeURIComponent(taskId)+(reserva?'&Idreserva='+encodeURIComponent(reserva):''):'';
+    var editUrl=taskId?(esInterv?'guardias-e-intervenciones.html?editar='+encodeURIComponent(taskId):'editar-tarea.html?taskid='+encodeURIComponent(taskId)+(reserva?'&Idreserva='+encodeURIComponent(reserva):'')):'';
     var flags=(isImp?'🚩':'')+(isUrg?'🏁':'');
     var metaCell = (editUrl?'<a class="info-card" href="'+editUrl+'" title="Editar">':'<div class="info-card">')
       + (flags?'<div class="info-flags">'+flags+'</div>':'')
@@ -1523,4 +1551,4 @@ function toggleDesc(btn){
 </script>
 </body>
 </html>
-<!-- HISTORIAL: v81 - FIX filtro villa no refrescaba: (1) loadVillas más robusto — acepta villaid/VillaId/VillaID/villa_id/ID para no devolver id vacío si Caspio cambia capitalización del campo; filas sin ID se ignoran. (2) Listener change adicional vía addEventListener para fVilla con schedule(0) inmediato, más fiable que oninput/onchange en HTML con datalist dentro de overflow:hidden (iOS/Safari). (3) onVillaChange: delay reducido a 300ms (igual que otros filtros); los return prematuros solo afectan al selector de multiunit, schedule siempre corre primero. |  v80 - FIX filtros no refrescaban: (1) Campo villa (fVilla con datalist): añadido onchange="onVillaChange()" además de oninput — en muchos navegadores/móvil seleccionar del datalist dispara change pero no input, por lo que el filtro nunca se ejecutaba. (2) Campos fBuscar, fReserva, fTaskId: añadido listener change además de input por el mismo motivo. Los select (fTasktype, fBookingType, fMultiunit) ya tenían change y estaban correctos. |  v79 - Retrofit: favicon estándar añadido (ruta absoluta); spinners <div class="spinner"> (CSS background base64) sustituidos por <img class="spinner"> con base64 embebido estándar; CSS .spinner{background:url(...)} eliminado (huérfano). |  v78 - Descripción inline: editor Quill por fila sustituido por lista editable (checkbox + edición inline + drag&drop reordenar + auto-mover marcado al fondo/desmarcado arriba + botón eliminar; fila "Añadir" encima de las terminadas). Mismo formato de texto guardado ([x]/[ ]/•); líneas planas legacy se cargan como ítem desmarcado. Checkbox con flex:none. Guardado a Caspio sin cambios (PUT Taskdescription). Eliminado Quill (CDN, CSS .ql-*/.desc-ql-wrap, botones .re-btn-inline, _qFmtRow) | v77 - Fix: renderTable oculta stInit+stErr, CSS state-box sin min-height forzado | v76 - Fix centrado spinner: .spinner display:block margin:auto, .state-box flex centrado | v75 - Spinner corazón 3Villas embebido en CSS inline (sin archivo externo) | v74 - Eliminado CSS inline .spinner/.spin — ahora spinner.css y spinner-sm.css tienen prioridad | v73 - versión anterior -->
+<!-- HISTORIAL: v82 - Si una tarea tiene marcado el campo Intervencion_guardia_tipo_ID (es decir, es una intervención de guardia o una guardia sin intervención, creada desde guardias-e-intervenciones.html), el botón/enlace "✏️ Editar" ya no abre editar-tarea.html — abre guardias-e-intervenciones.html?editar=TASKID en su lugar, para que se edite con las reglas propias de esas páginas (solo Fecha editable en guardias, bloqueo 24h, checkbox de validez solo admin/manager, etc.). Cambios: (1) buildRow() calcula esInterv=!!(t.Intervencion_guardia_tipo_ID) y lo usa tanto en el botón act-btn-edit como en el enlace directo editUrl de la info-card. (2) openEditTask(rawId,reserva,esInterv) — nuevo 3er parámetro; si es true, redirige a guardias-e-intervenciones.html en vez de editar-tarea.html (el parámetro Idreserva no aplica en ese caso, guardias-e-intervenciones.html ya trae el dato del propio registro). RETROFIT OBLIGATORIO detectado: el archivo no tenía implementado el mecanismo de auto-detección de versión (Opción B) pese a la regla permanente de memoria — añadido en el <head> junto con las meta Cache-Control/Pragma no-cache, que tampoco existían. Favicon ya era estándar. | v81 - FIX filtro villa no refrescaba: (1) loadVillas más robusto — acepta villaid/VillaId/VillaID/villa_id/ID para no devolver id vacío si Caspio cambia capitalización del campo; filas sin ID se ignoran. (2) Listener change adicional vía addEventListener para fVilla con schedule(0) inmediato, más fiable que oninput/onchange en HTML con datalist dentro de overflow:hidden (iOS/Safari). (3) onVillaChange: delay reducido a 300ms (igual que otros filtros); los return prematuros solo afectan al selector de multiunit, schedule siempre corre primero. |  v80 - FIX filtros no refrescaban: (1) Campo villa (fVilla con datalist): añadido onchange="onVillaChange()" además de oninput — en muchos navegadores/móvil seleccionar del datalist dispara change pero no input, por lo que el filtro nunca se ejecutaba. (2) Campos fBuscar, fReserva, fTaskId: añadido listener change además de input por el mismo motivo. Los select (fTasktype, fBookingType, fMultiunit) ya tenían change y estaban correctos. |  v79 - Retrofit: favicon estándar añadido (ruta absoluta); spinners <div class="spinner"> (CSS background base64) sustituidos por <img class="spinner"> con base64 embebido estándar; CSS .spinner{background:url(...)} eliminado (huérfano). |  v78 - Descripción inline: editor Quill por fila sustituido por lista editable (checkbox + edición inline + drag&drop reordenar + auto-mover marcado al fondo/desmarcado arriba + botón eliminar; fila "Añadir" encima de las terminadas). Mismo formato de texto guardado ([x]/[ ]/•); líneas planas legacy se cargan como ítem desmarcado. Checkbox con flex:none. Guardado a Caspio sin cambios (PUT Taskdescription). Eliminado Quill (CDN, CSS .ql-*/.desc-ql-wrap, botones .re-btn-inline, _qFmtRow) | v77 - Fix: renderTable oculta stInit+stErr, CSS state-box sin min-height forzado | v76 - Fix centrado spinner: .spinner display:block margin:auto, .state-box flex centrado | v75 - Spinner corazón 3Villas embebido en CSS inline (sin archivo externo) | v74 - Eliminado CSS inline .spinner/.spin — ahora spinner.css y spinner-sm.css tienen prioridad | v73 - versión anterior -->
