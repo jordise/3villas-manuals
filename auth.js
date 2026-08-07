@@ -88,6 +88,7 @@ const Auth = (function () {
     'nueva-tarea'                             : ['admin', 'manager', 'staff'],
     'editar-tarea'                            : ['admin', 'manager', 'staff'],
     'guardias-e-intervenciones'               : ['admin', 'manager', 'staff'],
+    'listado-guardias-e-intervenciones'       : ['admin', 'manager'],    
 
     // ── SUBTAREAS DE FLUJO ⚠️ CRÍTICAS ────────────────────────
     'task-limpieza'         : ['admin', 'manager', 'staff', 'cleaner'],
