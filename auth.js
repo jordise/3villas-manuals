@@ -83,10 +83,11 @@ const Auth = (function () {
     'entradas-primer-contacto-whatsapp' : ['admin', 'manager', 'staff'],
 
     // ── TAREAS ─────────────────────────────────────────────────
-    'tareas'                : ['admin', 'manager', 'staff', 'cleaner'],
-    'app-tareas'            : ['admin', 'manager', 'staff'],
-    'nueva-tarea'           : ['admin', 'manager', 'staff'],
-    'editar-tarea'          : ['admin', 'manager', 'staff'],
+    'tareas'                                  : ['admin', 'manager', 'staff', 'cleaner'],
+    'app-tareas'                              : ['admin', 'manager', 'staff'],
+    'nueva-tarea'                             : ['admin', 'manager', 'staff'],
+    'editar-tarea'                            : ['admin', 'manager', 'staff'],
+    'guardias-e-intervenciones'               : ['admin', 'manager', 'staff'],
 
     // ── SUBTAREAS DE FLUJO ⚠️ CRÍTICAS ────────────────────────
     'task-limpieza'         : ['admin', 'manager', 'staff', 'cleaner'],
