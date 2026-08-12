@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v63 | Historial completo al final -->
+<!-- VERSIÓN ACTUAL: v64 | Historial completo al final -->
 <head>
   <meta charset="UTF-8">
   <!-- ══ PWA ══ -->
@@ -14,15 +14,42 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/3villas-manuals/sw.js')
+      // v64: migración del SW legacy /3villas-manuals/ a /intranet/sw.js — desregistra el antiguo si sigue activo
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(reg => { if (reg.scope.includes('/3villas-manuals/')) reg.unregister().catch(() => {}); });
+      }).catch(() => {});
+      navigator.serviceWorker.register('/intranet/sw.js')
         .then(r => console.log('SW registrado:', r.scope))
         .catch(e => console.warn('SW error:', e));
     });
   }
 </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Editar Tarea v63 — 3Villas</title>
+  <title>Editar Tarea v64 — 3Villas</title>
   <link rel="icon" type="image/png" href="https://www.3villas.com/intranet/icon-corazon-rojo-fondo-transparente.png">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <script>
+    // ── AUTO-DETECCIÓN DE VERSIÓN (Opción B) — retrofit obligatorio, no estaba implementado ──
+    (function(){
+      const PAGE_VERSION='v64';
+      try{
+        if(location.protocol==='file:') return;
+        fetch(location.pathname,{cache:'reload'}).then(r=>r.text()).then(html=>{
+          const m=html.match(/VERSIÓN ACTUAL:\s*(v\d+)/);
+          if(!m) return;
+          const serverVer=m[1];
+          if(serverVer!==PAGE_VERSION){
+            const flag='3v_vchk_'+location.pathname+'_'+serverVer;
+            if(!sessionStorage.getItem(flag)){
+              sessionStorage.setItem(flag,'1');
+              location.reload();
+            }
+          }
+        }).catch(()=>{});
+      }catch(e){}
+    })();
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root{--red:#C8102E;--red-dark:#9e0c24;--red-light:#fce8eb;--green:#1e9e4e;--green-dark:#157039;--green-light:#e6f7ee;--orange:#e07b00;--orange-light:#fff4e0;--gray-1:#f4f5f7;--gray-2:#e8eaed;--gray-3:#c4c9d4;--gray-4:#7a8194;--gray-5:#2d3142;--shadow-sm:0 1px 4px rgba(0,0,0,.08);--shadow-md:0 4px 16px rgba(0,0,0,.12);--shadow-lg:0 8px 32px rgba(0,0,0,.16);--r:14px}
@@ -1149,4 +1176,4 @@ function onDone(){
 </script>
 </body>
 </html>
-<!-- HISTORIAL: v63 - Fotos: añadido Date.now() al final del nombre de archivo (año_before/after_taskId_usuario_slot_TIMESTAMP) en pre-subida y fallback; al reemplazar una foto del mismo slot se genera URL nueva en vez de reutilizar la misma clave R2, evitando que el navegador/CDN muestre la imagen antigua cacheada | v62 - goBack() lee sessionStorage[3v_eys_return] (guardado por entradas-equipo.html al abrir una tarea): si existe, navega directamente a la URL guardada (evita el bug de history.back() que con base href=/intranet/ volvía a index.html en lugar de entradas-equipo.html); guarda el scroll en 3v_eys_scroll para que entradas-equipo lo restaure al cargar. Si no hay URL guardada, hace history.back() como antes. |  v61 - Retrofit: favicon estándar añadido (ruta absoluta); spinner CSS .big-spinner sustituido por img base64 estándar del corazón 3Villas. |  v60 - FIX espaciado real: el checkbox de las listas heredaba flex:1 de la regla .input-mic input (se estiraba a ~180px y empujaba el texto); añadido flex:none al checkbox. Ahora grip+checkbox quedan compactos a la izquierda y el texto ocupa todo el ancho | v59 - Listas: compactado grip (12px) y checkbox (16px), gap 4px y min-width:0 en el texto (no surtió efecto por el flex heredado, corregido en v60) | v58 - Listas Descripción/Solución: reducido el espacio grip↔checkbox↔texto (gap 6px) para más ancho de edición; botón × anclado a la derecha. La fila "Añadir" se coloca encima de la primera tarea terminada (si las hay) y al final si no hay terminadas; ítem nuevo desmarcado entra como último pendiente | v57 - Descripción y Solución: editor Quill sustituido por lista editable (checkbox + edición inline + drag&drop reordenar + auto-mover marcado al fondo/desmarcado arriba + botón eliminar). Mismo formato de texto guardado ([x]/[ ]/•); líneas planas legacy se cargan como ítem desmarcado. Micro adaptado: dicta un ítem nuevo desmarcado. Eliminado Quill (CDN, CSS .ql-*, botones .re-*) | v56 - Lightbox fotos: botón cerrar ✕ visible en esquina superior derecha | v55 - Vi_Tasks_and_Villas incluye TaMultiunits: 1 sola llamada al cargar (vs 4 anteriores); multiunits completos en background para cambio de villa | v54 - Carga en 2 fases: Vi_Tasks_and_Villas sustituye loadTask+loadVillas+loadUsers (1 fetch vs 3); formulario visible inmediatamente; buscadores cargan en background | v53 - Fix botón borrar foto siempre visible (móvil); carga más rápida: loadTask sin 2ª fetch villa (usa allVillas), caché sessionStorage 5min para users y villas | v52 - Pre-subida de fotos en background al seleccionarlas; compresión canvas 1200px/80% (archivos >300KB); overlay spinner/✓/⚠ en thumbnail; uploadPhoto usa URL cacheada si ya subida | v51 - versión anterior -->
+<!-- HISTORIAL: v64 - Migración del Service Worker legacy: el registro pasa de '/3villas-manuals/sw.js' a '/intranet/sw.js' (versión más reciente, con caché versionada y limpieza de cachés antiguas), desregistrando primero cualquier SW activo con scope '/3villas-manuals/' para limpiar dispositivos que aún lo tuvieran instalado. Mismo cambio aplicado a la vez en entradas-equipo.html, tareas.html, nueva-tarea.html y listado-ocupacion.html. RETROFIT OBLIGATORIO detectado y corregido de paso: el archivo no tenía implementado el mecanismo de auto-detección de versión (Opción B) pese a la regla permanente de memoria — añadido en el <head> junto con las meta Cache-Control/Pragma no-cache que tampoco existían. Favicon ya era estándar. Sin cambios en ninguna otra lógica de la página. | v63 - Fotos: añadido Date.now() al final del nombre de archivo (año_before/after_taskId_usuario_slot_TIMESTAMP) en pre-subida y fallback; al reemplazar una foto del mismo slot se genera URL nueva en vez de reutilizar la misma clave R2, evitando que el navegador/CDN muestre la imagen antigua cacheada | v62 - goBack() lee sessionStorage[3v_eys_return] (guardado por entradas-equipo.html al abrir una tarea): si existe, navega directamente a la URL guardada (evita el bug de history.back() que con base href=/intranet/ volvía a index.html en lugar de entradas-equipo.html); guarda el scroll en 3v_eys_scroll para que entradas-equipo lo restaure al cargar. Si no hay URL guardada, hace history.back() como antes. |  v61 - Retrofit: favicon estándar añadido (ruta absoluta); spinner CSS .big-spinner sustituido por img base64 estándar del corazón 3Villas. |  v60 - FIX espaciado real: el checkbox de las listas heredaba flex:1 de la regla .input-mic input (se estiraba a ~180px y empujaba el texto); añadido flex:none al checkbox. Ahora grip+checkbox quedan compactos a la izquierda y el texto ocupa todo el ancho | v59 - Listas: compactado grip (12px) y checkbox (16px), gap 4px y min-width:0 en el texto (no surtió efecto por el flex heredado, corregido en v60) | v58 - Listas Descripción/Solución: reducido el espacio grip↔checkbox↔texto (gap 6px) para más ancho de edición; botón × anclado a la derecha. La fila "Añadir" se coloca encima de la primera tarea terminada (si las hay) y al final si no hay terminadas; ítem nuevo desmarcado entra como último pendiente | v57 - Descripción y Solución: editor Quill sustituido por lista editable (checkbox + edición inline + drag&drop reordenar + auto-mover marcado al fondo/desmarcado arriba + botón eliminar). Mismo formato de texto guardado ([x]/[ ]/•); líneas planas legacy se cargan como ítem desmarcado. Micro adaptado: dicta un ítem nuevo desmarcado. Eliminado Quill (CDN, CSS .ql-*, botones .re-*) | v56 - Lightbox fotos: botón cerrar ✕ visible en esquina superior derecha | v55 - Vi_Tasks_and_Villas incluye TaMultiunits: 1 sola llamada al cargar (vs 4 anteriores); multiunits completos en background para cambio de villa | v54 - Carga en 2 fases: Vi_Tasks_and_Villas sustituye loadTask+loadVillas+loadUsers (1 fetch vs 3); formulario visible inmediatamente; buscadores cargan en background | v53 - Fix botón borrar foto siempre visible (móvil); carga más rápida: loadTask sin 2ª fetch villa (usa allVillas), caché sessionStorage 5min para users y villas | v52 - Pre-subida de fotos en background al seleccionarlas; compresión canvas 1200px/80% (archivos >300KB); overlay spinner/✓/⚠ en thumbnail; uploadPhoto usa URL cacheada si ya subida | v51 - versión anterior -->
