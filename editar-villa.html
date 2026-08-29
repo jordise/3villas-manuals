@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v23 | Historial completo al final -->
+<!-- VERSIÓN ACTUAL: v24 | Historial completo al final -->
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#C8102E">
 <meta name="mobile-web-app-capable" content="yes">
@@ -18,7 +20,7 @@
      se sube pero el JS nunca recibe la señal → "Guardando…" eterno) y puede colgar también las
      NAVEGACIONES (el botón "← Volver" que va a villa.html). -->
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Editar Villa v23 — 3Villas</title>
+<title>Editar Villa v24 — 3Villas</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -169,6 +171,7 @@ textarea{resize:vertical;min-height:66px;line-height:1.5;transition:height .15s 
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:9990;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.open{display:flex}
 .modal-sheet{background:#fff;border-radius:16px;padding:20px 18px;max-width:360px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18)}
+.modal-sheet.wide{max-width:480px}
 .modal-sheet h3{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;margin-bottom:12px;color:var(--gray-5)}
 .modal-sheet p{font-size:13px;line-height:1.7;color:var(--gray-5);margin-bottom:8px}
 .modal-close{display:block;margin-top:16px;padding:12px;background:var(--gray-1);border:none;border-radius:10px;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;color:var(--gray-5);cursor:pointer;width:100%;text-align:center}
@@ -179,6 +182,20 @@ textarea{resize:vertical;min-height:66px;line-height:1.5;transition:height .15s 
 .legend-row-txt{flex:1}
 .legend-row-txt strong{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;display:block;margin-bottom:2px}
 .legend-row-txt span{font-size:12px;color:var(--gray-4)}
+
+/* ── MULTIUNIT KEYBOX MODAL ── */
+.mu-row{display:flex;flex-direction:column;gap:6px;border:1.5px solid var(--gray-2);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--gray-1)}
+.mu-row-title{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;color:var(--gray-5)}
+.mu-row-sub{font-size:11px;color:var(--gray-4)}
+.mu-row-inputline{display:flex;gap:8px;align-items:center;margin-top:4px}
+.mu-row-inputline input{flex:1;border:1.5px solid var(--gray-2);border-radius:9px;padding:8px 10px;font-size:13px;font-family:'Open Sans',sans-serif;color:var(--gray-5);outline:none}
+.mu-row-inputline input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(200,16,46,.08)}
+.mu-row-save{background:var(--red);color:#fff;border:none;border-radius:9px;padding:8px 12px;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.mu-row-save:hover{background:var(--red-dark)}
+.mu-row-save:disabled{background:var(--gray-3);cursor:not-allowed}
+.mu-row-saved{color:var(--green);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:800}
+.mu-open-btn{background:var(--gray-5);color:#fff;border:none;border-radius:10px;padding:10px 12px;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.mu-open-btn:hover{background:#1b1e29}
 
 /* ── SAVE BAR ── */
 .save-bar{position:fixed;bottom:0;left:0;right:0;z-index:200;background:#fff;border-top:1.5px solid var(--gray-2);padding:10px 14px;display:flex;gap:10px;box-shadow:0 -4px 20px rgba(0,0,0,.08)}
@@ -279,6 +296,15 @@ textarea{resize:vertical;min-height:66px;line-height:1.5;transition:height .15s 
   </div>
 </div>
 
+<!-- Multiunit keybox modal -->
+<div class="modal-overlay" id="muModal" onclick="if(event.target===this)closeMuModal()">
+  <div class="modal-sheet wide">
+    <h3>🔑 Keyboxes por unidad (Multiunit)</h3>
+    <div id="muModalBody"><p>Cargando…</p></div>
+    <button class="modal-close" onclick="closeMuModal()">Cerrar</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <nav class="top-nav">
@@ -344,9 +370,29 @@ textarea{resize:vertical;min-height:66px;line-height:1.5;transition:height .15s 
 (function(){
 'use strict';
 const WORKER  = 'https://caspio-proxy.jordi-89b.workers.dev';
+const PAGE_VERSION = 24;
 const urlP    = new URLSearchParams(window.location.search);
 const villaid = (urlP.get('villaid')||'').trim();
 function goToVilla(){ window.location.href='villa.html?villaid='+encodeURIComponent(villaid); }
+
+/* ── v24: auto-detección de versión (Opción B) — retrofit, no existía en este archivo ── */
+(function checkForNewerVersion(){
+  try{
+    if(location.protocol==='file:')return;
+    fetch(location.pathname,{cache:'reload'}).then(r=>r.text()).then(html=>{
+      const m=html.match(/VERSIÓN ACTUAL:\s*v(\d+)/i);
+      if(!m)return;
+      const serverV=parseInt(m[1]);
+      if(serverV>PAGE_VERSION){
+        const key='3v_vchk_'+location.pathname+'_v'+serverV;
+        if(!sessionStorage.getItem(key)){
+          sessionStorage.setItem(key,'1');
+          location.reload();
+        }
+      }
+    }).catch(()=>{});
+  }catch(e){}
+})();
 
 /* ══ v16: LOOKUP_DEFS — tablas de Caspio para traducir los campos FK de TaVillas ══
    Cada entrada: key interna, tabla real (confirmada contra el XML de estructura
@@ -560,6 +606,55 @@ function openLB(src){ if(!src)return; g('lbImg').src=src; g('lbOverlay').classLi
 function closeLB(){ g('lbOverlay').classList.remove('open'); }
 function showInfoModal(title,text){ g('infoModalTitle').textContent='ℹ️ '+title; g('infoModalText').textContent=text; g('infoModal').classList.add('open'); }
 function closeInfoModal(){ g('infoModal').classList.remove('open'); }
+
+/* ── MULTIUNIT KEYBOX MODAL ── */
+async function openMuModal(){
+  g('muModal').classList.add('open');
+  const body=g('muModalBody');
+  body.innerHTML='<p>Cargando…</p>';
+  try{
+    const where='VillaIDcaspio='+parseInt(villaid);
+    const r=await fetchWithTimeout(Auth.url(WORKER+'?action=data&table=TaMultiunits&where='+encodeURIComponent(where)+'&limit=50'),{},20000,'La carga de las unidades');
+    const j=await r.json();
+    const rows=j.Result||j.result||[];
+    if(!rows.length){body.innerHTML='<p>No se han encontrado unidades para esta villa en la tabla de Multiunits.</p>';return;}
+    body.innerHTML='';
+    rows.sort((a,b)=>String(a.descripcion||a.multiunitID||'').localeCompare(String(b.descripcion||b.multiunitID||''),'es'));
+    rows.forEach(mu=>{
+      const row=document.createElement('div');row.className='mu-row';
+      const title=document.createElement('div');title.className='mu-row-title';
+      title.textContent=mu.descripcion||mu.descripcion_corta||('Unidad '+mu.multiunitID);
+      row.appendChild(title);
+      const sub=document.createElement('div');sub.className='mu-row-sub';
+      sub.textContent='ID: '+mu.multiunitID+(mu.Nro_RUA?' · RUA: '+mu.Nro_RUA:'');
+      row.appendChild(sub);
+      const line=document.createElement('div');line.className='mu-row-inputline';
+      const inp=document.createElement('input');inp.type='text';inp.placeholder='Código keybox';inp.value=mu.Keybox||'';
+      const btn=document.createElement('button');btn.className='mu-row-save';btn.textContent='Guardar';
+      btn.onclick=()=>saveMuKeybox(mu.multiunitID,inp,btn);
+      line.appendChild(inp);line.appendChild(btn);
+      row.appendChild(line);
+      body.appendChild(row);
+    });
+  }catch(err){
+    console.error(err);
+    body.innerHTML='<p style="color:var(--red);font-weight:700">Error al cargar: '+esc(err.message)+'</p>';
+  }
+}
+function closeMuModal(){ g('muModal').classList.remove('open'); }
+async function saveMuKeybox(multiunitID,inp,btn){
+  const orig=btn.textContent;btn.disabled=true;btn.textContent='Guardando…';
+  try{
+    const where="multiunitID='"+String(multiunitID).replace(/'/g,"''")+"'";
+    const res=await fetchWithTimeout(Auth.url(WORKER+'?action=save&table=TaMultiunits&where='+encodeURIComponent(where)+'&method=PUT'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({Keybox:inp.value||''})},20000,'El guardado del keybox');
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    btn.textContent='Guardado ✓';toast('Keybox guardado','ok');
+    setTimeout(()=>{btn.textContent=orig;btn.disabled=false;},1500);
+  }catch(err){
+    console.error(err);btn.textContent=orig;btn.disabled=false;
+    toast('Error al guardar: '+err.message,'err');
+  }
+}
 function openLegendModal(){ g('legendModal').classList.add('open'); }
 function closeLegendModal(){ g('legendModal').classList.remove('open'); }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeLB(); closeInfoModal(); closeLegendModal(); } });
@@ -1052,6 +1147,13 @@ function buildForm(d){
 
   // ── 2. KEYBOX 1 ────────────────────────────────────────────
   main.appendChild(buildSection('kb1','🔑','Keybox 1',body=>{
+    if(parseInt(d.Unidades_multiunit)>1){
+      const muBtn=document.createElement('button');
+      muBtn.className='mu-open-btn';muBtn.type='button';
+      muBtn.textContent='🔑 Ver / editar keyboxes de las '+parseInt(d.Unidades_multiunit)+' unidades (Multiunit)';
+      muBtn.onclick=openMuModal;
+      body.appendChild(muBtn);
+    }
     body.appendChild(subgroup('🔒 Información interna (equipo)','sg-internal',
       buildTA('Key_Coments','Instrucciones internas / comentarios',d,2,2)
     ));
@@ -1432,6 +1534,7 @@ async function saveVilla(){
 window.saveVilla=saveVilla;window.openLB=openLB;window.closeLB=closeLB;
 window.goToVilla=goToVilla; /* v22: faltaba exponerla — los onclick de ✕ y "← Volver" no la encontraban */
 window.showInfoModal=showInfoModal;window.closeInfoModal=closeInfoModal;
+window.closeMuModal=closeMuModal;
 window.openLegendModal=openLegendModal;window.closeLegendModal=closeLegendModal;
 window.onSearch=onSearch;window.clearSearch=clearSearch;window.searchNav=searchNav;
 window.setFilter=setFilter;window.pendNav=pendNav;
@@ -1457,4 +1560,4 @@ document.addEventListener('DOMContentLoaded',loadVilla);
 </script>
 </body>
 </html>
-<!-- HISTORIAL: v23 - Nuevos campos en blanco, todos de uso interno (vis-internal, no visibles por el cliente): (1) 5 fotos adicionales de cuadro eléctrico (cloudflare_fotocuadroelectrico2..6) añadidas justo después de la foto existente de cuadro eléctrico en la sección Emergencias; (2) 5 fotos adicionales de llave de agua (cloudflare_foto_llave_agua2..6) añadidas justo después de la foto existente de llave de agua (antes del bloque de llave de agua en la calle, que queda intacto); (3) nueva sección/botón de navegación "Keybox equipo" (id kbeq, 3er botón de keybox junto a Keybox 1 y Keybox 2) exclusivamente de uso interno del equipo de 3Villas, con campo Keybox_equipo (texto), Key_Commentsequipo (instrucciones, textarea) y 3 fotos nuevas (cloudflare_foto1/2/3_keyboxequipo) — sin subgrupo de cliente, a diferencia de Keybox 1/2. Todos los campos nuevos usan buildNewOnly (sin foto antigua de Caspio equivalente) y NO se han añadido a PENDING_RULES (no generan aviso de pendiente), igual que cloudflare_safe_box_File1-3. Añadidos a CF_FIELDS (guardado de fotos) y Keybox_equipo/Key_Commentsequipo a TEXT_FIELDS (guardado de texto). | v22 - Fix: los botones ✕ (cabecera) y "← Volver" no navegaban a villa.html — goToVilla() (creada en v18) estaba definida dentro del IIFE pero NUNCA se expuso a window, así que los onclick del HTML (que se ejecutan en ámbito global) fallaban en silencio con "goToVilla is not defined" y los botones no hacían nada; el usuario acababa usando el atrás del navegador, que le llevaba a donde estuviera antes (listado/buscador) en vez de a la ficha de la villa. Mismo patrón de bug que ya se corrigió en villa.html v16 con otras funciones. Añadida window.goToVilla=goToVilla a la lista de exposiciones | v21 - Títulos de fotos en español derivados del nombre del campo (nuevo helper photoLabelFromField: cloudflare_foto1_keybox1 → "Foto1 keybox1"); la columna nueva de cada par muestra ese nombre en vez del genérico "Cloudflare (nueva)". Pares CON foto antigua (las servidas desde eucdn.caspio.com): la columna antigua pasa a ocupar la mitad que la nueva (grid 1fr 2fr, clase .has-old) y su imagen mide la mitad de alto (45px vs 90px); su etiqueta pasa a "{Nombre} (antigua intranet)" con botón de info (reutiliza mkInfoBtn/showInfoModal) que muestra "Las fotos de la antigua intranet se eliminarán el próximo 15 de Noviembre"; el badge sobre la imagen pasa de "Caspio · a deprecar" a "Antigua intranet". Pares SIN foto antigua: sin cambios de tamaño y conservan la etiqueta anterior | v20 - Fotos antiguas de Caspio: las URLs https://www.3villas.com/Informacion%20Villas/ pasan a servirse desde el CDN de Caspio https://eucdn.caspio.com/353F7000/Informacion%20Villas/. Nuevo helper caspioFileUrl() aplicado en buildOldPhoto: cubre tanto las rutas relativas que guardan los campos de archivo de Caspio (/Informacion Villas/... — que al resolverse contra www.3villas.com generaban la URL antigua) como URLs absolutas antiguas con 3villas.com. Beneficio extra: las rutas relativas, al convertirse ahora en URL http, se muestran como imagen con lightbox en vez de como enlace genérico "📎 Archivo" | v19 - Fix del guardado de imágenes colgado y del "no poder volver atrás" (mismos culpables detectados y corregidos en task-wp v18 y task-cierre v11): (1) eliminado el registro del Service Worker /3villas-manuals/sw.js (aquí además se registraba sin esperar al evento load) — auth.js lo desinstala activamente porque intercepta peticiones incorrectamente; un SW roto retiene las respuestas de los fetch (la imagen se sube a R2 pero el JS nunca recibe la señal → slot en "Subiendo…" eterno → saveVilla se queda esperando esa promesa para siempre en getUploadUrl → botón bloqueado en "Guardando…") y puede colgar también las navegaciones del botón "← Volver"; (2) añadido fetchWithTimeout blindado con Promise.race (el temporizador gana siempre aunque la promesa del fetch nunca se resuelva) y aplicado a startUpload (25s — si la subida se cuelga, el slot pasa a ⚠ Error en vez de bloquear el guardado) y a saveVilla (25s — si se cuelga, el catch muestra el error en el toast y el finally reactiva el botón). Nota: aquí NO hacía falta rompe-caché ni filename único (a diferencia de task-wp v20 / task-cierre v12) porque el nombre ya incluye Date.now() por subida | v18 - Botones ✕ (cabecera) y "← Volver" (barra inferior) ya no usan history.back(): ahora navegan siempre a villa.html?villaid={villaid} de la villa que se está editando, vía nueva función goToVilla(). Cabecera: se antepone "Editando…" en rojo (span.editing-badge) delante del nombre de la villa, para que quede claro que se está en modo edición. Añadida función esc() (no existía en este archivo) para escapar el nombre al insertarlo con innerHTML. | v17 - Label "Estado Photos" → "Estado Fotos / Fotografías". Cabecera: título ahora usa el campo Name ("Nombre interno equipo", 2º campo de la sección Villa — Nombres y ubicación) en vez de Name_villa_corto_interno; debajo del nombre, "ID {villaid}" → "Código llavero {villaid}" (mismo villaid, solo relabel), y se sustituye "HW {id} · RUA {rua}" por "Hostaway: {Hostawayid}" + botón "Ver en Hostaway" que abre https://dashboard.hostaway.com/listings/{Hostawayid} en pestaña nueva. Todos los campos de texto largo (buildTA: comentarios, notas, descripciones) ahora muestran el texto completo por defecto (altura automática vía autoGrowTA/autoGrowAllTA) y añaden un botón "▲ Contraer" que aparece solo si el contenido supera la altura mínima, permitiendo contraer/expandir a demanda. | v16 - FIX PRINCIPAL: ~30 campos de TaVillas que eran claves foráneas (INTEGER) a tablas lookup de Caspio y se mostraban en bruto (número sin traducir) o con opciones inventadas a mano que no coincidían con los IDs reales. Se añaden 37 tablas lookup confirmadas contra el XML de estructura de Caspio (LOOKUP_DEFS), cargadas todas en paralelo (Promise.all) junto a TaVillas/TaContacts/TaUsers — una sola carga por página, sin llamadas repetidas. Nueva función genérica buildLookupSelect(field,label,d,lookupKey,vis,info) que sustituye a los buildInput de texto/número sueltos y a los buildSelect con OPTS hardcodeados en: Property_Type, Owner_Type, Deal_Type, SIGNED, Status, ContractRenovationType, Status_Homestaging, Wellcompack, Fist_year_we_managed, Can_rent2020_Confirmed, Aircon, Zone, Changeoverday, Pets_allowed, Swiming_pool, Parking, Wifi_Comany, ETV_Plate, House_Name_Plate, Region_tasas_turisticas, TipoWellcomepack, Altaecotasa, who_pays__ecotasa, Activa, Status_Photos, Status_VreasyDescription, Status_Vreasy_Automatic_messages, Status_pricing, Status_Platforms, Pay_Cleanning/Pay_Garden/Pay_Pool/Pay_KeHolder (tabla TaViXWhoPay, confirmado con el usuario), y Room1-7 Beds/Otherbeds/Aircon/Bath/fan/foor (TaViXRoomBeds/TaViXRoomBedsother/TaViXRoomsAircon/TaViXRoomBath/TaViXRoomsFan/TaViXRoomFloor). Se añaden 2 campos que faltaban por completo en el formulario: ITV_2020 (TaITVstatus) y Status_Intranet (TaStatusIntranet). Centinelas de "sin definir" actualizados de IDs falsos a cadena vacía real, acorde a los nuevos valores de Caspio. Sin tocar: cots_cunas/Highchair_silita/dehumidifier_number (confirmado como cantidades simples, no FK) ni los campos Yes/No reales (Dishwasher, Washing_machine, Cofe_Machine, Beach_towels_provided, Detector_de_humos), que mantienen sus OPTS. RETROFIT: favicon estándar ya presente; spinner de la pantalla de carga (#stLoad) sustituido de div+CSS con animación (.big-spinner/@keyframes spin, no estándar) a <img class="spinner"> con el base64 del corazón estándar (mismo patrón que checkin-pasos.html); CSS huérfano de .big-spinner/@keyframes spin eliminado. | v15 - Toolbar: buscar+pendientes en una sola fila; cajas pend compactas con ↑↓; sin botón Todo; scroll horizontal en móvil | v14 - Todos los campo-select con búsqueda: buildSS input+dropdown con highlight; afecta buildSelect/buildContactSelect/buildUserSelect/buildBoolField | v13 - buildBoolField solo Sí/No; vacío = No | v12 - Checkin_* cambiados a buildBoolField (Sí/No) en lugar de OPTS.checkin (3 opciones) | v11 - Fix Yes/No fields: isTruthy helper para leer -1/true/false de Caspio; buildBoolField muestra Sí/No/Sin definir; isPending corregido para booleanos; guardado usa isTruthy | v10 - Quitado ecotasa2019status (campo eliminado del formulario) | v09 - Fix tipos al guardar: INT_FIELDS/BOOL_FIELDS/NUM_FIELDS/DATE_FIELDS exactos del documento; Number→parseFloat, Date→string, Yes/No→boolean | v08 - Restaurado safe_box File 1+2+3; fix emoji 🏷️→📋 posible causa de blank; | v07 - Fix: quitar KeyHolder_zone/Sercives_comments/safe_box_File2+3 no están en doc; icono info cabecera = mismo azul que campos; flechas alta prioridad para pendientes amarillos | v06 - Restructura completa según doc v2: nuevo orden col A, secciones Equipamiento/Animales/Operaciones nuevas; info-btn azul redondo; popup centrado sin overlay oscuro; fix contacts ID detection; | v05 - Restructura completa: secciones Villamanager/Seguridad/Piscina+Jacuzzi/Comunicación/Admin nuevas; colores amarillo=cliente/blanco=interno; subgrupos dentro de secciones; botón Info leyenda colores; botón ℹ️ por campo con descripción; habitaciones 1-7; Key_Coments_clients nuevo campo; nav-pills para todas las secciones | v04 - búsqueda flechas ↑↓; pendientes flechas ↑↓; fix tipos datos INTEGER/BOOL al guardar; nav-pills estilo villa.html | v03 - dropdowns TaContacts/TaUsers; búsqueda; nav secciones; filtro pendientes; botón guardar | v02 - Fix Auth.require | v01 - Primera versión -->
+<!-- HISTORIAL: v24 - Nueva forma de editar los keyboxes de villas multiunit: dentro de la sección "Keybox 1", si Unidades_multiunit>1, aparece un botón "🔑 Ver / editar keyboxes de las N unidades (Multiunit)" que abre un modal nuevo (#muModal). El modal carga bajo demanda (solo al pulsar el botón, no en la carga inicial de la página — nuevo fetch justificado porque hasta ahora esta página nunca leía la tabla TaMultiunits) los registros de TaMultiunits filtrados por VillaIDcaspio=villaid, mostrando por cada unidad su descripción, multiunitID, Nro_RUA y un campo editable de Keybox con botón "Guardar" individual (PUT a TaMultiunits con where=multiunitID='...', ya que esta tabla no está en la lista de tablas con action=update directo). Nuevas funciones openMuModal/closeMuModal/saveMuKeybox y clases CSS .mu-row/.mu-open-btn/.modal-sheet.wide. RETROFIT: esta página no tenía implementada la auto-detección de versión (Opción B) — añadida ahora (meta Cache-Control/Pragma no-cache, PAGE_VERSION=24, función checkForNewerVersion con antibucle sessionStorage) | v23 - Nuevos campos en blanco, todos de uso interno (vis-internal, no visibles por el cliente): (1) 5 fotos adicionales de cuadro eléctrico (cloudflare_fotocuadroelectrico2..6) añadidas justo después de la foto existente de cuadro eléctrico en la sección Emergencias; (2) 5 fotos adicionales de llave de agua (cloudflare_foto_llave_agua2..6) añadidas justo después de la foto existente de llave de agua (antes del bloque de llave de agua en la calle, que queda intacto); (3) nueva sección/botón de navegación "Keybox equipo" (id kbeq, 3er botón de keybox junto a Keybox 1 y Keybox 2) exclusivamente de uso interno del equipo de 3Villas, con campo Keybox_equipo (texto), Key_Commentsequipo (instrucciones, textarea) y 3 fotos nuevas (cloudflare_foto1/2/3_keyboxequipo) — sin subgrupo de cliente, a diferencia de Keybox 1/2. Todos los campos nuevos usan buildNewOnly (sin foto antigua de Caspio equivalente) y NO se han añadido a PENDING_RULES (no generan aviso de pendiente), igual que cloudflare_safe_box_File1-3. Añadidos a CF_FIELDS (guardado de fotos) y Keybox_equipo/Key_Commentsequipo a TEXT_FIELDS (guardado de texto). | v22 - Fix: los botones ✕ (cabecera) y "← Volver" no navegaban a villa.html — goToVilla() (creada en v18) estaba definida dentro del IIFE pero NUNCA se expuso a window, así que los onclick del HTML (que se ejecutan en ámbito global) fallaban en silencio con "goToVilla is not defined" y los botones no hacían nada; el usuario acababa usando el atrás del navegador, que le llevaba a donde estuviera antes (listado/buscador) en vez de a la ficha de la villa. Mismo patrón de bug que ya se corrigió en villa.html v16 con otras funciones. Añadida window.goToVilla=goToVilla a la lista de exposiciones | v21 - Títulos de fotos en español derivados del nombre del campo (nuevo helper photoLabelFromField: cloudflare_foto1_keybox1 → "Foto1 keybox1"); la columna nueva de cada par muestra ese nombre en vez del genérico "Cloudflare (nueva)". Pares CON foto antigua (las servidas desde eucdn.caspio.com): la columna antigua pasa a ocupar la mitad que la nueva (grid 1fr 2fr, clase .has-old) y su imagen mide la mitad de alto (45px vs 90px); su etiqueta pasa a "{Nombre} (antigua intranet)" con botón de info (reutiliza mkInfoBtn/showInfoModal) que muestra "Las fotos de la antigua intranet se eliminarán el próximo 15 de Noviembre"; el badge sobre la imagen pasa de "Caspio · a deprecar" a "Antigua intranet". Pares SIN foto antigua: sin cambios de tamaño y conservan la etiqueta anterior | v20 - Fotos antiguas de Caspio: las URLs https://www.3villas.com/Informacion%20Villas/ pasan a servirse desde el CDN de Caspio https://eucdn.caspio.com/353F7000/Informacion%20Villas/. Nuevo helper caspioFileUrl() aplicado en buildOldPhoto: cubre tanto las rutas relativas que guardan los campos de archivo de Caspio (/Informacion Villas/... — que al resolverse contra www.3villas.com generaban la URL antigua) como URLs absolutas antiguas con 3villas.com. Beneficio extra: las rutas relativas, al convertirse ahora en URL http, se muestran como imagen con lightbox en vez de como enlace genérico "📎 Archivo" | v19 - Fix del guardado de imágenes colgado y del "no poder volver atrás" (mismos culpables detectados y corregidos en task-wp v18 y task-cierre v11): (1) eliminado el registro del Service Worker /3villas-manuals/sw.js (aquí además se registraba sin esperar al evento load) — auth.js lo desinstala activamente porque intercepta peticiones incorrectamente; un SW roto retiene las respuestas de los fetch (la imagen se sube a R2 pero el JS nunca recibe la señal → slot en "Subiendo…" eterno → saveVilla se queda esperando esa promesa para siempre en getUploadUrl → botón bloqueado en "Guardando…") y puede colgar también las navegaciones del botón "← Volver"; (2) añadido fetchWithTimeout blindado con Promise.race (el temporizador gana siempre aunque la promesa del fetch nunca se resuelva) y aplicado a startUpload (25s — si la subida se cuelga, el slot pasa a ⚠ Error en vez de bloquear el guardado) y a saveVilla (25s — si se cuelga, el catch muestra el error en el toast y el finally reactiva el botón). Nota: aquí NO hacía falta rompe-caché ni filename único (a diferencia de task-wp v20 / task-cierre v12) porque el nombre ya incluye Date.now() por subida | v18 - Botones ✕ (cabecera) y "← Volver" (barra inferior) ya no usan history.back(): ahora navegan siempre a villa.html?villaid={villaid} de la villa que se está editando, vía nueva función goToVilla(). Cabecera: se antepone "Editando…" en rojo (span.editing-badge) delante del nombre de la villa, para que quede claro que se está en modo edición. Añadida función esc() (no existía en este archivo) para escapar el nombre al insertarlo con innerHTML. | v17 - Label "Estado Photos" → "Estado Fotos / Fotografías". Cabecera: título ahora usa el campo Name ("Nombre interno equipo", 2º campo de la sección Villa — Nombres y ubicación) en vez de Name_villa_corto_interno; debajo del nombre, "ID {villaid}" → "Código llavero {villaid}" (mismo villaid, solo relabel), y se sustituye "HW {id} · RUA {rua}" por "Hostaway: {Hostawayid}" + botón "Ver en Hostaway" que abre https://dashboard.hostaway.com/listings/{Hostawayid} en pestaña nueva. Todos los campos de texto largo (buildTA: comentarios, notas, descripciones) ahora muestran el texto completo por defecto (altura automática vía autoGrowTA/autoGrowAllTA) y añaden un botón "▲ Contraer" que aparece solo si el contenido supera la altura mínima, permitiendo contraer/expandir a demanda. | v16 - FIX PRINCIPAL: ~30 campos de TaVillas que eran claves foráneas (INTEGER) a tablas lookup de Caspio y se mostraban en bruto (número sin traducir) o con opciones inventadas a mano que no coincidían con los IDs reales. Se añaden 37 tablas lookup confirmadas contra el XML de estructura de Caspio (LOOKUP_DEFS), cargadas todas en paralelo (Promise.all) junto a TaVillas/TaContacts/TaUsers — una sola carga por página, sin llamadas repetidas. Nueva función genérica buildLookupSelect(field,label,d,lookupKey,vis,info) que sustituye a los buildInput de texto/número sueltos y a los buildSelect con OPTS hardcodeados en: Property_Type, Owner_Type, Deal_Type, SIGNED, Status, ContractRenovationType, Status_Homestaging, Wellcompack, Fist_year_we_managed, Can_rent2020_Confirmed, Aircon, Zone, Changeoverday, Pets_allowed, Swiming_pool, Parking, Wifi_Comany, ETV_Plate, House_Name_Plate, Region_tasas_turisticas, TipoWellcomepack, Altaecotasa, who_pays__ecotasa, Activa, Status_Photos, Status_VreasyDescription, Status_Vreasy_Automatic_messages, Status_pricing, Status_Platforms, Pay_Cleanning/Pay_Garden/Pay_Pool/Pay_KeHolder (tabla TaViXWhoPay, confirmado con el usuario), y Room1-7 Beds/Otherbeds/Aircon/Bath/fan/foor (TaViXRoomBeds/TaViXRoomBedsother/TaViXRoomsAircon/TaViXRoomBath/TaViXRoomsFan/TaViXRoomFloor). Se añaden 2 campos que faltaban por completo en el formulario: ITV_2020 (TaITVstatus) y Status_Intranet (TaStatusIntranet). Centinelas de "sin definir" actualizados de IDs falsos a cadena vacía real, acorde a los nuevos valores de Caspio. Sin tocar: cots_cunas/Highchair_silita/dehumidifier_number (confirmado como cantidades simples, no FK) ni los campos Yes/No reales (Dishwasher, Washing_machine, Cofe_Machine, Beach_towels_provided, Detector_de_humos), que mantienen sus OPTS. RETROFIT: favicon estándar ya presente; spinner de la pantalla de carga (#stLoad) sustituido de div+CSS con animación (.big-spinner/@keyframes spin, no estándar) a <img class="spinner"> con el base64 del corazón estándar (mismo patrón que checkin-pasos.html); CSS huérfano de .big-spinner/@keyframes spin eliminado. | v15 - Toolbar: buscar+pendientes en una sola fila; cajas pend compactas con ↑↓; sin botón Todo; scroll horizontal en móvil | v14 - Todos los campo-select con búsqueda: buildSS input+dropdown con highlight; afecta buildSelect/buildContactSelect/buildUserSelect/buildBoolField | v13 - buildBoolField solo Sí/No; vacío = No | v12 - Checkin_* cambiados a buildBoolField (Sí/No) en lugar de OPTS.checkin (3 opciones) | v11 - Fix Yes/No fields: isTruthy helper para leer -1/true/false de Caspio; buildBoolField muestra Sí/No/Sin definir; isPending corregido para booleanos; guardado usa isTruthy | v10 - Quitado ecotasa2019status (campo eliminado del formulario) | v09 - Fix tipos al guardar: INT_FIELDS/BOOL_FIELDS/NUM_FIELDS/DATE_FIELDS exactos del documento; Number→parseFloat, Date→string, Yes/No→boolean | v08 - Restaurado safe_box File 1+2+3; fix emoji 🏷️→📋 posible causa de blank; | v07 - Fix: quitar KeyHolder_zone/Sercives_comments/safe_box_File2+3 no están en doc; icono info cabecera = mismo azul que campos; flechas alta prioridad para pendientes amarillos | v06 - Restructura completa según doc v2: nuevo orden col A, secciones Equipamiento/Animales/Operaciones nuevas; info-btn azul redondo; popup centrado sin overlay oscuro; fix contacts ID detection; | v05 - Restructura completa: secciones Villamanager/Seguridad/Piscina+Jacuzzi/Comunicación/Admin nuevas; colores amarillo=cliente/blanco=interno; subgrupos dentro de secciones; botón Info leyenda colores; botón ℹ️ por campo con descripción; habitaciones 1-7; Key_Coments_clients nuevo campo; nav-pills para todas las secciones | v04 - búsqueda flechas ↑↓; pendientes flechas ↑↓; fix tipos datos INTEGER/BOOL al guardar; nav-pills estilo villa.html | v03 - dropdowns TaContacts/TaUsers; búsqueda; nav secciones; filtro pendientes; botón guardar | v02 - Fix Auth.require | v01 - Primera versión -->
