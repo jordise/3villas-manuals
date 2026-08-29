@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v20 | Historial completo al final -->
+<!-- VERSIÓN ACTUAL: v21 | Historial completo al final -->
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#C8102E">
 <meta name="mobile-web-app-capable" content="yes">
@@ -12,7 +14,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/png" href="https://www.3villas.com/intranet/icon-corazon-rojo-fondo-transparente.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Villa Info v20 — 3Villas</title>
+<title>Villa Info v21 — 3Villas</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -107,6 +109,7 @@ main{padding:10px 12px 14px;max-width:700px;margin:0 auto;display:flex;flex-dire
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:9990;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.open{display:flex}
 .modal-sheet{background:#fff;border-radius:16px;padding:20px 18px;max-width:360px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18)}
+.modal-sheet.wide{max-width:480px}
 .modal-sheet h3{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;margin-bottom:12px;color:var(--gray-5)}
 .modal-sheet p{font-size:13px;line-height:1.7;color:var(--gray-5);margin-bottom:8px}
 .modal-close{display:block;margin-top:16px;padding:12px;background:var(--gray-1);border:none;border-radius:10px;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;color:var(--gray-5);cursor:pointer;width:100%;text-align:center}
@@ -117,6 +120,17 @@ main{padding:10px 12px 14px;max-width:700px;margin:0 auto;display:flex;flex-dire
 .legend-row-txt{flex:1}
 .legend-row-txt strong{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;display:block;margin-bottom:2px}
 .legend-row-txt span{font-size:12px;color:var(--gray-4)}
+
+/* ── MULTIUNIT KEYBOX MODAL (solo lectura) ── */
+.mu-row{display:flex;flex-direction:column;gap:6px;border:1.5px solid var(--gray-2);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--gray-1)}
+.mu-row-title{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;color:var(--gray-5)}
+.mu-row-sub{font-size:11px;color:var(--gray-4)}
+.mu-row-kb{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:800;color:var(--red);margin-top:2px}
+.mu-open-btn{background:var(--gray-5);color:#fff;border:none;border-radius:10px;padding:10px 12px;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.mu-open-btn:hover{background:#1b1e29}
+.mu-edit-note{background:var(--red-light);border:1.5px solid rgba(200,16,46,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--gray-5);margin-top:6px;text-align:center}
+.mu-edit-note a{color:var(--red);font-weight:800;text-decoration:none}
+.mu-edit-note a:hover{text-decoration:underline}
 
 /* ── LIGHTBOX / SPINNER ── */
 #lbOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:9999;align-items:center;justify-content:center}
@@ -179,6 +193,16 @@ main{padding:10px 12px 14px;max-width:700px;margin:0 auto;display:flex;flex-dire
   </div>
 </div>
 
+<!-- Multiunit keybox modal (solo lectura) -->
+<div class="modal-overlay" id="muModal" onclick="if(event.target===this)closeMuModal()">
+  <div class="modal-sheet wide">
+    <h3>🔑 Keyboxes por unidad (Multiunit)</h3>
+    <div id="muModalBody"><p>Cargando…</p></div>
+    <div class="mu-edit-note">Para modificar estos códigos, ve a <a id="muEditLink" href="editar-villa.html">Editar esta villa / propiedad</a>.</div>
+    <button class="modal-close" onclick="closeMuModal()">Cerrar</button>
+  </div>
+</div>
+
 <nav class="top-nav">
   <a class="nav-logo" href="index.html"><img src="logo-negro.png" alt="3Villas"></a>
   <div class="nav-center">
@@ -217,8 +241,28 @@ main{padding:10px 12px 14px;max-width:700px;margin:0 auto;display:flex;flex-dire
 (function(){
 'use strict';
 const WORKER  = 'https://caspio-proxy.jordi-89b.workers.dev';
+const PAGE_VERSION = 21;
 const urlP    = new URLSearchParams(window.location.search);
 const villaid = (urlP.get('villa_id')||urlP.get('villaid')||'').trim();
+
+/* ── v21: auto-detección de versión (Opción B) — retrofit, no existía en este archivo ── */
+(function checkForNewerVersion(){
+  try{
+    if(location.protocol==='file:')return;
+    fetch(location.pathname,{cache:'reload'}).then(r=>r.text()).then(html=>{
+      const m=html.match(/VERSIÓN ACTUAL:\s*v(\d+)/i);
+      if(!m)return;
+      const serverV=parseInt(m[1]);
+      if(serverV>PAGE_VERSION){
+        const key='3v_vchk_'+location.pathname+'_v'+serverV;
+        if(!sessionStorage.getItem(key)){
+          sessionStorage.setItem(key,'1');
+          location.reload();
+        }
+      }
+    }).catch(()=>{});
+  }catch(e){}
+})();
 
 window.goBack=function(){try{window.close();}catch(e){}setTimeout(function(){history.back();},200);};
 
@@ -327,6 +371,40 @@ function openLB(src){ if(!src)return; g('lbImg').src=src; g('lbOverlay').classLi
 function closeLB(){ g('lbOverlay').classList.remove('open'); }
 function showInfoModal(title,text){ g('infoModalTitle').textContent='ℹ️ '+title; g('infoModalText').textContent=text; g('infoModal').classList.add('open'); }
 function closeInfoModal(){ g('infoModal').classList.remove('open'); }
+
+/* ── MULTIUNIT KEYBOX MODAL (solo lectura) ── */
+async function openMuModal(){
+  g('muEditLink').href='editar-villa.html?villaid='+encodeURIComponent(villaid);
+  g('muModal').classList.add('open');
+  const body=g('muModalBody');
+  body.innerHTML='<p>Cargando…</p>';
+  try{
+    const where='VillaIDcaspio='+parseInt(villaid);
+    const r=await fetch(Auth.url(WORKER+'?action=data&table=TaMultiunits&where='+encodeURIComponent(where)+'&limit=50'));
+    const j=await r.json();
+    const rows=j.Result||j.result||[];
+    if(!rows.length){body.innerHTML='<p>No se han encontrado unidades para esta villa en la tabla de Multiunits.</p>';return;}
+    body.innerHTML='';
+    rows.sort((a,b)=>String(a.descripcion||a.multiunitID||'').localeCompare(String(b.descripcion||b.multiunitID||''),'es'));
+    rows.forEach(mu=>{
+      const row=document.createElement('div');row.className='mu-row';
+      const title=document.createElement('div');title.className='mu-row-title';
+      title.textContent=mu.descripcion||mu.descripcion_corta||('Unidad '+mu.multiunitID);
+      row.appendChild(title);
+      const sub=document.createElement('div');sub.className='mu-row-sub';
+      sub.textContent='ID: '+mu.multiunitID+(mu.Nro_RUA?' · RUA: '+mu.Nro_RUA:'');
+      row.appendChild(sub);
+      const kb=document.createElement('div');kb.className='mu-row-kb';
+      kb.textContent=mu.Keybox?mu.Keybox:'— sin código —';
+      row.appendChild(kb);
+      body.appendChild(row);
+    });
+  }catch(err){
+    console.error(err);
+    body.innerHTML='<p style="color:var(--red);font-weight:700">Error al cargar: '+esc(err.message)+'</p>';
+  }
+}
+function closeMuModal(){ g('muModal').classList.remove('open'); }
 function openLegendModal(){ g('legendModal').classList.add('open'); }
 function closeLegendModal(){ g('legendModal').classList.remove('open'); }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeLB(); closeInfoModal(); closeLegendModal(); } });
@@ -621,6 +699,13 @@ function buildForm(d){
 
   // ── 2. KEYBOX 1 ────────────────────────────────────────────
   main.appendChild(buildSection('kb1','🔑','Keybox 1',body=>{
+    if(parseInt(d.Unidades_multiunit)>1){
+      const muBtn=document.createElement('button');
+      muBtn.className='mu-open-btn';muBtn.type='button';
+      muBtn.textContent='🔑 Ver keyboxes de las '+parseInt(d.Unidades_multiunit)+' unidades (Multiunit)';
+      muBtn.onclick=openMuModal;
+      body.appendChild(muBtn);
+    }
     body.appendChild(subgroup('🔒 Información interna (equipo)','sg-internal',
       buildTA('Key_Coments','Instrucciones internas / comentarios',d,2,2)
     ));
@@ -926,10 +1011,10 @@ function buildForm(d){
 
 window.onSearch=onSearch;window.clearSearch=clearSearch;window.searchNav=searchNav;
 window.openLegendModal=openLegendModal;window.closeLegendModal=closeLegendModal;
-window.closeInfoModal=closeInfoModal;window.closeLB=closeLB;
+window.closeInfoModal=closeInfoModal;window.closeLB=closeLB;window.closeMuModal=closeMuModal;
 document.addEventListener('DOMContentLoaded',loadVilla);
 })();
 </script>
 </body>
 </html>
-<!-- HISTORIAL: v20 - Añadidos en solo lectura (idéntico a editar-villa.html v23), todos de uso interno (vis-internal): (1) 5 fotos adicionales de cuadro eléctrico (cloudflare_fotocuadroelectrico2..6) tras la foto existente en Emergencias; (2) 5 fotos adicionales de llave de agua (cloudflare_foto_llave_agua2..6) tras la foto existente de llave de agua (antes de "llave del agua en la calle", que queda intacto); (3) nueva sección "Keybox equipo" (id kbeq, 3er botón junto a Keybox 1 y 2) con Keybox_equipo, Key_Commentsequipo y 3 fotos (cloudflare_foto1/2/3_keyboxequipo), sin subgrupo de cliente. Página de solo lectura: no hay guardado, por lo que no aplica ninguna lista TEXT_FIELDS/CF_FIELDS. | v19 - Fix: el historial de la v18 contenía literalmente la secuencia de tres guiones seguida de mayor-que al documentar la errata corregida; esa secuencia incluye el cierre de comentario HTML, por lo que el comentario se cerraba prematuramente y todo el texto restante del historial se renderizaba como texto visible al final de la página en cada carga. Reformulada la frase sin la secuencia literal. Regla a futuro: nunca escribir el cierre de comentario dentro del texto del HISTORIAL | v18 - Fotos de la antigua intranet visibles como en editar-villa: buildPair rehecho — cuando el campo antiguo tiene foto, se muestra el par con la antigua a mitad de tamaño (grid 1fr 2fr, max-height 110px vs 220px, atenuada con borde discontinuo), título "{Nombre} (antigua intranet)" y botón ℹ️ (mkInfoBtn/showInfoModal ya existentes) con el aviso "Las fotos de la antigua intranet se eliminarán el próximo 15 de Noviembre". Se añaden los mismos helpers de editar-villa v20/v21: caspioFileUrl (reescribe las rutas antiguas /Informacion Villas/ y las URLs con 3villas.com al CDN de Caspio eucdn.caspio.com/353F7000 — antes esas rutas relativas ni se veían) y photoLabelFromField (título en español derivado del campo: cloudflare_foto1_keybox1 → "Foto1 keybox1"). Las fotos SIN antigua pasan de la etiqueta genérica "📷 Foto" al nombre real en español. Corregida también la errata de tres guiones en el cierre del comentario de versión de cabecera | v17 - Botón "✏️ Editar Villa": se quita target="_blank" para que navegue en la misma pestaña, en vez de abrir una nueva (en Chrome con la app instalada, abrir en pestaña nueva una URL dentro del scope de la app hacía que saltara a la app en lugar de quedarse en el navegador). El resto de botones (Mapa, Hostaway, 3villas.com, Drive, Manual Villa, Preparar Manual) mantienen target="_blank" tal cual, no se ha tocado nada más. | v16 - FIX REAL: onSearch, clearSearch, searchNav, openLegendModal, closeLegendModal, closeInfoModal y closeLB no estaban expuestas a "window". Todo el script vive dentro de un IIFE, y los onclick/oninput del HTML se ejecutan en el ámbito global, así que esas funciones no se encontraban al pulsar/escribir (mismo patrón que ya usa editar-villa.html, que sí las expone). Por eso el buscador y los botones de leyenda/modales no reaccionaban en la v15 aunque el código estuviera bien escrito. | v15 - Añadido el sistema de búsqueda completo de editar-villa.html (mismo HTML/CSS/JS: input con botón limpiar, contador de resultados, flechas anterior/siguiente, resaltado .hi-match), colocado entre las dos filas de botones (barra de acciones y barra de secciones). Adaptado sin applyFilter() porque esta página no tiene filtro de pendientes: al limpiar la búsqueda se restauran todas las tarjetas visibles directamente. Añadido fixStickyTops() (igual que villa.html v12) para posicionar dinámicamente el top de cada barra pegajosa según la altura real de las anteriores. | v14 - Fix: el parámetro de la URL ahora acepta tanto "villa_id" (con guion bajo) como "villaid", en el mismo orden de prioridad que usaba villa.html v12 (villa_id primero, villaid como fallback). En v13 solo se aceptaba "villaid", por lo que los enlaces que pasaban "villa_id" (como hacía villa.html) no encontraban la villa. | v13 - Nueva versión de solo lectura basada en la estructura de editar-villa.html (mismo orden de 18 secciones, mismas 37 tablas lookup, mismos campos), para sustituir a villa.html. Cabecera igual que editar-villa.html (título = Name, "Código llavero N", botón "Ver en Hostaway") + Villamanager (KeyHolder_person resuelto contra TaContacts, igual que hacía villa.html). Debajo de la cabecera, barra de botones con todos los que tenía villa.html: 📍 Mapa, 🏠 Hostaway, 🌐 3villas.com, 📁 Drive, 📖 Manual Villa, 📋 Preparar Manual, ✏️ Editar Villa (mismas condiciones y URLs que villa.html v12). Todos los campos se muestran como texto de solo lectura (sin inputs/selects/textareas editables) con la misma leyenda de colores de editar-villa.html (amarillo=visible por el cliente, blanco=interno, rojo=pendiente de rellenar). Sin barra de guardado, sin subida de fotos, sin buscador ni flechas de pendientes (funciones de edición, no aplican en una ficha de solo lectura). -->
+<!-- HISTORIAL: v21 - Añadido en la sección "Keybox 1" un botón "🔑 Ver keyboxes de las N unidades (Multiunit)" (visible solo si Unidades_multiunit>1) que abre un modal nuevo (#muModal) de solo lectura: carga bajo demanda (al pulsar el botón, no en la carga inicial — nuevo fetch justificado porque esta página nunca leía la tabla TaMultiunits) los registros de TaMultiunits filtrados por VillaIDcaspio=villaid, mostrando por unidad su descripción, ID, RUA y el código Keybox como texto (sin ningún input editable, coherente con esta página de solo lectura). El modal incluye un aviso fijo al final indicando que para modificar esos códigos hay que ir a "Editar esta villa / propiedad", con enlace a editar-villa.html?villaid=... Mismo patrón de UI que editar-villa.html v24, pero sin guardado. Nuevas funciones openMuModal/closeMuModal y clases CSS .mu-row/.mu-open-btn/.mu-edit-note/.modal-sheet.wide. RETROFIT: esta página no tenía implementada la auto-detección de versión (Opción B) — añadida ahora (meta Cache-Control/Pragma no-cache, PAGE_VERSION=21, función checkForNewerVersion con antibucle sessionStorage) | v20 - Añadidos en solo lectura (idéntico a editar-villa.html v23), todos de uso interno (vis-internal): (1) 5 fotos adicionales de cuadro eléctrico (cloudflare_fotocuadroelectrico2..6) tras la foto existente en Emergencias; (2) 5 fotos adicionales de llave de agua (cloudflare_foto_llave_agua2..6) tras la foto existente de llave de agua (antes de "llave del agua en la calle", que queda intacto); (3) nueva sección "Keybox equipo" (id kbeq, 3er botón junto a Keybox 1 y 2) con Keybox_equipo, Key_Commentsequipo y 3 fotos (cloudflare_foto1/2/3_keyboxequipo), sin subgrupo de cliente. Página de solo lectura: no hay guardado, por lo que no aplica ninguna lista TEXT_FIELDS/CF_FIELDS. | v19 - Fix: el historial de la v18 contenía literalmente la secuencia de tres guiones seguida de mayor-que al documentar la errata corregida; esa secuencia incluye el cierre de comentario HTML, por lo que el comentario se cerraba prematuramente y todo el texto restante del historial se renderizaba como texto visible al final de la página en cada carga. Reformulada la frase sin la secuencia literal. Regla a futuro: nunca escribir el cierre de comentario dentro del texto del HISTORIAL | v18 - Fotos de la antigua intranet visibles como en editar-villa: buildPair rehecho — cuando el campo antiguo tiene foto, se muestra el par con la antigua a mitad de tamaño (grid 1fr 2fr, max-height 110px vs 220px, atenuada con borde discontinuo), título "{Nombre} (antigua intranet)" y botón ℹ️ (mkInfoBtn/showInfoModal ya existentes) con el aviso "Las fotos de la antigua intranet se eliminarán el próximo 15 de Noviembre". Se añaden los mismos helpers de editar-villa v20/v21: caspioFileUrl (reescribe las rutas antiguas /Informacion Villas/ y las URLs con 3villas.com al CDN de Caspio eucdn.caspio.com/353F7000 — antes esas rutas relativas ni se veían) y photoLabelFromField (título en español derivado del campo: cloudflare_foto1_keybox1 → "Foto1 keybox1"). Las fotos SIN antigua pasan de la etiqueta genérica "📷 Foto" al nombre real en español. Corregida también la errata de tres guiones en el cierre del comentario de versión de cabecera | v17 - Botón "✏️ Editar Villa": se quita target="_blank" para que navegue en la misma pestaña, en vez de abrir una nueva (en Chrome con la app instalada, abrir en pestaña nueva una URL dentro del scope de la app hacía que saltara a la app en lugar de quedarse en el navegador). El resto de botones (Mapa, Hostaway, 3villas.com, Drive, Manual Villa, Preparar Manual) mantienen target="_blank" tal cual, no se ha tocado nada más. | v16 - FIX REAL: onSearch, clearSearch, searchNav, openLegendModal, closeLegendModal, closeInfoModal y closeLB no estaban expuestas a "window". Todo el script vive dentro de un IIFE, y los onclick/oninput del HTML se ejecutan en el ámbito global, así que esas funciones no se encontraban al pulsar/escribir (mismo patrón que ya usa editar-villa.html, que sí las expone). Por eso el buscador y los botones de leyenda/modales no reaccionaban en la v15 aunque el código estuviera bien escrito. | v15 - Añadido el sistema de búsqueda completo de editar-villa.html (mismo HTML/CSS/JS: input con botón limpiar, contador de resultados, flechas anterior/siguiente, resaltado .hi-match), colocado entre las dos filas de botones (barra de acciones y barra de secciones). Adaptado sin applyFilter() porque esta página no tiene filtro de pendientes: al limpiar la búsqueda se restauran todas las tarjetas visibles directamente. Añadido fixStickyTops() (igual que villa.html v12) para posicionar dinámicamente el top de cada barra pegajosa según la altura real de las anteriores. | v14 - Fix: el parámetro de la URL ahora acepta tanto "villa_id" (con guion bajo) como "villaid", en el mismo orden de prioridad que usaba villa.html v12 (villa_id primero, villaid como fallback). En v13 solo se aceptaba "villaid", por lo que los enlaces que pasaban "villa_id" (como hacía villa.html) no encontraban la villa. | v13 - Nueva versión de solo lectura basada en la estructura de editar-villa.html (mismo orden de 18 secciones, mismas 37 tablas lookup, mismos campos), para sustituir a villa.html. Cabecera igual que editar-villa.html (título = Name, "Código llavero N", botón "Ver en Hostaway") + Villamanager (KeyHolder_person resuelto contra TaContacts, igual que hacía villa.html). Debajo de la cabecera, barra de botones con todos los que tenía villa.html: 📍 Mapa, 🏠 Hostaway, 🌐 3villas.com, 📁 Drive, 📖 Manual Villa, 📋 Preparar Manual, ✏️ Editar Villa (mismas condiciones y URLs que villa.html v12). Todos los campos se muestran como texto de solo lectura (sin inputs/selects/textareas editables) con la misma leyenda de colores de editar-villa.html (amarillo=visible por el cliente, blanco=interno, rojo=pendiente de rellenar). Sin barra de guardado, sin subida de fotos, sin buscador ni flechas de pendientes (funciones de edición, no aplican en una ficha de solo lectura). -->
