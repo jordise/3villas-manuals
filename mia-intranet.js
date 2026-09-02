@@ -171,10 +171,12 @@ function E(tag,cls,txt){
 function sq(v){
   return String(v==null?'':v).replace(/[\x00-\x1f\x7f]/g,'').slice(0,80).replace(/'/g,"''");
 }
-/* Valores que van dentro de un LIKE: fuera los comodines. No se confía en
-   escapar con corchetes; se quitan %, _ y [ y ya está. */
+/* Valores que van dentro de un LIKE: fuera los comodines de verdad. Se quitan
+   % y [ porque ensanchan la búsqueda sin límite. El _ se queda: es un comodín
+   de UN carácter, así que un guion bajo literal sigue encontrándose a sí mismo,
+   y quitarlo rompía los correos (ana_maria@gmail.com pasaba a anamaria...). */
 function sqLike(v){
-  return sq(String(v==null?'':v).replace(/[%_\[]/g,''));
+  return sq(String(v==null?'':v).replace(/[%\[]/g,''));
 }
 /* Sin acentos y en minúsculas, para comparar nombres */
 function fold(v){
@@ -183,7 +185,18 @@ function fold(v){
   return s.toLowerCase().trim();
 }
 function isDate(v){ return typeof v==='string' && /^\d{4}-\d{2}-\d{2}$/.test(v); }
+/* Id numérico: villaid, ContactID. NO es un id de usuario. */
 function isId(v){ return /^\d{1,12}$/.test(String(v==null?'':v).trim()); }
+/* Id de usuario de Caspio: ocho caracteres, letras mayúsculas y cifras, con al
+   menos una de cada (V25EJV4G, 30QKOKC6, 1U8GA927). Es el UserID de TaUsers, el
+   UserID_asigned_alfanum de TaTasks y el KeyHolder_person de TaVillas: en el
+   volcado del 2026-09-01 los 382 KeyHolder_person y los 75.283 alfanum tienen
+   esta forma y ninguno es numérico. Los ids numéricos son de otra tabla
+   (Cleanning_team y ContactID son ContactID), así que no valen aquí. */
+function isUserId(v){
+  const s=String(v==null?'':v).trim();
+  return /^[A-Za-z0-9]{8}$/.test(s) && /[0-9]/.test(s) && /[A-Za-z]/.test(s);
+}
 function isPhone(v){ return /^[\d\s+().-]{6,}$/.test(String(v==null?'':v).trim()); }
 function todayISO(){
   const d=new Date();
@@ -252,23 +265,36 @@ const CSS = `
 .mia-row .mia-in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:8px}
 .mia-row .mia-mk{width:30px;height:30px;flex-shrink:0}
 .mia-field{flex:1;display:flex;align-items:center;height:44px;cursor:text;border:1.5px solid var(--gray-2,#e8eaed);border-radius:22px;padding:0 14px;background:var(--gray-1,#f4f5f7);min-width:0}
-.mia-field:focus-within{border-color:var(--red,#C8102E);background:#fff}
+/* Anillo de foco con outline, no con borde: varias páginas hacen
+   body.dark *{border-color:...!important} y se comían el borde del campo. */
+.mia-field:focus-within{border-color:var(--red,#C8102E);background:#fff;outline:2px solid #9e0c24;outline-offset:2px}
 /* 44 px de alto propios, no el 100% del hueco: con box-sizing:border-box el
    hueco interior del campo son 41 px y la zona tactil del input se quedaba
    corta. Sobresale 1,5 px por lado, y como es transparente no se ve. */
 .mia-field input{flex:1;height:44px;box-sizing:border-box;border:none;background:transparent;font-family:inherit;font-size:16px;color:var(--gray-5,#2d3142);min-width:0;outline:none}
 .mia-field input::placeholder{color:#5c6273}
-.mia-go{height:44px;padding:0 14px;border:none;border-radius:22px;background:var(--red,#C8102E);color:#fff;font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;letter-spacing:.3px;cursor:pointer;flex-shrink:0}
+.mia-go{box-sizing:border-box;height:44px;padding:0 14px;border:none;border-radius:22px;background:var(--red,#C8102E);color:#fff;font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;letter-spacing:.3px;cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;gap:0}
 .mia-go:hover{background:var(--red-dark,#9e0c24)}
+.mia-go .mia-go-i{display:none;width:20px;height:20px;flex-shrink:0}
+/* Debajo de 480 px el botón es solo el icono, 44x44, y la marca sale de la
+   fila: el campo gana casi 90 px, que son cinco o seis palabras más de la
+   pregunta a la vista. El nombre sigue ahí para el lector de pantalla
+   (aria-label) y para el ratón (title). */
+@media (max-width:479px){
+  .mia-row{padding:6px 8px 5px}
+  .mia-row .mia-mk{display:none}
+  .mia-go{width:44px;padding:0}
+  .mia-go .mia-go-t{display:none}
+  .mia-go .mia-go-i{display:block}
+}
 
 /* Aa: entra en la cabecera con el alto del botón de al lado, para que la
    cabecera no cambie de altura. El ::after le da 44x44 de zona táctil sin
    ocupar sitio. */
-.mia-aa{position:relative;font-family:'Atkinson Hyperlegible','Open Sans',sans-serif;background:var(--gray-1,#f4f5f7);border:1.5px solid var(--gray-2,#e8eaed);color:#5c6273;width:32px;height:32px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:background .15s,color .15s}
-.mia-aa::after{content:'';position:absolute;inset:-6px}
+/* Aa: siempre dentro de la fila, 44x44 de verdad (no una zona táctil
+   simulada), a 8 px de lo de al lado como el resto de la fila. */
+.mia-aa{box-sizing:border-box;font-family:'Atkinson Hyperlegible','Open Sans',sans-serif;background:var(--gray-1,#f4f5f7);border:1.5px solid var(--gray-2,#e8eaed);color:#5c6273;width:44px;height:44px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:background .15s,color .15s}
 .mia-aa.on{background:var(--gray-5,#2d3142);border-color:var(--gray-5,#2d3142);color:#fff}
-.mia-aa.mia-aa-row{width:44px;height:44px;border-radius:12px}
-.mia-aa.mia-aa-row::after{content:none}
 
 .mia-panel{display:none;background:#fff;border-bottom:2px solid var(--gray-2,#e8eaed);padding:12px 16px 14px;font-size:16px;line-height:1.5;--mia-muted:#5c6273;color:var(--gray-5,#2d3142)}
 .mia-panel.show{display:block}
@@ -291,7 +317,7 @@ const CSS = `
 .mia-panel .mcard{background:#fff;border:1px solid var(--gray-2,#e8eaed);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
 .mia-panel .mcard-h{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--red,#C8102E);color:#fff}
 .mia-panel .mcard-h .mia-t{font-family:Montserrat,sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;flex:1;line-height:1.2}
-.mia-panel .mcard-h .mia-id{font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;background:rgba(255,255,255,.2);padding:3px 9px;border-radius:20px;white-space:nowrap}
+.mia-panel .mcard-h .mia-id{font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;background:rgba(255,255,255,.12);padding:3px 9px;border-radius:20px;white-space:nowrap}
 .mia-panel .mcard-b{padding:14px 14px 16px;display:flex;flex-direction:column;gap:12px}
 .mia-panel .mia-kv{display:grid;grid-template-columns:100px 1fr;gap:8px 12px;font-size:16px;line-height:1.5}
 .mia-panel .mia-kv .mia-k{font-size:14px;font-weight:600;color:var(--mia-muted);padding-top:2px}
@@ -324,7 +350,7 @@ const CSS = `
    todo color que no sea blanco necesita !important y más especificidad. ── */
 body.dark .mia-row{background:#16161e;border-bottom-color:rgba(255,255,255,.10)}
 body.dark .mia-field{background:#1e1e26;border-color:rgba(255,255,255,.16)}
-body.dark .mia-field:focus-within{background:#252535;border-color:var(--red,#C8102E)}
+body.dark .mia-field:focus-within{background:#252535;border-color:var(--red,#C8102E);outline-color:#ff9fae}
 body.dark .mia-field input::placeholder{color:#a7adbb!important}
 body.dark .mia-go{background:var(--red,#C8102E)}
 body.dark .mia-aa{background:#1e1e26;border-color:rgba(255,255,255,.18);color:#c9cdd8!important}
@@ -385,6 +411,11 @@ body.easy .act-chip{min-height:36px;padding:6px 12px}
 body.easy .mia-field input{font-size:17px}
 body.easy .mia-panel,body.easy .mia-panel .mia-kv,body.easy .mia-panel .mia-st,body.easy .mia-panel .mia-pay,body.easy .mia-panel .mchip,body.easy .mia-panel .mia-note{font-family:'Atkinson Hyperlegible','Open Sans',sans-serif}
 body.easy .mia-panel{font-size:17px}
+/* Con Aa nada de Mia va en mayúsculas forzadas: ni sus botones ni el título
+   de la ficha, que es un nombre de villa. */
+body.easy .mia-panel .mia-btn,
+body.easy .mia-panel .mcard-h .mia-t,
+body.easy .mia-go{text-transform:none;letter-spacing:0}
 `;
 
 /* ════════════════ ESTADO DEL MÓDULO ════════════════ */
@@ -433,8 +464,18 @@ function buildRow(){
   });
   field.appendChild(inp);
   /* El botón va FUERA del campo: los dos miden 44 px de alto y uno de 44
-     dentro de otro de 44 no cabe. */
-  const go=E('button','mia-go',T.go); go.type='button';
+     dentro de otro de 44 no cabe. Lleva el texto y una flecha; el CSS enseña
+     uno u otro según el ancho. La flecha es un SVG en línea, no un emoji: un
+     emoji cambia de dibujo en cada sistema y no se puede colorear. */
+  const go=E('button','mia-go'); go.type='button';
+  go.appendChild(E('span','mia-go-t',T.go));
+  const gi=E('span','mia-go-i');
+  gi.innerHTML='<svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" '
+    +'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'
+    +'<path d="M3.5 10h12"/><path d="M10.5 5l5 5-5 5"/></svg>';
+  go.appendChild(gi);
+  go.setAttribute('aria-label',T.go);
+  go.title=T.go;
   go.addEventListener('click',onAsk);
   inn.appendChild(field); inn.appendChild(go);
   row.appendChild(inn);
@@ -455,57 +496,26 @@ function buildAa(){
   b.addEventListener('click',function(){ setEasy(!document.body.classList.contains('easy')); });
   return b;
 }
-/* El Aa entra en .nav-btns o .wp-nav-btns DELANTE del botón de menú, con el
-   alto del botón de al lado. Delante: así el botón de menú y todo lo que va
-   detrás no se mueven ni un píxel, solo crece el hueco por la izquierda.
-   Si no hay ninguno de los dos contenedores (index, permisos, la familia de
-   villa.html), o si al meterlo la cabecera crece —pantallas estrechas donde
-   la fila de botones dobla—, la cabecera no se toca: el Aa se va a la fila
-   de Mia, a 44 px. Se revisa en los dos sentidos al cambiar el tamaño. */
-let AASLOT='';                       // 'head' | 'row'
-function aaBtns(){
-  return document.querySelector('.nav-btns')||document.querySelector('.wp-nav-btns');
-}
-/* buscar-villa.html y XXbuscar-fichaXX.html llaman al suyo button.nav-menu */
-function aaMenu(btns){
-  return btns.querySelector('.nav-menu-btn,.wp-nav-menu,.nav-hamburger,button.nav-menu');
-}
-function aaToRow(){
-  if(!AABTN||!ROW)return false;
-  AABTN.classList.add('mia-aa-row');
-  AABTN.style.width=''; AABTN.style.height='';
-  const inn=ROW.querySelector('.mia-in');
-  (inn||ROW).appendChild(AABTN);
-  AASLOT='row';
-  return true;
-}
-function placeAaNow(){
-  if(!AABTN)return;
-  const btns=aaBtns();
-  if(!btns){ aaToRow(); return; }
-  if(AABTN.parentNode)AABTN.parentNode.removeChild(AABTN);
-  AABTN.classList.remove('mia-aa-row');
-  AABTN.style.width=''; AABTN.style.height='';
-  /* La altura de la cabecera ANTES de meter el botón, con el botón fuera. */
-  const before=ANCHOR?ANCHOR.offsetHeight:0;
-  const menu=aaMenu(btns);
-  const ref=menu||btns.querySelector('button,a');
-  const h=ref?Math.round(ref.getBoundingClientRect().height):0;
-  if(menu)btns.insertBefore(AABTN,menu); else btns.appendChild(AABTN);
-  if(h>=24&&h<=40){ AABTN.style.width=h+'px'; AABTN.style.height=h+'px'; }
-  const after=ANCHOR?ANCHOR.offsetHeight:0;
-  if(after>before&&aaToRow())return;   /* la cabecera crecía: mejor en la fila */
-  AASLOT='head';
-}
+/* El Aa vive SOLO en la fila de Mia, a 44x44 y a 8 px de lo de al lado. En la
+   cabecera de la página no entra nunca: allí robaba sitio al título, movía los
+   botones y en pantallas estrechas hacía crecer la cabecera. Con el botón
+   dentro de la fila, la cabecera de cualquier página queda idéntica a como
+   estaba y no hay nada que medir ni que recolocar al cambiar el tamaño. */
 function placeAa(){
   AABTN=buildAa();
-  placeAaNow();
+  AABTN.classList.add('mia-aa-row');
+  const inn=ROW.querySelector('.mia-in');
+  (inn||ROW).appendChild(AABTN);
 }
-/* El boton Aa de la cabecera NO se quita: es texto mas legible, no busca
-   nada, no depende del Worker, y quitarlo dejaria a quien lo tenga encendido
-   sin forma de apagarlo. Si vivia dentro de la fila, se va con ella. */
+/* Al retirar la fila se va todo lo de Mia: el campo, el panel y el botón Aa,
+   que vive dentro de la fila. Como el Aa desaparece, body.easy se quita
+   también —si no, la página se quedaría con el texto grande y sin botón para
+   apagarlo—, pero la preferencia guardada NO se toca: en la próxima página con
+   Mia vuelve encendido. */
 function hideRow(keepPanel){
-  if(AABTN&&AABTN.classList.contains('mia-aa-row'))AABTN=null;
+  if(AABTN&&AABTN.parentNode)AABTN.parentNode.removeChild(AABTN);
+  AABTN=null;
+  document.body.classList.remove('easy');
   if(ROW&&ROW.parentNode)ROW.parentNode.removeChild(ROW);
   ROW=null; INPUT=null;
   if(!keepPanel){
@@ -533,13 +543,6 @@ function mount(){
   placeAa();
 
   if(easyOn())setEasy(true);
-
-  /* Lo único que se mira al cambiar el tamaño es dónde cabe el botón Aa. */
-  let at=null;
-  window.addEventListener('resize',function(){
-    clearTimeout(at);
-    at=setTimeout(function(){ if(AABTN&&(ROW||AASLOT==='head'))placeAaNow(); },150);
-  });
 }
 
 /* ════════════════ PANEL ════════════════ */
@@ -663,12 +666,18 @@ function mapPairs(m){
   }catch(e){}
   return out;
 }
-/* Nombre → id. Solo claves que sean id numéricos: contactsMap guarda también
-   entradas nombre→nombre.
+/* Nombre → id de usuario. Fuentes, en este orden: los mapas que la propia
+   página ya tiene cargados y, si no hay ninguno (tareas.html los guarda dentro
+   de su IIFE), el mapa id→nombre que Mia carga de TaUsers con la misma llamada
+   que hace la página.
+   contactsMap NO entra: sus claves son ContactID numéricos de TaContacts, otra
+   tabla; un contacto colándose como usuario o como manager daría un filtro
+   falso con su chip.
    Se compara por PRINCIPIO DE PALABRA, sin acentos y en minúsculas: cada
    palabra de lo que ha dicho el usuario tiene que empezar alguna palabra del
-   nombre del mapa. "Ana" no es "Mariana". Si coinciden dos personas no se
-   resuelve ninguna: quien llama lo dice en "No pude aplicar". */
+   nombre del mapa. "Ana" no es "Mariana". El nombre completo exacto gana:
+   "Ana Ruiz" es Ana Ruiz, no Ana Ruiz Pons. Si aun así coinciden dos personas
+   no se resuelve ninguna: quien llama lo dice en "No pude aplicar". */
 function nameWords(v){ return String(v==null?'':v).split(/[^a-z0-9]+/).filter(Boolean); }
 function nameHit(name,qw){
   const parts=nameWords(name);
@@ -679,25 +688,42 @@ function nameHit(name,qw){
   }
   return true;
 }
-function findUser(name){
-  const q=fold(name);
-  if(!q)return {id:'',many:false};
-  if(isId(q))return {id:q,many:false};
-  const qw=nameWords(q);
-  if(!qw.length)return {id:'',many:false};
-  const maps=['allUsersMap','managersMap','contactsMap'];
-  const ids=[];
+function userPairs(){
+  const out=[];
+  const seen={};
+  const maps=['allUsersMap','managersMap'];
   for(let i=0;i<maps.length;i++){
     const pairs=mapPairs(globalMap(maps[i]));
     for(let j=0;j<pairs.length;j++){
-      const k=pairs[j][0], v=fold(pairs[j][1]);
-      if(!isId(k)||!v)continue;
-      if(!nameHit(v,qw))continue;
-      if(ids.indexOf(k)<0)ids.push(k);
+      const k=pairs[j][0];
+      if(seen[k])continue;
+      seen[k]=1; out.push(pairs[j]);
     }
   }
-  if(ids.length===1)return {id:ids[0],many:false};
-  return {id:'',many:ids.length>1};
+  if(!out.length&&USERS){
+    USERS.forEach(function(v,k){ if(!seen[k]){ seen[k]=1; out.push([String(k),String(v==null?'':v)]); } });
+  }
+  return out;
+}
+function findUser(name){
+  const raw=String(name==null?'':name).trim();
+  if(!raw)return {id:'',many:false};
+  if(isUserId(raw))return {id:raw.toUpperCase(),many:false};
+  const q=fold(raw);
+  const qw=nameWords(q);
+  if(!qw.length)return {id:'',many:false};
+  const pairs=userPairs();
+  const ids=[], exact=[];
+  for(let j=0;j<pairs.length;j++){
+    const k=pairs[j][0], v=fold(pairs[j][1]);
+    if(!isUserId(k)||!v)continue;
+    if(v===q){ if(exact.indexOf(k)<0)exact.push(k); }
+    if(!nameHit(v,qw))continue;
+    if(ids.indexOf(k)<0)ids.push(k);
+  }
+  if(exact.length===1)return {id:exact[0],many:false};
+  if(!exact.length&&ids.length===1)return {id:ids[0],many:false};
+  return {id:'',many:(exact.length||ids.length)>1};
 }
 function nameToId(name){ return findUser(name).id; }
 
@@ -720,14 +746,36 @@ async function proxyGet(qs){
   if(json.error)throw new Error(String(json.error));
   return rows;
 }
+/* Misma llamada que hace tareas.html en loadUsers() (línea 840) y otras
+   dieciséis páginas de la intranet: action=data&table=TaUsers&limit=200, con el
+   token del propio usuario. El proxy no admite elegir columnas —ninguna página
+   le pasa nunca una lista de campos—, así que llegan las filas enteras: se les
+   quitan los campos sensibles al recibirlas, se guarda solo id→nombre y las
+   filas se sueltan. Una vez por carga de página, ni una petición más. */
+let USERSP=null;
 async function loadUsers(){
-  if(USERS)return USERS;
-  USERS=new Map();
-  try{
-    const rows=await proxyGet('action=data&table=TaUsers&limit=200');
-    rows.forEach(function(u){ USERS.set(String(u[U.id]||''),String(u[U.name]||'')); });
-  }catch(e){ dbg('TaUsers ko'); }
-  return USERS;
+  if(USERSP)return USERSP;
+  USERSP=(async function(){
+    const m=new Map();
+    try{
+      const rows=await proxyGet('action=data&table=TaUsers&limit=200');
+      rows.forEach(function(u){
+        const id=String(u[U.id]||'').trim(), nm=String(u[U.name]||'').trim();
+        if(id&&nm)m.set(id,nm);
+      });
+    }catch(e){ dbg('TaUsers ko'); }
+    USERS=m;
+    return m;
+  })();
+  return USERSP;
+}
+/* Solo se baja el mapa si hace falta un nombre y la página no tiene el suyo
+   (tareas.html guarda allUsersMap dentro de su IIFE, así que no se ve). */
+async function ensureUsers(name){
+  const raw=String(name==null?'':name).trim();
+  if(!raw||isUserId(raw))return;
+  if(userPairs().length)return;
+  await loadUsers();
 }
 
 /* ════════════════ WHERE de reservas ════════════════ */
@@ -739,7 +787,9 @@ function phClean(f){
 function bookingsWhere(b){
   const parts=[];
   const code=(b.code||'').trim(), guest=(b.guest||'').trim(), villa=(b.villa||'').trim();
-  if(!code)parts.push(F.status+"<>'cancelled'");
+  /* Siempre, también con código: es la primera condición de buildWhere() en
+     entradas-equipo, así que la ficha enseña lo mismo que la página. */
+  parts.push(F.status+"<>'cancelled'");
   if(code)parts.push(F.confirmCode+" LIKE '%"+sqLike(code)+"%'");
   if(villa)parts.push(F.villaName+" LIKE '%"+sqLike(villa)+"%'");
   if(guest){
@@ -765,8 +815,19 @@ function bookingsWhere(b){
   if(isDate(b.stay_on)){
     parts.push('('+F.checkIn+"<='"+b.stay_on+"T23:59:59' AND "+F.checkOut+">='"+b.stay_on+"T00:00:00')");
   }else{
-    if(isDate(b.check_in_from))parts.push(F.checkIn+">='"+b.check_in_from+"T00:00:00'");
-    if(isDate(b.check_in_to))parts.push(F.checkIn+"<='"+b.check_in_to+"T23:59:59'");
+    /* Misma condición que buildWhere() de entradas-equipo (línea 1348): la
+       ventana vale para la ENTRADA o para la SALIDA. Con solo el check-in, una
+       pregunta de salida ("quién se va el 6") no encontraba nada, y el Worker
+       manda las salidas con la fecha en check_in_from/to a propósito. */
+    const d=isDate(b.check_in_from)?b.check_in_from:'', h=isDate(b.check_in_to)?b.check_in_to:'';
+    if(d&&h){
+      parts.push('(('+F.checkIn+">='"+d+"T00:00:00' AND "+F.checkIn+"<='"+h+"T23:59:59') OR ("
+        +F.checkOut+">='"+d+"T00:00:00' AND "+F.checkOut+"<='"+h+"T23:59:59'))");
+    }else if(d){
+      parts.push('(('+F.checkIn+">='"+d+"T00:00:00') OR ("+F.checkOut+">='"+d+"T00:00:00'))");
+    }else if(h){
+      parts.push('(('+F.checkIn+"<='"+h+"T23:59:59') OR ("+F.checkOut+"<='"+h+"T23:59:59'))");
+    }
   }
   const mgr=b.manager?nameToId(b.manager):'';
   if(mgr)parts.push(F.villaManager+"='"+sq(mgr)+"'");
@@ -852,7 +913,7 @@ async function renderState(r){
     let nm='';
     const pairs=mapPairs(globalMap('allUsersMap')).concat(mapPairs(globalMap('managersMap')));
     for(let i=0;i<pairs.length&&!nm;i++)if(pairs[i][0]===mgrId)nm=pairs[i][1];
-    if(!nm){ const users=await loadUsers(); nm=users.get(mgrId)||''; }
+    if(!nm){ const users=await loadUsers(); nm=users.get(mgrId)||''; }   /* mismo mapa, una sola descarga */
     if(nm)kvRow(kv,T.vm,nm);   /* si no hay nombre, no se pinta el id a secas */
   }
   body.appendChild(kv);
@@ -1054,9 +1115,18 @@ async function doBookings(b,card){
 async function doNotes(n){
   const code=String((n&&n.code)||'').trim();
   const guest=String((n&&n.guest)||'').trim();
+  /* Un chip por cada condición aplicada de verdad, igual que en reservas. */
+  const chips={};
+  if(code)chips.code=code;
+  if(guest)chips.guest=guest;
+  const again=function(){ doNotes(n); };
+  const head=function(box){
+    const c=chipsBlock(chips,n,again);
+    if(c)box.appendChild(c);
+  };
   if(code){
     const box=E('div');
-    box.appendChild(note(code));
+    head(box);
     const btns=E('div','mia-btns');
     btns.appendChild(btn(T.openNotes,link('notas',{TaBookings2021_FS_confirmation_code:code}),true));
     box.appendChild(btns);
@@ -1067,8 +1137,18 @@ async function doNotes(n){
   let rows;
   try{ rows=await fetchBookings({guest:guest},MAX_ROWS,F.checkIn+' DESC'); }
   catch(e){ say(note('No he podido leer la reserva.')); return; }
-  if(!rows||!rows.length){ say(note(T.noBooking)); return; }
   const box=E('div');
+  head(box);
+  if(!rows||!rows.length){
+    /* Sin reservas no hay notas que abrir: queda el enlace a Entradas con el
+       nombre, que es lo único que se pudo aplicar. */
+    box.appendChild(note(T.noBooking));
+    const btns=E('div','mia-btns');
+    btns.appendChild(btn(T.openEnt,link('entradas',bookingsPlan({guest:guest}).params),true));
+    box.appendChild(btns);
+    say(box);
+    return;
+  }
   box.appendChild(note(T.many));
   box.appendChild(resultList(rows,T.notes,function(r){
     const c=String(g(r,'confirmCode')||'').trim();
@@ -1248,10 +1328,15 @@ async function onAsk(){
   try{
     if(target==='bookings'){
       const b=Object.assign({},data.bookings||{});
+      await ensureUsers(b.manager);
       const card=data.answer_card==='state'&&((b.code&&String(b.code).trim())||(b.guest&&String(b.guest).trim()));
       await doBookings(b,card);
     }
-    else if(target==='tasks')doTasks(Object.assign({},data.tasks||{}));
+    else if(target==='tasks'){
+      const t=Object.assign({},data.tasks||{});
+      await ensureUsers(t.user);
+      doTasks(t);
+    }
     else if(target==='notes')await doNotes(Object.assign({},data.notes||{}));
     else if(target==='availability')doAvailability(Object.assign({},data.availability||{}));
     else if(target==='villa')await doVilla(data.villa||{});
