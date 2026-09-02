@@ -387,5 +387,6 @@
 
 })();
 
-/* Mia v1 (2026-09-02): carga mia-intranet.js si hay sesion. Quitar esta linea = desactivar Mia. */
-try{if(typeof Auth!=='undefined'&&Auth.token&&Auth.token()){var s=document.createElement('script');s.src='mia-intranet.js';s.defer=true;document.head.appendChild(s);}}catch(e){}
+/* Mia v1 (2026-09-02): carga mia-intranet.js si hay sesion. Quitar estas lineas = desactivar Mia. */
+/* Sin declaraciones: un var aqui seria window.s y chocaria con paginas que declaran let/const s. */
+try{if(typeof Auth!=='undefined'&&Auth.token&&Auth.token()){document.head.appendChild(Object.assign(document.createElement('script'),{src:(document.currentScript&&document.currentScript.src?document.currentScript.src.replace(/nav-component\.js.*$/,'mia-intranet.js'):'mia-intranet.js')}));}}catch(e){}

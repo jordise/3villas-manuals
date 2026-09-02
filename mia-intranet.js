@@ -12,11 +12,18 @@
 //  Reglas de este fichero:
 //   · Add-only: no cambia ni una regla CSS de las páginas existentes.
 //     El único ajuste es un style inline en los elementos sticky que
-//     estaban a top:48px, para que bajen la altura de la fila.
+//     quedaban justo debajo de la cabecera, para que bajen la altura
+//     de la fila. Al quitar la fila se devuelve el valor original.
+//   · Toda clase de Mia lleva el prefijo mia- o vive dentro de
+//     .mia-row/.mia-panel: villa.html tiene un .h-btn global.
 //   · Nunca se pinta ni se registra el código de la caja de llaves:
-//     todo campo *Keybox* se borra nada más recibir la respuesta.
+//     todo campo *Keybox*, *password* o *wifi* se borra nada más
+//     recibir la respuesta.
 //   · Todo valor que venga del Worker o de Caspio entra en el DOM por
 //     textContent o por escapeHtml(). Nunca por innerHTML sin escapar.
+//   · Un chip nunca dice un filtro que no haya llegado a la URL: los
+//     chips se construyen con los parámetros realmente emitidos y el
+//     resto va a "No pude aplicar".
 //   · Si no hay sesión, si el rol no está permitido o si el Worker
 //     falla, la fila no aparece y la página queda exactamente igual.
 //
@@ -38,8 +45,12 @@ const MIA_DEBUG = false;               // true solo para depurar en local
 const PROXY          = 'https://caspio-proxy.jordi-89b.workers.dev';
 const VIEW_BOOKINGS  = 'Vi_villas_and_bookings2021';
 const VIEW_PAYMENTS  = 'Vi_bookingsall_and_paymen_editb';
-const TIMEOUT_MS     = 12000;
-const HEAD_H         = 48;             // alto de la cabecera de siempre
+/* 22 s: tiene que ser mayor que el peor caso del Worker (5 s de comprobación
+   de sesión + 15 s de modelo). Si no, el navegador se rinde con la respuesta
+   ya de camino. */
+const TIMEOUT_MS     = 22000;
+const HEAD_FALLBACK  = 48;             // alto de cabecera si no se puede medir
+const MAX_ROWS       = 5;              // filas por lista (igual que el límite de la consulta)
 const K_EASY         = '3v_easy';      // localStorage: texto más legible
 const K_OFF          = '3v_mia_off';   // sessionStorage: Mia apagada esta sesión
 
@@ -52,6 +63,7 @@ const F = {
   status:'TaBookings2021_BookingStatus', statusNameFormula:'TaBookings2021_Status_name_formula',
   guestName:'TaBookings2021_Guest_Full_Name', guestEmail:'TaBookings2021_Guest_email',
   secondEmail:'TaBookings2021_Segundo_email',
+  guestPhone:'TaBookings2021_Guest_phonenumber', phoneArrival:'TaBookings2021_Segundo_Telefono',
   fiscalName:'TaBookings2021_Fiscal_guest_name', fiscalSurname:'TaBookings2021_Fiscal_guest_surename',
   portalName:'TaBookings2021_Portal_Name', villaManager:'TaVillas_KeyHolder_person',
   cleaner:'TaVillas_Cleanning_team',
@@ -87,6 +99,24 @@ const PAGES = {
   notas    :'notas-equipo-reservas.html'
 };
 
+/* Familias de Portal_Name. La palabra que usa la gente no es el valor que
+   guarda Caspio (bookingcom, airbnbOfficial, direct). Entradas NO tiene
+   parámetro de source en la URL, así que esto solo sirve para la consulta. */
+const SOURCES = {
+  booking:['bookingcom','Booking.com'], 'booking.com':['bookingcom','Booking.com'],
+  bookingcom:['bookingcom','Booking.com'],
+  airbnb:['airbnbOfficial','Airbnb'], 'airbnbofficial':['airbnbOfficial','Airbnb'],
+  directa:['direct','Direct'], directo:['direct','Direct'], direct:['direct','Direct']
+};
+
+/* tareas.html restoreFiltersFromURL() lee est(1583) u(1585) fd/fh(1591)
+   vi(1594) tt(1606) bt(1607) urg(1609) imp(1613).
+   bt = "Tipo reserva" del <select id="fBookingType">: 10 limpieza,
+   20 welcomepack, 30 cierre. tt es el id de un tipo de tarea del catálogo,
+   que Mia no conoce: no se emite nunca. */
+const TASK_EST = { pendiente:'pend', terminada:'done' };
+const TASK_BT  = { limpieza:'10', welcomepack:'20', 'welcome pack':'20', cierre:'30' };
+
 /* Textos (producción en español) */
 const T = {
   ph        :'Pregunta a Mia: reserva, villa, fechas…',
@@ -99,24 +129,31 @@ const T = {
   openEnt   :'Abrir en Entradas',
   openTar   :'Abrir en Tareas',
   openNotes :'Abrir notas',
+  notes     :'Notas',
   openVilla :'Ver villa',
   openOcu   :'Abrir Ocupación',
   noApply   :'No pude aplicar:',
   down      :'Mia no está disponible ahora. Los filtros de siempre funcionan igual.',
+  expired   :'Tu sesión ha caducado. Vuelve a entrar.',
+  busyWait  :'Mia está ocupada. Espera un momento y vuelve a preguntar.',
+  busy      :'Mia está ocupada. Prueba otra vez en un momento.',
+  badQ      :'No he entendido la pregunta.',
   noBooking :'No encuentro esa reserva',
   noVilla   :'No encuentro esa villa',
   many      :'He encontrado varias reservas. Elige una:',
+  more      :'Hay más resultados. Abre Entradas para verlos todos.',
   unknown   :'No he entendido. Prueba con un nombre, un código de reserva, una villa o unas fechas.',
   ocuNote   :'Ocupación no admite filtros por enlace todavía. Abre la página y pon:',
   loading   :'Un momento…',
   close     :'Cerrar',
+  rmFilter  :'Quitar filtro',
   guest     :'Huésped', dates:'Fechas', vm:'Villa manager', state:'Estado',
   payments  :'Pagos', concept:'Concepto', date:'Fecha', amount:'Importe', total:'Total',
   nights    :'noches'
 };
 
 /* Marca de Mia (SVG en línea; no se usa <use> por el <base href> de varias páginas) */
-const MARK = '<svg class="mk" viewBox="0 0 100 100" aria-hidden="true" focusable="false">'
+const MARK = '<svg class="mia-mk" viewBox="0 0 100 100" aria-hidden="true" focusable="false">'
   + '<circle cx="50" cy="50" r="50" fill="#C8102E"/>'
   + '<svg x="22" y="34" width="56" height="32.6" viewBox="15.05 9.4 44.7 26">'
   + '<g transform="rotate(-90 37.4 22.35)">'
@@ -138,12 +175,26 @@ function E(tag,cls,txt){
   if(txt!=null)e.textContent=String(txt);
   return e;
 }
-/* Escape para valores dentro de un WHERE de Caspio (mismo criterio que las páginas) */
+/* Escape para valores dentro de un WHERE de Caspio.
+   El corte a 80 va ANTES de doblar las comillas: si no, un valor cuyo
+   carácter 80 sea una comilla llegaría a medio escapar. */
 function sq(v){
-  return String(v==null?'':v).replace(/[\x00-\x1f\x7f]/g,'').replace(/'/g,"''").slice(0,80);
+  return String(v==null?'':v).replace(/[\x00-\x1f\x7f]/g,'').slice(0,80).replace(/'/g,"''");
+}
+/* Valores que van dentro de un LIKE: fuera los comodines. No se confía en
+   escapar con corchetes; se quitan %, _ y [ y ya está. */
+function sqLike(v){
+  return sq(String(v==null?'':v).replace(/[%_\[]/g,''));
+}
+/* Sin acentos y en minúsculas, para comparar nombres */
+function fold(v){
+  let s=String(v==null?'':v);
+  try{ s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,''); }catch(e){}
+  return s.toLowerCase().trim();
 }
 function isDate(v){ return typeof v==='string' && /^\d{4}-\d{2}-\d{2}$/.test(v); }
 function isId(v){ return /^\d{1,12}$/.test(String(v==null?'':v).trim()); }
+function isPhone(v){ return /^[\d\s+().-]{6,}$/.test(String(v==null?'':v).trim()); }
 function todayISO(){
   const d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -158,6 +209,10 @@ function fmtDate(v){
   const s=dOnly(v); if(!isDate(s))return s||'—';
   const d=new Date(s+'T00:00:00');
   return isNaN(d)?s:d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function fmtShort(v){
+  const s=dOnly(v); if(!isDate(s))return s||'—';
+  return s.slice(8,10)+'/'+s.slice(5,7);
 }
 function fmtEUR(v){
   const n=parseFloat(v);
@@ -190,7 +245,8 @@ function hasSession(){
   try{
     if(typeof Auth==='undefined'||!Auth||!Auth.token)return false;
     if(!Auth.token())return false;
-    const role=Auth.role?String(Auth.role()||''):'';
+    /* El rol llega con mayúsculas y espacios en algunas páginas */
+    const role=Auth.role?String(Auth.role()||'').trim().toLowerCase():'';
     return MIA_ALLOWED_ROLES.indexOf(role)>=0;
   }catch(e){ return false; }
 }
@@ -198,62 +254,123 @@ function miaOff(){ try{ return sessionStorage.getItem(K_OFF)==='1'; }catch(e){ r
 function setMiaOff(){ try{ sessionStorage.setItem(K_OFF,'1'); }catch(e){} }
 
 /* ════════════════ CSS (solo lo nuevo — add-only) ════════════════ */
+/* z-index 350: por encima del #filterBar de contactos (300) y por debajo de
+   los modales de las páginas (9000+). */
 const CSS = `
-.mia-row{position:sticky;top:${HEAD_H}px;z-index:250;background:#fff;border-bottom:1px solid var(--gray-2,#e8eaed);padding:6px 12px 5px}/* 40+11+1 = 52px de alto */
-.mia-row .in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:8px}
-.mia-row .mk{width:30px;height:30px;flex-shrink:0}
-.mia-field{flex:1;display:flex;align-items:center;gap:6px;height:40px;border:1.5px solid var(--gray-2,#e8eaed);border-radius:20px;padding:0 5px 0 14px;background:var(--gray-1,#f4f5f7)}
+.mia-row{position:sticky;top:0;z-index:350;background:#fff;border-bottom:1px solid var(--gray-2,#e8eaed);padding:6px 12px 5px}
+.mia-row .mia-in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:8px}
+.mia-row .mia-mk{width:30px;height:30px;flex-shrink:0}
+.mia-field{flex:1;display:flex;align-items:center;height:44px;border:1.5px solid var(--gray-2,#e8eaed);border-radius:22px;padding:0 14px;background:var(--gray-1,#f4f5f7);min-width:0}
 .mia-field:focus-within{border-color:var(--red,#C8102E);background:#fff}
-.mia-field input{flex:1;border:none;background:transparent;font-family:inherit;font-size:15px;color:var(--gray-5,#2d3142);min-width:0;outline:none}
-.mia-field input::placeholder{color:#6b7180}
-.mia-go{height:30px;padding:0 12px;border:none;border-radius:15px;background:var(--red,#C8102E);color:#fff;font-family:Montserrat,sans-serif;font-size:11px;font-weight:800;letter-spacing:.4px;cursor:pointer;flex-shrink:0}
+.mia-field input{flex:1;height:100%;border:none;background:transparent;font-family:inherit;font-size:16px;color:var(--gray-5,#2d3142);min-width:0;outline:none}
+.mia-field input::placeholder{color:#5c6273}
+.mia-go{height:44px;padding:0 14px;border:none;border-radius:22px;background:var(--red,#C8102E);color:#fff;font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;letter-spacing:.3px;cursor:pointer;flex-shrink:0}
 .mia-go:hover{background:var(--red-dark,#9e0c24)}
-.aa-tog{font-family:'Atkinson Hyperlegible','Open Sans',sans-serif;background:var(--gray-1,#f4f5f7);border:1.5px solid var(--gray-2,#e8eaed);color:var(--gray-4,#7a8194);width:32px;height:32px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
-.aa-tog.on{background:var(--gray-5,#2d3142);border-color:var(--gray-5,#2d3142);color:#fff}
 
-.mia-panel{display:none;background:#fff;border-bottom:2px solid var(--gray-2,#e8eaed);padding:12px 16px 14px;font-size:16px;line-height:1.5;--muted:#5c6273;color:var(--gray-5,#2d3142)}
+/* Aa: entra en la cabecera con el alto del botón de al lado, para que la
+   cabecera no cambie de altura. El ::after le da 44x44 de zona táctil sin
+   ocupar sitio. */
+.mia-aa{position:relative;font-family:'Atkinson Hyperlegible','Open Sans',sans-serif;background:var(--gray-1,#f4f5f7);border:1.5px solid var(--gray-2,#e8eaed);color:#5c6273;width:32px;height:32px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:background .15s,color .15s}
+.mia-aa::after{content:'';position:absolute;inset:-6px}
+.mia-aa.on{background:var(--gray-5,#2d3142);border-color:var(--gray-5,#2d3142);color:#fff}
+.mia-aa.mia-aa-row{width:44px;height:44px;border-radius:12px}
+.mia-aa.mia-aa-row::after{content:none}
+
+.mia-panel{display:none;background:#fff;border-bottom:2px solid var(--gray-2,#e8eaed);padding:12px 16px 14px;font-size:16px;line-height:1.5;--mia-muted:#5c6273;color:var(--gray-5,#2d3142)}
 .mia-panel.show{display:block}
-.mia-panel .in{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
-.mia-top{display:flex;align-items:center;gap:8px}
-.mia-top .mk{width:30px;height:30px;flex-shrink:0}
-.mia-top .q{flex:1;font-size:15px;color:var(--muted)}
-.mia-top .q b{color:var(--gray-5,#2d3142);font-weight:600}
-.mia-close{width:44px;height:44px;border:1.5px solid var(--gray-2,#e8eaed);border-radius:50%;background:#fff;color:var(--muted);font-size:16px;cursor:pointer;flex-shrink:0}
-.mchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.mchips .lb{font-size:14px;font-weight:600;color:var(--muted)}
-.mchip{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--red,#C8102E);background:var(--red-light,#fce8eb);border:1.5px solid rgba(200,16,46,.25);border-radius:22px;padding:5px 5px 5px 12px;min-height:36px}
-.mchip .x{width:26px;height:26px;border-radius:50%;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;background:rgba(200,16,46,.12);color:var(--red,#C8102E);font-size:11px;font-weight:900;line-height:1}
-.mia-panel .note-line{font-size:15px;color:var(--muted);max-width:62ch}
-.mcard{background:#fff;border:1px solid var(--gray-2,#e8eaed);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
-.mcard-h{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--red,#C8102E);color:#fff}
-.mcard-h .t{font-family:Montserrat,sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;flex:1;line-height:1.2}
-.mcard-h .id{font-family:Montserrat,sans-serif;font-size:12px;font-weight:800;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:20px;white-space:nowrap}
-.mcard-b{padding:14px 14px 16px;display:flex;flex-direction:column;gap:12px}
-.mia-panel .kv{display:grid;grid-template-columns:100px 1fr;gap:8px 12px;font-size:16px;line-height:1.5}
-.mia-panel .kv .k{font-size:14px;font-weight:600;color:var(--muted);padding-top:2px}
-.mia-panel .kv .v{color:var(--gray-5,#2d3142)}
-.mia-panel .sec{font-size:15px;font-weight:600;color:var(--gray-5,#2d3142);padding-bottom:6px;border-bottom:1px solid var(--gray-2,#e8eaed);margin-bottom:8px}
-.mia-panel .states{display:flex;flex-wrap:wrap;gap:6px}
-.mia-panel .st{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:600;border-radius:22px;padding:6px 12px;min-height:36px;border:1.5px solid var(--gray-2,#e8eaed);background:#fff;color:var(--gray-5,#2d3142)}
-.mia-panel .st.ok{border-color:rgba(30,158,78,.35);background:var(--green-light,#e6f7ee);color:var(--green,#1e9e4e)}
-.mia-panel .st.pend{border-color:rgba(224,123,0,.35);background:var(--orange-light,#fff4e0);color:var(--orange,#e07b00)}
-.mia-panel .pay{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
-.mia-panel .pay th{font-size:14px;font-weight:600;color:var(--muted);text-align:left;padding:4px 0 6px;border-bottom:1px solid var(--gray-2,#e8eaed)}
-.mia-panel .pay td{padding:9px 0;border-bottom:1px solid var(--gray-1,#f4f5f7);vertical-align:top}
-.mia-panel .pay td.n{text-align:right;white-space:nowrap}
-.mia-panel .btns{display:flex;flex-wrap:wrap;gap:8px}
-.mia-panel .h-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border-radius:8px;border:1.5px solid var(--gray-2,#e8eaed);background:#fff;color:var(--gray-5,#2d3142);font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;letter-spacing:.2px;cursor:pointer;text-decoration:none;text-transform:uppercase}
-.mia-panel .h-btn.primary{background:var(--red,#C8102E);border-color:var(--red,#C8102E);color:#fff}
-.mia-panel .villas{display:flex;flex-direction:column;gap:6px}
-.mia-panel .vrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--gray-2,#e8eaed);border-radius:10px;background:#fff;text-align:left;width:100%;font-family:inherit;font-size:15px;cursor:pointer;min-height:44px}
-.mia-panel .vrow .n{font-family:Montserrat,sans-serif;font-weight:800;font-size:15px;flex:1}
-.mia-panel .vrow .m{font-size:14px;color:var(--muted)}
-.mia-panel .foot{font-size:13px;color:var(--muted)}
+.mia-panel .mia-in{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.mia-panel .mia-top{display:flex;align-items:center;gap:8px}
+.mia-panel .mia-top .mia-mk{width:30px;height:30px;flex-shrink:0}
+.mia-panel .mia-top .mia-q{flex:1;font-size:15px;color:var(--mia-muted)}
+.mia-panel .mia-top .mia-q b{color:var(--gray-5,#2d3142);font-weight:600}
+.mia-panel .mia-close{width:44px;height:44px;border:1.5px solid var(--gray-2,#e8eaed);border-radius:50%;background:#fff;color:var(--mia-muted);font-size:16px;cursor:pointer;flex-shrink:0;padding:0}
+.mia-panel .mchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mia-panel .mchips .mia-lb{font-size:14px;font-weight:600;color:var(--mia-muted)}
+.mia-panel .mchip{display:inline-flex;align-items:center;gap:2px;font-size:14px;font-weight:600;color:var(--red,#C8102E);background:var(--red-light,#fce8eb);border:1.5px solid rgba(200,16,46,.25);border-radius:22px;padding:0 4px 0 12px;min-height:36px}
+.mia-panel .mchip .mia-x{width:36px;height:36px;border:none;background:none;padding:0;margin:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.mia-panel .mchip .mia-x i{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(200,16,46,.12);color:#9e0c24;font-size:13px;font-weight:900;line-height:1;font-style:normal}
+.mia-panel .mia-note{font-size:15px;color:var(--mia-muted);max-width:62ch}
+.mia-panel .mcard{background:#fff;border:1px solid var(--gray-2,#e8eaed);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.mia-panel .mcard-h{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--red,#C8102E);color:#fff}
+.mia-panel .mcard-h .mia-t{font-family:Montserrat,sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;flex:1;line-height:1.2}
+.mia-panel .mcard-h .mia-id{font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;background:rgba(255,255,255,.2);padding:3px 9px;border-radius:20px;white-space:nowrap}
+.mia-panel .mcard-b{padding:14px 14px 16px;display:flex;flex-direction:column;gap:12px}
+.mia-panel .mia-kv{display:grid;grid-template-columns:100px 1fr;gap:8px 12px;font-size:16px;line-height:1.5}
+.mia-panel .mia-kv .mia-k{font-size:14px;font-weight:600;color:var(--mia-muted);padding-top:2px}
+.mia-panel .mia-kv .mia-v{color:var(--gray-5,#2d3142)}
+.mia-panel .mia-sec{font-size:15px;font-weight:600;color:var(--gray-5,#2d3142);padding-bottom:6px;border-bottom:1px solid var(--gray-2,#e8eaed);margin-bottom:8px}
+.mia-panel .mia-states{display:flex;flex-wrap:wrap;gap:6px}
+.mia-panel .mia-st{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:600;border-radius:22px;padding:6px 12px;min-height:36px;border:1.5px solid var(--gray-2,#e8eaed);background:#fff;color:var(--gray-5,#2d3142)}
+.mia-panel .mia-st.ok{border-color:rgba(20,101,47,.35);background:var(--green-light,#e6f7ee);color:#14652f}
+.mia-panel .mia-st.pend{border-color:rgba(138,69,0,.35);background:var(--orange-light,#fff4e0);color:#8a4500}
+.mia-panel .mia-st.bad{border-color:rgba(158,12,36,.35);background:var(--red-light,#fce8eb);color:#9e0c24}
+.mia-panel .mia-pay{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+.mia-panel .mia-pay th{font-size:14px;font-weight:600;color:var(--mia-muted);text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--gray-2,#e8eaed)}
+.mia-panel .mia-pay td{padding:9px 10px 9px 0;border-bottom:1px solid var(--gray-1,#f4f5f7);vertical-align:top}
+.mia-panel .mia-pay td.mia-n,.mia-panel .mia-pay th.mia-n{text-align:right;white-space:nowrap;padding-left:12px;padding-right:0}
+.mia-panel .mia-btns{display:flex;flex-wrap:wrap;gap:8px}
+.mia-panel .mia-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border-radius:8px;border:1.5px solid var(--gray-2,#e8eaed);background:#fff;color:var(--gray-5,#2d3142);font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;letter-spacing:.2px;cursor:pointer;text-decoration:none;text-transform:uppercase}
+.mia-panel .mia-btn.mia-primary{background:var(--red,#C8102E);border-color:var(--red,#C8102E);color:#fff}
+.mia-panel .mia-list{display:flex;flex-direction:column;gap:6px}
+.mia-panel .mia-vrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:8px 12px;border:1px solid var(--gray-2,#e8eaed);border-radius:10px;background:#fff}
+.mia-panel .mia-vrow .mia-vmain{flex:1 1 55%;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;min-height:44px;padding:0;border:none;background:none;text-align:left;font-family:inherit;font-size:15px;color:var(--gray-5,#2d3142);text-decoration:none;cursor:pointer}
+.mia-panel .mia-vrow .mia-n{font-family:Montserrat,sans-serif;font-weight:800;font-size:15px}
+.mia-panel .mia-vrow .mia-m{font-size:14px;color:var(--mia-muted)}
+.mia-panel .mia-foot{font-size:13px;color:var(--mia-muted)}
+@media (max-width:480px){
+  .mia-panel .mia-vrow .mia-m{flex-basis:100%}
+  .mia-panel .mia-vrow .mia-btn{flex:1 1 100%}
+}
+
+/* ── Modo noche. Las páginas hacen body.dark *{color:#fff!important}, así que
+   todo color que no sea blanco necesita !important y más especificidad. ── */
+body.dark .mia-row{background:#16161e;border-bottom-color:rgba(255,255,255,.10)}
+body.dark .mia-field{background:#1e1e26;border-color:rgba(255,255,255,.16)}
+body.dark .mia-field:focus-within{background:#252535;border-color:var(--red,#C8102E)}
+body.dark .mia-field input::placeholder{color:#a7adbb!important}
+body.dark .mia-go{background:var(--red,#C8102E)}
+body.dark .mia-aa{background:#1e1e26;border-color:rgba(255,255,255,.18);color:#c9cdd8!important}
+body.dark .mia-aa.on{background:#f4f5f7;border-color:#f4f5f7;color:#16161e!important}
+body.dark .mia-panel{background:#16161e;border-bottom-color:rgba(255,255,255,.16)}
+/* Los colores claros se ponen aqui, no se heredan del body.dark *{color:#fff}
+   de la pagina: hay paginas con modo noche y paginas sin el. */
+body.dark .mia-field input,
+body.dark .mia-panel,
+body.dark .mia-panel .mia-top .mia-q b,
+body.dark .mia-panel .mia-close,
+body.dark .mia-panel .mia-kv .mia-v,
+body.dark .mia-panel .mia-sec,
+body.dark .mia-panel .mia-st,
+body.dark .mia-panel .mia-pay td,
+body.dark .mia-panel .mia-btn,
+body.dark .mia-panel .mia-vrow .mia-vmain,
+body.dark .mia-panel .mia-vrow .mia-n{color:#fff!important}
+body.dark .mia-panel .mia-top .mia-q,
+body.dark .mia-panel .mia-note,
+body.dark .mia-panel .mia-foot,
+body.dark .mia-panel .mia-kv .mia-k,
+body.dark .mia-panel .mchips .mia-lb,
+body.dark .mia-panel .mia-pay th,
+body.dark .mia-panel .mia-vrow .mia-m{color:#c9cdd8!important}
+body.dark .mia-panel .mia-close{background:#1e1e26;border-color:rgba(255,255,255,.20)}
+body.dark .mia-panel .mcard{background:#1e1e26;border-color:rgba(255,255,255,.14);box-shadow:none}
+body.dark .mia-panel .mia-sec{border-bottom-color:rgba(255,255,255,.18)}
+body.dark .mia-panel .mia-st{background:#252535;border-color:rgba(255,255,255,.18)}
+body.dark .mia-panel .mia-st.ok{background:rgba(30,158,78,.28);border-color:rgba(30,158,78,.5);color:#b6f2ce!important}
+body.dark .mia-panel .mia-st.pend{background:rgba(224,123,0,.30);border-color:rgba(224,123,0,.5);color:#ffd9a3!important}
+body.dark .mia-panel .mia-st.bad{background:rgba(200,16,46,.30);border-color:rgba(200,16,46,.5);color:#ffc2cb!important}
+body.dark .mia-panel .mchip{background:rgba(200,16,46,.24);border-color:rgba(200,16,46,.5);color:#ffc2cb!important}
+body.dark .mia-panel .mchip .mia-x i{background:rgba(255,255,255,.16);color:#fff!important}
+body.dark .mia-panel .mia-btn{background:#252535;border-color:rgba(255,255,255,.20)}
+body.dark .mia-panel .mia-btn.mia-primary{background:var(--red,#C8102E);border-color:var(--red,#C8102E)}
+body.dark .mia-panel .mia-vrow{background:#252535;border-color:rgba(255,255,255,.14)}
+body.dark .mia-panel .mia-pay td{border-bottom-color:rgba(255,255,255,.10)}
+body.dark .mia-panel .mia-pay th{border-bottom-color:rgba(255,255,255,.18)}
 
 /* ── Aa: texto más legible. Opt-in, apagado por defecto. ── */
 body.easy{--gray-4:#5c6273;--gray-3:#a9afbb;font-family:'Atkinson Hyperlegible','Open Sans',sans-serif;font-size:16px}
 body.easy .h-title{font-size:15px}
-body.easy .h-count,body.easy .user-pill{font-size:13px}
+body.easy .h-count,body.easy .user-pill,body.easy .wp-nav-user{font-size:13px}
 body.easy .f-label,body.easy .pill-label,body.easy .date-box .lbl,body.easy .ilbl,body.easy .c-toggle,body.easy .tipo-badge,body.easy .ph-line .ph-tag,body.easy .villa-name,body.easy .bdg,body.easy .spill{text-transform:none;letter-spacing:0}
 body.easy .f-label,body.easy .pill-label,body.easy .date-box .lbl,body.easy .ilbl{font-size:13px;font-weight:600;font-family:inherit}
 body.easy .pill-opt,body.easy .btn-mas,body.easy .chip-filter,body.easy .bdg,body.easy .lnk,body.easy .act-chip,body.easy .ph-line,body.easy .villa-sub,body.easy .res-id,body.easy .spill,body.easy .c-toggle{font-size:13px}
@@ -268,14 +385,15 @@ body.easy .card{box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid var(--gray
 body.easy .c-toggle{min-height:44px}
 body.easy .act-chip{min-height:36px;padding:6px 12px}
 body.easy .mia-field input{font-size:17px}
-body.easy .mia-panel,body.easy .mia-panel .kv,body.easy .mia-panel .st,body.easy .mia-panel .pay,body.easy .mchip,body.easy .mia-panel .note-line{font-family:'Atkinson Hyperlegible','Open Sans',sans-serif}
+body.easy .mia-panel,body.easy .mia-panel .mia-kv,body.easy .mia-panel .mia-st,body.easy .mia-panel .mia-pay,body.easy .mia-panel .mchip,body.easy .mia-panel .mia-note{font-family:'Atkinson Hyperlegible','Open Sans',sans-serif}
 body.easy .mia-panel{font-size:17px}
 `;
 
 /* ════════════════ ESTADO DEL MÓDULO ════════════════ */
-let ROW=null, PANEL=null, BODY=null, INPUT=null, AABTN=null;
-let ST={ q:'', data:null, filters:null, target:'unknown' };
-let USERS=null;         // mapa UserID → Name (se pide una sola vez)
+let ROW=null, PANEL=null, BODY=null, INPUT=null, AABTN=null, ANCHOR=null;
+let ANCHOR_H=HEAD_FALLBACK;
+let ST={ q:'' };
+let USERS=null;         // mapa UserID → Name (solo como último recurso, para la ficha)
 let downShown=false;
 
 /* ════════════════ TEXTO MÁS LEGIBLE (Aa) ════════════════ */
@@ -289,32 +407,83 @@ function loadEasyFont(){
 }
 function setEasy(on){
   document.body.classList.toggle('easy',!!on);
-  if(AABTN)AABTN.classList.toggle('on',!!on);
+  if(AABTN){ AABTN.classList.toggle('on',!!on); AABTN.setAttribute('aria-pressed',on?'true':'false'); }
   if(on)loadEasyFont();
   try{ localStorage.setItem(K_EASY,on?'1':'0'); }catch(e){}
 }
 function easyOn(){ try{ return localStorage.getItem(K_EASY)==='1'; }catch(e){ return false; } }
 
-/* ════════════════ SHIM DE STICKY ════════════════ */
-/* Los elementos que estaban pegados a top:48px bajan la altura de la fila.
-   Se hace con style inline: el CSS de las páginas no se toca. */
-function shimSticky(){
+/* ════════════════ SHIM DE STICKY ════════════════
+   Los elementos pegados justo debajo de la cabecera bajan la altura de la
+   fila. Se hace con style inline: el CSS de las páginas no se toca.
+   El barrido completo (querySelectorAll('*')) solo se hace en las pasadas
+   con temporizador y en load. Al cambiar el tamaño de la ventana solo se
+   recalcula la lista ya conocida. */
+const SHIMMED=[];   // [{el, obs, inline}]
+function rowH(){ return ROW?Math.round(ROW.getBoundingClientRect().height):0; }
+
+function reapply(el){
+  const h=rowH(); if(!h)return;
+  let orig=parseFloat(el.dataset.miaTop);
+  if(!isFinite(orig))return;
+  const cur=el.style.top, curN=parseFloat(cur);
+  /* La página ha vuelto a medir su cabecera (tareas.html fixStickyTops pone
+     nav.offsetHeight; contactos.html pone el top de #filterBar por JS). Ese
+     número es la nueva base: se respeta y se le suma la fila. */
+  if(isFinite(curN)&&curN>=ANCHOR_H-6&&curN<orig+h){ orig=curN; el.dataset.miaTop=String(curN); }
+  const want=(orig+h)+'px';
+  /* Solo se escribe si el valor actual no es ya el esperado: sin esto el
+     MutationObserver se dispararía a sí mismo en bucle. */
+  if((!isFinite(curN)||curN<orig+h)&&cur!==want)el.style.top=want;
+}
+function watch(el){
+  if(typeof MutationObserver==='undefined')return null;
+  const obs=new MutationObserver(function(){ reapply(el); });
+  obs.observe(el,{attributes:true,attributeFilter:['style']});
+  return obs;
+}
+function scanSticky(){
   if(!ROW)return;
-  const h=Math.round(ROW.getBoundingClientRect().height);
-  if(!h)return;
-  const top=(HEAD_H+h)+'px';
-  const all=document.querySelectorAll('*');
+  const h=rowH(); if(!h)return;
+  let all;
+  try{ all=document.querySelectorAll('*'); }catch(e){ return; }
   for(let i=0;i<all.length;i++){
     const el=all[i];
-    if(el===ROW)continue;
-    if(el.getAttribute('data-mia-shim')){ el.style.top=top; continue; }
+    if(el===ROW||el===PANEL||el===ANCHOR)continue;
+    if(el.hasAttribute('data-mia-shim'))continue;
     let cs;
     try{ cs=getComputedStyle(el); }catch(e){ continue; }
     if(cs.position!=='sticky')continue;
-    if(cs.top!==HEAD_H+'px')continue;
+    const t=parseFloat(cs.top);
+    if(!isFinite(t))continue;
+    /* Solo lo que queda debajo de la cabecera. Un top:0 (la propia cabecera
+       de la página) no se toca nunca. */
+    if(t<ANCHOR_H-6)continue;
     el.setAttribute('data-mia-shim','1');
-    el.style.top=top;
+    el.dataset.miaTop=String(t);
+    const inline=el.style.top;
+    el.style.top=(t+h)+'px';
+    SHIMMED.push({el:el,obs:watch(el),inline:inline});
   }
+}
+function reapplyAll(){
+  for(let i=0;i<SHIMMED.length;i++)reapply(SHIMMED[i].el);
+}
+function unshim(){
+  for(let i=0;i<SHIMMED.length;i++){
+    const s=SHIMMED[i];
+    if(s.obs)s.obs.disconnect();
+    s.el.style.top=s.inline;
+    s.el.removeAttribute('data-mia-shim');
+    try{ delete s.el.dataset.miaTop; }catch(e){}
+  }
+  SHIMMED.length=0;
+}
+function measureAnchor(){
+  if(!ANCHOR)return;
+  const h=Math.round(ANCHOR.getBoundingClientRect().height);
+  if(h>0)ANCHOR_H=h;
+  if(ROW)ROW.style.top=ANCHOR_H+'px';
 }
 
 /* ════════════════ MONTAJE ════════════════ */
@@ -326,52 +495,74 @@ function anchor(){
 }
 function buildRow(){
   const row=E('div','mia-row'); row.id='miaRow';
-  const inn=E('div','in');
+  const inn=E('div','mia-in');
   const mk=E('span'); mk.innerHTML=MARK; inn.appendChild(mk.firstChild);
   const field=E('div','mia-field');
   const inp=document.createElement('input');
   inp.type='text'; inp.id='miaInput'; inp.autocomplete='off';
   inp.setAttribute('placeholder',T.ph); inp.setAttribute('aria-label',T.ph);
-  inp.addEventListener('keydown',function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); onAsk(); } });
+  inp.addEventListener('keydown',function(ev){
+    if(ev.key==='Enter'){ ev.preventDefault(); onAsk(); }
+    else if(ev.key==='Escape'||ev.key==='Esc'){ closePanel(); }
+  });
+  field.appendChild(inp);
+  /* El botón va FUERA del campo: los dos miden 44 px de alto y uno de 44
+     dentro de otro de 44 no cabe. */
   const go=E('button','mia-go',T.go); go.type='button';
   go.addEventListener('click',onAsk);
-  field.appendChild(inp); field.appendChild(go);
-  inn.appendChild(field); row.appendChild(inn);
+  inn.appendChild(field); inn.appendChild(go);
+  row.appendChild(inn);
   INPUT=inp;
   return row;
 }
 function buildPanel(){
   const p=E('div','mia-panel'); p.id='miaPanel';
-  const inn=E('div','in'); inn.id='miaPanelIn';
+  p.setAttribute('aria-live','polite');
+  p.addEventListener('keydown',function(ev){
+    if(ev.key==='Escape'||ev.key==='Esc'){ ev.stopPropagation(); closePanel(); }
+  });
+  const inn=E('div','mia-in'); inn.id='miaPanelIn';
   p.appendChild(inn); BODY=inn;
   return p;
 }
 function buildAa(){
-  const b=E('button','aa-tog','Aa');
+  const b=E('button','mia-aa','Aa');
   b.type='button'; b.id='miaAa'; b.title=T.aa; b.setAttribute('aria-label',T.aa);
+  b.setAttribute('aria-pressed','false');
   b.addEventListener('click',function(){ setEasy(!document.body.classList.contains('easy')); });
   return b;
 }
-function placeAa(a){
+/* El Aa entra en .nav-btns o .wp-nav-btns delante del botón de menú, con el
+   alto del botón de al lado para que la cabecera no cambie de altura. Si no
+   hay ninguno de los dos (index, permisos, la familia de villa.html) NO se
+   toca la cabecera: el Aa se pone al final de la fila de Mia, a 44 px. */
+function placeAa(){
   AABTN=buildAa();
   const btns=document.querySelector('.nav-btns')||document.querySelector('.wp-nav-btns');
   if(btns){
     const menu=btns.querySelector('.nav-menu-btn,.wp-nav-menu,.nav-hamburger');
+    const ref=menu||btns.querySelector('button,a');
+    const h=ref?Math.round(ref.getBoundingClientRect().height):0;
     if(menu)btns.insertBefore(AABTN,menu); else btns.appendChild(AABTN);
+    if(h>=24&&h<=40){ AABTN.style.width=h+'px'; AABTN.style.height=h+'px'; }
     return;
   }
-  a.appendChild(AABTN);
+  AABTN.classList.add('mia-aa-row');
+  const inn=ROW.querySelector('.mia-in');
+  if(inn)inn.appendChild(AABTN); else ROW.appendChild(AABTN);
 }
+/* El boton Aa de la cabecera NO se quita: es texto mas legible, no busca
+   nada, no depende del Worker, y quitarlo dejaria a quien lo tenga encendido
+   sin forma de apagarlo. Si vivia dentro de la fila, se va con ella. */
 function hideRow(keepPanel){
+  if(AABTN&&AABTN.classList.contains('mia-aa-row'))AABTN=null;
   if(ROW&&ROW.parentNode)ROW.parentNode.removeChild(ROW);
   ROW=null; INPUT=null;
   if(!keepPanel){
     if(PANEL&&PANEL.parentNode)PANEL.parentNode.removeChild(PANEL);
     PANEL=null; BODY=null;
   }
-  /* Devolver los sticky a su sitio */
-  const shimmed=document.querySelectorAll('[data-mia-shim]');
-  for(let i=0;i<shimmed.length;i++){ shimmed[i].style.top=''; shimmed[i].removeAttribute('data-mia-shim'); }
+  unshim();   /* devolver los sticky a su sitio y soltar los observadores */
 }
 
 function mount(){
@@ -379,6 +570,7 @@ function mount(){
   if(miaOff())return;
   const a=anchor();
   if(!a||!a.parentNode)return;
+  ANCHOR=a;
 
   const style=E('style'); style.id='miaStyles'; style.textContent=CSS;
   document.head.appendChild(style);
@@ -387,13 +579,23 @@ function mount(){
   PANEL=buildPanel();
   a.parentNode.insertBefore(ROW,a.nextSibling);
   ROW.parentNode.insertBefore(PANEL,ROW.nextSibling);
-  placeAa(a);
+  placeAa();
 
   if(easyOn())setEasy(true);
 
-  shimSticky();
+  measureAnchor();
+  scanSticky();
+  /* Las páginas colocan barras por JS después de cargar datos (villa.html
+     #linksBar, contactos #filterBar, tareas fixStickyTops a los 100 ms). */
+  setTimeout(function(){ measureAnchor(); scanSticky(); },150);
+  setTimeout(function(){ measureAnchor(); scanSticky(); },400);
+  setTimeout(function(){ measureAnchor(); scanSticky(); },1000);
+  window.addEventListener('load',function(){ measureAnchor(); scanSticky(); });
   let rt=null;
-  window.addEventListener('resize',function(){ clearTimeout(rt); rt=setTimeout(shimSticky,120); });
+  window.addEventListener('resize',function(){
+    clearTimeout(rt);
+    rt=setTimeout(function(){ measureAnchor(); reapplyAll(); },120);
+  });
 }
 
 /* ════════════════ PANEL ════════════════ */
@@ -404,7 +606,7 @@ function clearPanel(){ if(BODY)BODY.textContent=''; }
 function panelHead(){
   const top=E('div','mia-top');
   const mk=E('span'); mk.innerHTML=MARK; top.appendChild(mk.firstChild);
-  const q=E('div','q');
+  const q=E('div','mia-q');
   q.appendChild(document.createTextNode(T.asked+' '));
   q.appendChild(E('b',null,ST.q));
   top.appendChild(q);
@@ -418,66 +620,120 @@ function say(node){
   clearPanel();
   BODY.appendChild(panelHead());
   if(node)BODY.appendChild(node);
-  BODY.appendChild(E('div','foot',T.onlyRead));
+  BODY.appendChild(E('div','mia-foot',T.onlyRead));
   openPanel();
 }
-function note(txt){ return E('div','note-line',txt); }
+function note(txt){ return E('div','mia-note',txt); }
 
 /* ════════════════ CHIPS ════════════════ */
-/* Etiquetas de los filtros que Mia puede quitar */
+/* Los chips se construyen SIEMPRE con lo que ha llegado a la URL o a la
+   consulta. Lo demás va a "No pude aplicar". */
 const CHIP_LABELS = {
   code:'Reserva', guest:'Inquilino', villa:'Villa', check_in_from:'Desde', check_in_to:'Hasta',
-  stay_on:'En estancia el', manager:'Manager', source:'Source', cleaner:'Limpieza', tipo:'Tipo',
+  stay_on:'Está el', manager:'Manager', source:'Source', cleaner:'Limpieza', tipo:'Tipo',
   type:'Tipo', status:'Estado', user:'Usuario', from:'Desde', to:'Hasta',
   urgent:'Urgente', important:'Importante', pax:'Plazas', pool:'Piscina'
 };
 function chipText(k,v){
   const lbl=CHIP_LABELS[k]||k;
+  if(k==='stay_on')return lbl+' '+fmtShort(v);
   if(v===true)return lbl;
   if(isDate(v))return lbl+': '+fmtDate(v);
   return lbl+': '+v;
 }
-function chipsBlock(filters,onChange){
-  const keys=Object.keys(filters).filter(function(k){
-    const v=filters[k];
+function chipsBlock(chips,filters,onChange){
+  const keys=Object.keys(chips||{}).filter(function(k){
+    const v=chips[k];
     return v!==''&&v!=null&&v!==false&&!(Array.isArray(v)&&!v.length);
   });
   if(!keys.length)return null;
   const wrap=E('div','mchips');
-  wrap.appendChild(E('span','lb',T.filters));
+  wrap.appendChild(E('span','mia-lb',T.filters));
   keys.forEach(function(k){
     const c=E('span','mchip');
-    c.appendChild(document.createTextNode(chipText(k,filters[k])));
-    const x=E('button','x','✕');
-    x.type='button'; x.title=T.close; x.setAttribute('aria-label',T.close+' '+(CHIP_LABELS[k]||k));
+    c.appendChild(document.createTextNode(chipText(k,chips[k])));
+    const x=E('button','mia-x'); x.type='button';
+    x.appendChild(E('i',null,'✕'));
+    x.title=T.rmFilter; x.setAttribute('aria-label',T.rmFilter+' '+(CHIP_LABELS[k]||k));
     x.addEventListener('click',function(){ delete filters[k]; onChange(); });
     c.appendChild(x);
     wrap.appendChild(c);
   });
   return wrap;
 }
+function noApplyBlock(list){
+  const l=(list||[]).filter(Boolean);
+  if(!l.length)return null;
+  return note(T.noApply+' '+l.map(String).join(', '));
+}
 function btn(label,href,primary){
   const a=document.createElement('a');
-  a.className='h-btn'+(primary?' primary':'');
+  a.className='mia-btn'+(primary?' mia-primary':'');
   a.textContent=label;
   a.setAttribute('href',href);
   return a;
 }
 
+/* ════════════════ MAPAS DE LA PROPIA PÁGINA ════════════════ */
+/* Nunca se descarga TaUsers para resolver un nombre: se usa el mapa que la
+   página ya tiene cargado (entradas-equipo expone allUsersMap, managersMap y
+   contactsMap como variables de script). Si no hay mapa, el nombre va a
+   "No pude aplicar". */
+function globalMap(name){
+  try{ if(window[name])return window[name]; }catch(e){}
+  try{ if(name==='allUsersMap'&&typeof allUsersMap!=='undefined')return allUsersMap; }catch(e){}
+  try{ if(name==='managersMap'&&typeof managersMap!=='undefined')return managersMap; }catch(e){}
+  try{ if(name==='contactsMap'&&typeof contactsMap!=='undefined')return contactsMap; }catch(e){}
+  return null;
+}
+function mapPairs(m){
+  const out=[];
+  if(!m)return out;
+  try{
+    if(typeof m.forEach==='function'&&typeof m.get==='function'){
+      m.forEach(function(v,k){ out.push([String(k),String(v==null?'':v)]); });
+    }else if(typeof m==='object'){
+      Object.keys(m).forEach(function(k){ out.push([String(k),String(m[k]==null?'':m[k])]); });
+    }
+  }catch(e){}
+  return out;
+}
+/* Nombre → id. Solo claves que sean id numéricos: contactsMap guarda también
+   entradas nombre→nombre. */
+function nameToId(name){
+  const q=fold(name);
+  if(!q)return '';
+  if(isId(q))return q;
+  const maps=['allUsersMap','managersMap','contactsMap'];
+  let loose='';
+  for(let i=0;i<maps.length;i++){
+    const pairs=mapPairs(globalMap(maps[i]));
+    for(let j=0;j<pairs.length;j++){
+      const k=pairs[j][0], v=fold(pairs[j][1]);
+      if(!isId(k)||!v)continue;
+      if(v===q)return k;
+      if(!loose&&v.indexOf(q)>=0)loose=k;
+    }
+  }
+  return loose;
+}
+
 /* ════════════════ CASPIO (lectura con el token del usuario) ════════════════ */
-/* Toda respuesta pasa por aquí: los campos Keybox se borran nada más parsear. */
-function stripKeybox(rows){
+/* Toda respuesta pasa por aquí: los campos sensibles se borran nada más
+   parsear, antes de que nada los pueda pintar o registrar. */
+const SENSITIVE=/keybox|password|wifi/i;
+function stripSensitive(rows){
   for(let i=0;i<rows.length;i++){
     const r=rows[i]; if(!r||typeof r!=='object')continue;
     const ks=Object.keys(r);
-    for(let j=0;j<ks.length;j++){ if(ks[j].toLowerCase().indexOf('keybox')>=0)delete r[ks[j]]; }
+    for(let j=0;j<ks.length;j++){ if(SENSITIVE.test(ks[j]))delete r[ks[j]]; }
   }
   return rows;
 }
 async function proxyGet(qs){
   const res=await fetch(Auth.url(PROXY+'?'+qs));
   const json=await res.json();
-  const rows=stripKeybox(json.Result||json.result||[]);
+  const rows=stripSensitive(json.Result||json.result||[]);
   if(json.error)throw new Error(String(json.error));
   return rows;
 }
@@ -494,19 +750,32 @@ async function loadUsers(){
 /* ════════════════ WHERE de reservas ════════════════ */
 /* Mismos operadores y escapado que buildWhere() de entradas-equipo.
    OJO con la trampa de fechas: stay_on = Checkin <= día AND Checkout >= día. */
+function phClean(f){
+  return "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE("+f+",' ',''),'+',''),'-',''),'.',''),'(',''),')','')";
+}
 function bookingsWhere(b){
   const parts=[];
   const code=(b.code||'').trim(), guest=(b.guest||'').trim(), villa=(b.villa||'').trim();
   if(!code)parts.push(F.status+"<>'cancelled'");
-  if(code)parts.push(F.confirmCode+" LIKE '%"+sq(code)+"%'");
-  if(villa)parts.push(F.villaName+" LIKE '%"+sq(villa)+"%'");
+  if(code)parts.push(F.confirmCode+" LIKE '%"+sqLike(code)+"%'");
+  if(villa)parts.push(F.villaName+" LIKE '%"+sqLike(villa)+"%'");
   if(guest){
-    const q=sq(guest);
+    const q=sqLike(guest);
     let c=F.guestName+" LIKE '%"+q+"%' OR "+F.guestEmail+" LIKE '%"+q+"%' OR "+F.secondEmail+" LIKE '%"+q+"%'";
+    /* Teléfonos: misma cadena de REPLACE que entradas-equipo (línea ~1348) */
+    const ph=guest.replace(/[\s+\-.()]/g,'');
+    if(ph&&/^\d+$/.test(ph)){
+      const p=sqLike(ph);
+      c+=' OR '+phClean(F.guestPhone)+" LIKE '%"+p+"%' OR "+phClean(F.phoneArrival)+" LIKE '%"+p+"%'";
+      if(ph.indexOf('00')===0&&ph.slice(2)){
+        const p2=sqLike(ph.slice(2));
+        c+=' OR '+phClean(F.guestPhone)+" LIKE '%"+p2+"%' OR "+phClean(F.phoneArrival)+" LIKE '%"+p2+"%'";
+      }
+    }
     const words=guest.split(/\s+/).filter(Boolean).slice(0,4);
     if(words.length>1){
-      c+=' OR ('+words.map(function(w){ return F.guestName+" LIKE '%"+sq(w)+"%'"; }).join(' AND ')+')';
-      c+=' OR ('+words.map(function(w){ return '('+F.fiscalName+" LIKE '%"+sq(w)+"%' OR "+F.fiscalSurname+" LIKE '%"+sq(w)+"%')"; }).join(' AND ')+')';
+      c+=' OR ('+words.map(function(w){ return F.guestName+" LIKE '%"+sqLike(w)+"%'"; }).join(' AND ')+')';
+      c+=' OR ('+words.map(function(w){ return '('+F.fiscalName+" LIKE '%"+sqLike(w)+"%' OR "+F.fiscalSurname+" LIKE '%"+sqLike(w)+"%')"; }).join(' AND ')+')';
     }
     parts.push('('+c+')');
   }
@@ -516,16 +785,27 @@ function bookingsWhere(b){
     if(isDate(b.check_in_from))parts.push(F.checkIn+">='"+b.check_in_from+"T00:00:00'");
     if(isDate(b.check_in_to))parts.push(F.checkIn+"<='"+b.check_in_to+"T23:59:59'");
   }
-  if(isId(b.manager))parts.push(F.villaManager+"='"+sq(b.manager)+"'");
-  if(isId(b.cleaner))parts.push(F.cleaner+'='+sq(b.cleaner));
-  if(b.source)parts.push(F.portalName+"='"+sq(b.source)+"'");
+  const mgr=b.manager?nameToId(b.manager):'';
+  if(mgr)parts.push(F.villaManager+"='"+sq(mgr)+"'");
+  const cln=b.cleaner?nameToId(b.cleaner):'';
+  if(cln)parts.push(F.cleaner+'='+sq(cln));
+  const fam=b.source?SOURCES[fold(b.source)]:null;
+  if(fam)parts.push(F.portalName+' IN ('+fam.map(function(s){ return "'"+sq(s)+"'"; }).join(',')+')');
   return parts.join(' AND ');
+}
+async function fetchBookings(b,limit,order){
+  const where=bookingsWhere(b);
+  if(!where)return null;
+  let qs='action=view&view='+encodeURIComponent(VIEW_BOOKINGS)+'&where='+encodeURIComponent(where);
+  if(order)qs+='&orderBy='+encodeURIComponent(order);
+  qs+='&limit='+limit;
+  return await proxyGet(qs);
 }
 
 /* ════════════════ FICHA DE ESTADO ════════════════ */
 function statePill(label,val){
   const ok=isOk(val);
-  const st=E('span','st'+(ok===true?' ok':ok===false?' pend':''));
+  const st=E('span','mia-st'+(ok===true?' ok':ok===false?' pend':''));
   st.textContent=(ok===true?'✓ ':'· ')+label;
   return st;
 }
@@ -539,33 +819,43 @@ function payConcept(r){
 }
 function payTable(rows){
   const box=E('div');
-  box.appendChild(E('div','sec',T.payments));
+  box.appendChild(E('div','mia-sec',T.payments));
   if(!rows.length){ box.appendChild(note('Sin líneas de pago.')); return box; }
-  let total=0, html='<tr><th>'+escapeHtml(T.concept)+'</th><th>'+escapeHtml(T.date)+'</th><th class="n">'+escapeHtml(T.amount)+'</th></tr>';
+  let total=0, html='<tr><th>'+escapeHtml(T.concept)+'</th><th>'+escapeHtml(T.date)+'</th><th class="mia-n">'+escapeHtml(T.amount)+'</th></tr>';
   rows.forEach(function(r){
     const n=parseFloat(r[PAY.amount]); if(!isNaN(n))total+=n;
     html+='<tr><td>'+escapeHtml(payConcept(r))+'</td><td>'+escapeHtml(fmtDate(r[PAY.date]))
-        +'</td><td class="n">'+escapeHtml(fmtEUR(r[PAY.amount]))+'</td></tr>';
+        +'</td><td class="mia-n">'+escapeHtml(fmtEUR(r[PAY.amount]))+'</td></tr>';
   });
-  html+='<tr><td><b>'+escapeHtml(T.total)+'</b></td><td></td><td class="n"><b>'+escapeHtml(fmtEUR(total))+'</b></td></tr>';
-  const t=E('table','pay'); t.innerHTML=html;
+  html+='<tr><td><b>'+escapeHtml(T.total)+'</b></td><td></td><td class="mia-n"><b>'+escapeHtml(fmtEUR(total))+'</b></td></tr>';
+  const t=E('table','mia-pay'); t.innerHTML=html;
   box.appendChild(t);
   return box;
 }
-function kvRow(kv,k,v){ kv.appendChild(E('span','k',k)); kv.appendChild(E('span','v',v)); }
+function kvRow(kv,k,v){ kv.appendChild(E('span','mia-k',k)); kv.appendChild(E('span','mia-v',v)); }
+
+/* Enlace a Entradas para una reserva concreta: ventana de un día antes a un
+   día después, para que la reserva caiga dentro pase lo que pase. */
+function entradasParamsFor(r){
+  const code=String(g(r,'confirmCode')||'').trim();
+  const guest=String(g(r,'guestName')||'').trim();
+  const p={ desde:addDays(dOnly(g(r,'checkIn')),-1), hasta:addDays(dOnly(g(r,'checkOut')),1) };
+  if(guest)p.inq=guest; else if(code)p.cod=code;
+  return p;
+}
 
 async function renderState(r){
   const code=String(g(r,'confirmCode')||'');
   const villa=String(g(r,'villaName')||'—');
   const card=E('div','mcard');
   const head=E('div','mcard-h');
-  head.appendChild(E('span','t',villa));
-  if(code)head.appendChild(E('span','id',code));
+  head.appendChild(E('span','mia-t',villa));
+  if(code)head.appendChild(E('span','mia-id',code));
   card.appendChild(head);
   const body=E('div','mcard-b'); card.appendChild(body);
 
   /* Datos */
-  const kv=E('div','kv');
+  const kv=E('div','mia-kv');
   const pax=(parseInt(g(r,'adults'),10)||0)+(parseInt(g(r,'children'),10)||0);
   const gline=[g(r,'guestName'),pax?pax+' pax':'',g(r,'portalName')].filter(Boolean).join(' · ');
   kvRow(kv,T.guest,gline||'—');
@@ -573,21 +863,23 @@ async function renderState(r){
   kvRow(kv,T.dates,fmtDate(g(r,'checkIn'))+' → '+fmtDate(g(r,'checkOut'))+(nights?' · '+nights+' '+T.nights:''));
   const mgrId=String(g(r,'villaManager')||'').trim();
   if(mgrId){
-    const users=await loadUsers();
-    const nm=users.get(mgrId);
+    let nm='';
+    const pairs=mapPairs(globalMap('allUsersMap')).concat(mapPairs(globalMap('managersMap')));
+    for(let i=0;i<pairs.length&&!nm;i++)if(pairs[i][0]===mgrId)nm=pairs[i][1];
+    if(!nm){ const users=await loadUsers(); nm=users.get(mgrId)||''; }
     if(nm)kvRow(kv,T.vm,nm);   /* si no hay nombre, no se pinta el id a secas */
   }
   body.appendChild(kv);
 
   /* Estados */
   const secSt=E('div');
-  secSt.appendChild(E('div','sec',T.state));
-  const sts=E('div','states');
+  secSt.appendChild(E('div','mia-sec',T.state));
+  const sts=E('div','mia-states');
   const stName=String(g(r,'statusNameFormula')||g(r,'status')||'').trim();
-  if(stName)sts.appendChild(E('span','st','· '+stName));
+  if(stName)sts.appendChild(E('span','mia-st'+(fold(stName).indexOf('cancel')>=0?' bad':''),'· '+stName));
   const ciRaw=g(r,'checkinPend');
   const ciPend=Number(ciRaw)===3;
-  const ci=E('span','st'+(ciPend?' pend':(isOk(ciRaw)===true?' ok':'')));
+  const ci=E('span','mia-st'+(ciPend?' pend':(isOk(ciRaw)===true?' ok':'')));
   ci.textContent=(ciPend?'· ':(isOk(ciRaw)===true?'✓ ':'· '))+'Check-in online';
   sts.appendChild(ci);
   sts.appendChild(statePill('WelcomePack',g(r,'wellcomePack')));
@@ -605,13 +897,8 @@ async function renderState(r){
   body.appendChild(payBox);
 
   /* Botones */
-  const btns=E('div','btns');
-  const guest=String(g(r,'guestName')||'').trim();
-  const desde=addDays(dOnly(g(r,'checkIn')),-1);
-  const hasta=addDays(dOnly(g(r,'checkOut')),1);
-  const entParams={desde:desde,hasta:hasta};
-  if(guest)entParams.inq=guest; else if(code)entParams.cod=code;
-  btns.appendChild(btn(T.openEnt,link('entradas',entParams),true));
+  const btns=E('div','mia-btns');
+  btns.appendChild(btn(T.openEnt,link('entradas',entradasParamsFor(r)),true));
   if(code)btns.appendChild(btn(T.openNotes,link('notas',{TaBookings2021_FS_confirmation_code:code})));
   const vid=String(g(r,'villaId')||'').trim();
   if(isId(vid))btns.appendChild(btn(T.openVilla,link('villa',{villa_id:vid})));
@@ -634,65 +921,65 @@ async function renderState(r){
   }
 }
 
-/* ════════════════ OBJETIVOS ════════════════ */
-async function doBookingsCard(b){
-  const where=bookingsWhere(b);
-  if(!where){ say(note(T.noBooking)); return; }
-  let rows;
-  try{
-    rows=await proxyGet('action=view&view='+encodeURIComponent(VIEW_BOOKINGS)
-      +'&where='+encodeURIComponent(where)+'&limit=5');
-  }catch(e){ say(note('No he podido leer la reserva.')); return; }
+/* Fila de resultado: nombre + datos (abre la ficha) y un botón a la derecha */
+function resultRow(r,extraLabel,extraHref){
+  const row=E('div','mia-vrow');
+  const main=E('button','mia-vmain'); main.type='button';
+  main.appendChild(E('span','mia-n',String(g(r,'villaName')||'—')));
+  main.appendChild(E('span','mia-m',String(g(r,'guestName')||'')+' · '
+    +fmtDate(g(r,'checkIn'))+' → '+fmtDate(g(r,'checkOut'))));
+  main.addEventListener('click',function(){ renderState(r); });
+  row.appendChild(main);
+  if(extraLabel&&extraHref)row.appendChild(btn(extraLabel,extraHref));
+  return row;
+}
+function resultList(rows,extraLabel,hrefOf){
+  const list=E('div','mia-list');
+  rows.forEach(function(r){ list.appendChild(resultRow(r,extraLabel,hrefOf?hrefOf(r):'')); });
+  return list;
+}
 
-  if(!rows.length){
-    const box=E('div');
-    box.appendChild(note(T.noBooking));
-    const chips=chipsBlock(b,function(){ doBookingsCard(b); });
-    if(chips)box.insertBefore(chips,box.firstChild);
-    say(box);
-    return;
+/* ════════════════ RESERVAS ════════════════ */
+/* Los parámetros que Entradas entiende de verdad (restoreFromURL: mgr, ci,
+   wp, cierr, tipo, cod, villa, inq, desde, hasta). No hay parámetro de
+   source ni de limpieza: esos van a "No pude aplicar". */
+function bookingsPlan(b){
+  const p={}, chips={}, no=[];
+  if(b.code){ p.cod=b.code; chips.code=b.code; }
+  if(b.guest){ p.inq=b.guest; chips.guest=b.guest; }
+  if(b.villa){ p.villa=b.villa; chips.villa=b.villa; }
+  if(isDate(b.stay_on)){
+    /* Nunca una ventana de un día: Entradas cruza entradas Y salidas contra
+       el rango, así que un huésped a mitad de estancia sería invisible. */
+    p.desde=addDays(b.stay_on,-30); p.hasta=addDays(b.stay_on,30);
+    chips.stay_on=b.stay_on;
+  }else{
+    if(isDate(b.check_in_from)){ p.desde=b.check_in_from; chips.check_in_from=b.check_in_from; }
+    if(isDate(b.check_in_to)){ p.hasta=b.check_in_to; chips.check_in_to=b.check_in_to; }
   }
-  if(rows.length===1){ await renderState(rows[0]); return; }
-
-  const box=E('div');
-  box.appendChild(note(T.many));
-  const list=E('div','villas');
-  rows.forEach(function(r){
-    const row=E('button','vrow'); row.type='button';
-    row.appendChild(E('span','n',String(g(r,'villaName')||'—')));
-    row.appendChild(E('span','m',String(g(r,'guestName')||'')+' · '
-      +fmtDate(g(r,'checkIn'))+' → '+fmtDate(g(r,'checkOut'))));
-    row.addEventListener('click',function(){ renderState(r); });
-    list.appendChild(row);
-  });
-  box.appendChild(list);
-  say(box);
+  if(b.manager){
+    const id=nameToId(b.manager);
+    if(id){ p.mgr=id; chips.manager=b.manager; } else no.push('manager: '+b.manager);
+  }
+  if(b.cleaner)no.push('limpieza: '+b.cleaner);
+  if(b.source)no.push('source: '+b.source);
+  if(['both','entrada','salida'].indexOf(b.tipo)>=0){ p.tipo=b.tipo; chips.tipo=b.tipo; }
+  else if(b.tipo)no.push('tipo: '+b.tipo);
+  return {params:p,chips:chips,no:no};
 }
-
-function bookingsParams(b){
-  const p={};
-  if(b.code)p.cod=b.code;
-  if(b.guest)p.inq=b.guest;
-  if(b.villa)p.villa=b.villa;
-  if(isDate(b.stay_on)){ p.desde=b.stay_on; p.hasta=b.stay_on; }
-  else{ if(isDate(b.check_in_from))p.desde=b.check_in_from; if(isDate(b.check_in_to))p.hasta=b.check_in_to; }
-  if(isId(b.manager))p.mgr=b.manager;
-  if(['all','pend'].indexOf(b.ci)>=0)p.ci=b.ci;
-  if(['all','pending'].indexOf(b.wp)>=0)p.wp=b.wp;
-  if(['all','pending'].indexOf(b.cierr)>=0)p.cierr=b.cierr;
-  if(['both','entrada','salida'].indexOf(b.tipo)>=0)p.tipo=b.tipo;
-  return p;
-}
-function doBookingsLink(b){
+function doBookingsLink(b,extraNo){
   const render=function(){
+    const plan=bookingsPlan(b);
     const box=E('div');
-    const chips=chipsBlock(b,render);
+    const chips=chipsBlock(plan.chips,b,render);
     if(chips)box.appendChild(chips);
     box.appendChild(note(T.usedHere));
-    const href=link('entradas',bookingsParams(b));
-    const btns=E('div','btns');
+    const na=noApplyBlock(plan.no.concat(extraNo||[]));
+    if(na)box.appendChild(na);
+    const href=link('entradas',plan.params);
+    const btns=E('div','mia-btns');
     if(curPage()===PAGES.entradas){
-      const go=E('button','h-btn primary',T.openEnt); go.type='button';
+      const go=E('button','mia-btn mia-primary',T.openEnt); go.type='button';
       go.addEventListener('click',function(){ location.href=href; });
       btns.appendChild(go);
     }else{
@@ -703,26 +990,131 @@ function doBookingsLink(b){
   };
   render();
 }
-function tasksParams(t){
-  const p={};
-  if(t.villa)p.vi=t.villa;
-  if(t.type)p.tt=t.type;
-  if(['all','pend','done'].indexOf(t.status)>=0)p.est=t.status;
-  if(isId(t.user))p.u=t.user;
-  if(isDate(t.from))p.fd=t.from;
-  if(isDate(t.to))p.fh=t.to;
-  return p;
+async function doBookingsCard(b){
+  const plan=bookingsPlan(b);
+  /* Sin código: las más recientes primero, para que las cinco que se
+     enseñan sean las útiles. */
+  const order=(b.code&&String(b.code).trim())?'':F.checkIn+' DESC';
+  let rows;
+  try{ rows=await fetchBookings(b,MAX_ROWS,order); }
+  catch(e){ say(note('No he podido leer la reserva.')); return; }
+  if(rows===null){ say(note(T.noBooking)); return; }
+
+  if(!rows.length){
+    const box=E('div');
+    const chips=chipsBlock(plan.chips,b,function(){ doBookingsCard(b); });
+    if(chips)box.appendChild(chips);
+    box.appendChild(note(T.noBooking));
+    const na=noApplyBlock(plan.no);
+    if(na)box.appendChild(na);
+    say(box);
+    return;
+  }
+  if(rows.length===1){ await renderState(rows[0]); return; }
+
+  const box=E('div');
+  const chips=chipsBlock(plan.chips,b,function(){ doBookingsCard(b); });
+  if(chips)box.appendChild(chips);
+  box.appendChild(note(T.many));
+  box.appendChild(resultList(rows,T.openEnt,function(r){ return link('entradas',entradasParamsFor(r)); }));
+  if(rows.length>=MAX_ROWS)box.appendChild(note(T.more));
+  const na=noApplyBlock(plan.no);
+  if(na)box.appendChild(na);
+  say(box);
+}
+/* "quién está el 14" — nunca un enlace de un día. Se lista lo que devuelve
+   la consulta de estancia; si la consulta falla, ventana de ±30 días. */
+async function doBookingsStay(b){
+  const plan=bookingsPlan(b);
+  let rows;
+  try{ rows=await fetchBookings(b,MAX_ROWS,F.checkIn+' DESC'); }
+  catch(e){ doBookingsLink(b); return; }
+  if(rows===null){ doBookingsLink(b); return; }
+  if(rows.length===1){ await renderState(rows[0]); return; }
+
+  const box=E('div');
+  const chips=chipsBlock(plan.chips,b,function(){ doBookings(b); });
+  if(chips)box.appendChild(chips);
+  box.appendChild(note(rows.length?T.many:T.noBooking));
+  if(rows.length){
+    box.appendChild(resultList(rows,T.openEnt,function(r){ return link('entradas',entradasParamsFor(r)); }));
+    if(rows.length>=MAX_ROWS)box.appendChild(note(T.more));
+  }
+  const na=noApplyBlock(plan.no);
+  if(na)box.appendChild(na);
+  say(box);
+}
+async function doBookings(b,card){
+  if(isDate(b.stay_on)){ await doBookingsStay(b); return; }
+  if(card){ await doBookingsCard(b); return; }
+  doBookingsLink(b);
+}
+
+/* ════════════════ NOTAS ════════════════ */
+async function doNotes(n){
+  const code=String((n&&n.code)||'').trim();
+  const guest=String((n&&n.guest)||'').trim();
+  if(code){
+    const box=E('div');
+    box.appendChild(note(code));
+    const btns=E('div','mia-btns');
+    btns.appendChild(btn(T.openNotes,link('notas',{TaBookings2021_FS_confirmation_code:code}),true));
+    box.appendChild(btns);
+    say(box);
+    return;
+  }
+  if(!guest){ say(note(T.noBooking)); return; }
+  let rows;
+  try{ rows=await fetchBookings({guest:guest},MAX_ROWS,F.checkIn+' DESC'); }
+  catch(e){ say(note('No he podido leer la reserva.')); return; }
+  if(!rows||!rows.length){ say(note(T.noBooking)); return; }
+  const box=E('div');
+  box.appendChild(note(T.many));
+  box.appendChild(resultList(rows,T.notes,function(r){
+    const c=String(g(r,'confirmCode')||'').trim();
+    return c?link('notas',{TaBookings2021_FS_confirmation_code:c}):'';
+  }));
+  if(rows.length>=MAX_ROWS)box.appendChild(note(T.more));
+  say(box);
+}
+
+/* ════════════════ TAREAS ════════════════ */
+function tasksPlan(t){
+  const p={}, chips={}, no=[];
+  if(t.villa){ p.vi=t.villa; chips.villa=t.villa; }
+  if(t.status){
+    const est=TASK_EST[fold(t.status)];
+    if(est){ p.est=est; chips.status=t.status; }
+    else no.push('estado: '+t.status);   /* "en curso" no existe como filtro de URL */
+  }
+  if(t.type){
+    const bt=TASK_BT[fold(t.type)];
+    if(bt){ p.bt=bt; chips.type=t.type; }
+    else no.push('tipo: '+t.type);       /* tt es un id de catálogo: no se inventa */
+  }
+  if(t.user){
+    const id=nameToId(t.user);
+    if(id){ p.u=id; chips.user=t.user; } else no.push('usuario: '+t.user);
+  }
+  if(isDate(t.from)){ p.fd=t.from; chips.from=t.from; }
+  if(isDate(t.to)){ p.fh=t.to; chips.to=t.to; }
+  if(t.urgent===true){ p.urg='1'; chips.urgent=true; }
+  if(t.important===true){ p.imp='1'; chips.important=true; }
+  return {params:p,chips:chips,no:no};
 }
 function doTasks(t){
   const render=function(){
+    const plan=tasksPlan(t);
     const box=E('div');
-    const chips=chipsBlock(t,render);
+    const chips=chipsBlock(plan.chips,t,render);
     if(chips)box.appendChild(chips);
     box.appendChild(note(T.usedHere));
-    const href=link('tareas',tasksParams(t));
-    const btns=E('div','btns');
+    const na=noApplyBlock(plan.no);
+    if(na)box.appendChild(na);
+    const href=link('tareas',plan.params);
+    const btns=E('div','mia-btns');
     if(curPage()===PAGES.tareas){
-      const go=E('button','h-btn primary',T.openTar); go.type='button';
+      const go=E('button','mia-btn mia-primary',T.openTar); go.type='button';
       go.addEventListener('click',function(){ location.href=href; });
       btns.appendChild(go);
     }else{
@@ -733,10 +1125,12 @@ function doTasks(t){
   };
   render();
 }
+
+/* ════════════════ OCUPACIÓN Y VILLAS ════════════════ */
 function doAvailability(a){
   const render=function(){
+    const chips=chipsBlock(a,a,render);
     const box=E('div');
-    const chips=chipsBlock(a,render);
     if(chips)box.appendChild(chips);
     const bits=[];
     if(isDate(a.from)||isDate(a.to))bits.push(fmtDate(a.from)+' → '+fmtDate(a.to));
@@ -744,7 +1138,7 @@ function doAvailability(a){
     if(a.pool)bits.push('piscina');
     (Array.isArray(a.other)?a.other:[]).forEach(function(o){ if(o)bits.push(String(o)); });
     box.appendChild(note(T.ocuNote+' '+(bits.join(', ')||'—')));
-    const btns=E('div','btns');
+    const btns=E('div','mia-btns');
     btns.appendChild(btn(T.openOcu,link('ocupacion',{}),true));
     box.appendChild(btns);
     say(box);
@@ -757,10 +1151,10 @@ async function doVilla(v){
   let rows;
   try{ rows=await proxyGet('action=data&table=TaVillas&limit=500'); }
   catch(e){ say(note('No he podido leer las villas.')); return; }
-  const q=name.toLowerCase();
+  const q=fold(name);
   const hits=rows.filter(function(r){
-    const a=String(r.Name_villa_para_inquilinos||'').toLowerCase();
-    const b=String(r.Name||'').toLowerCase();
+    const a=fold(r.Name_villa_para_inquilinos);
+    const b=fold(r.Name);
     return (a&&a.indexOf(q)>=0)||(b&&b.indexOf(q)>=0);
   }).slice(0,10);
 
@@ -769,19 +1163,21 @@ async function doVilla(v){
   if(hits.length===1){
     const id=String(hits[0].villaid||'');
     box.appendChild(note(String(hits[0].Name_villa_para_inquilinos||hits[0].Name||name)));
-    const btns=E('div','btns');
+    const btns=E('div','mia-btns');
     if(isId(id))btns.appendChild(btn(T.openVilla,link('villa',{villa_id:id}),true));
     box.appendChild(btns);
   }else{
     box.appendChild(note(T.many));
-    const list=E('div','villas');
+    const list=E('div','mia-list');
     hits.forEach(function(r){
       const id=String(r.villaid||'');
+      const row=E('div','mia-vrow');
       const a=document.createElement('a');
-      a.className='vrow';
+      a.className='mia-vmain';
       a.setAttribute('href',link('villa',{villa_id:id})||'#');
-      a.appendChild(E('span','n',String(r.Name_villa_para_inquilinos||r.Name||'—')));
-      list.appendChild(a);
+      a.appendChild(E('span','mia-n',String(r.Name_villa_para_inquilinos||r.Name||'—')));
+      row.appendChild(a);
+      list.appendChild(row);
     });
     box.appendChild(list);
   }
@@ -790,32 +1186,41 @@ async function doVilla(v){
 function doUnknown(data){
   const box=E('div');
   box.appendChild(note(T.unknown));
-  const um=(data&&Array.isArray(data.unmatched))?data.unmatched.filter(Boolean):[];
-  if(um.length)box.appendChild(note(T.noApply+' '+um.map(String).join(', ')));
+  const na=noApplyBlock((data&&Array.isArray(data.unmatched))?data.unmatched:[]);
+  if(na)box.appendChild(na);
   say(box);
 }
 
 /* ════════════════ PREGUNTA ════════════════ */
-/* Worker caido, lento o apagado: un aviso y Mia se retira hasta la proxima sesion.
-   El panel con el aviso se queda hasta que el usuario lo cierre; la fila desaparece. */
+/* Worker caído o apagado: un aviso y Mia se retira hasta la próxima sesión.
+   El panel con el aviso se queda hasta que el usuario lo cierre; la fila
+   desaparece y los sticky vuelven a su sitio. */
 function fail(){
   if(!downShown){ downShown=true; say(note(T.down)); }
   setMiaOff();
   hideRow(true);
 }
+function kind(k){ const e=new Error(k); e.miaKind=k; return e; }
 async function askWorker(q){
   const ctl=new AbortController();
   const to=setTimeout(function(){ ctl.abort(); },TIMEOUT_MS);
+  let res;
   try{
-    const res=await fetch(MIA_WORKER_URL,{
+    res=await fetch(MIA_WORKER_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+Auth.token()},
       body:JSON.stringify({ q:q, page:curPage(), today:todayISO() }),
       signal:ctl.signal
     });
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    return await res.json();
+  }catch(e){
+    throw kind(e&&e.name==='AbortError'?'timeout':'red');
   }finally{ clearTimeout(to); }
+  if(res.status===401)throw kind('401');
+  if(res.status===429)throw kind('429');
+  if(res.status===400)throw kind('400');
+  if(!res.ok)throw kind('red');
+  try{ return await res.json(); }
+  catch(e){ throw kind('red'); }
 }
 async function onAsk(){
   if(!INPUT)return;
@@ -825,18 +1230,28 @@ async function onAsk(){
   say(note(T.loading));
   let data;
   try{ data=await askWorker(q); }
-  catch(e){ dbg('worker ko'); fail(); return; }
+  catch(e){
+    const k=e&&e.miaKind;
+    /* La fila se queda: estos tres son problemas de un momento, no una
+       caída, y culpar al usuario con "no he entendido" sería mentira. */
+    if(k==='401'){ say(note(T.expired)); return; }
+    if(k==='429'){ say(note(T.busyWait)); return; }
+    if(k==='400'){ say(note(T.badQ)); return; }
+    if(k==='timeout'){ say(note(T.busy)); return; }
+    fail(); return;   /* red o 5xx */
+  }
   if(!data||typeof data!=='object'){ fail(); return; }
-  if(data.enabled===false){ closePanel(); setMiaOff(); hideRow(false); return; }
-  ST.data=data;
+  if(data.enabled===false){ fail(); return; }   /* apagada: se avisa una vez y se retira */
+  if(data.error==='modelo'||data.error==='ocupado'){ say(note(T.busy)); return; }
   const target=String(data.target||'unknown');
   try{
     if(target==='bookings'){
       const b=Object.assign({},data.bookings||{});
-      const wantsCard=data.answer_card==='state'&&((b.code&&String(b.code).trim())||(b.guest&&String(b.guest).trim()));
-      if(wantsCard)await doBookingsCard(b); else doBookingsLink(b);
+      const card=data.answer_card==='state'&&((b.code&&String(b.code).trim())||(b.guest&&String(b.guest).trim()));
+      await doBookings(b,card);
     }
     else if(target==='tasks')doTasks(Object.assign({},data.tasks||{}));
+    else if(target==='notes')await doNotes(Object.assign({},data.notes||{}));
     else if(target==='availability')doAvailability(Object.assign({},data.availability||{}));
     else if(target==='villa')await doVilla(data.villa||{});
     else doUnknown(data);
