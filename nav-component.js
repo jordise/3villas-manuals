@@ -388,5 +388,10 @@
 })();
 
 /* Mia v1 (2026-09-02): carga mia-intranet.js si hay sesion. Quitar estas lineas = desactivar Mia. */
-/* Sin declaraciones: un var aqui seria window.s y chocaria con paginas que declaran let/const s. */
-try{if(typeof Auth!=='undefined'&&Auth.token&&Auth.token()){document.head.appendChild(Object.assign(document.createElement('script'),{src:(document.currentScript&&document.currentScript.src?document.currentScript.src.replace(/nav-component\.js.*$/,'mia-intranet.js'):'mia-intranet.js')}));}}catch(e){}
+/* Sin declaraciones en el ambito global: un var aqui seria window.s y chocaria con
+   paginas que declaran let/const s. __miaLoader corta una segunda ejecucion, asi que
+   incluir el fichero dos veces no anade nada. La ruta se saca del propio src y solo
+   se cambia el ultimo nombre de fichero si es un nav-component*.js; si no cambia
+   nada (fichero renombrado a otra cosa) se cae a la ruta relativa, para que nunca
+   pueda cargarse a si mismo. */
+try{if(typeof Auth!=='undefined'&&Auth.token&&Auth.token()&&!window.__miaLoader){window.__miaLoader=1;document.head.appendChild(Object.assign(document.createElement('script'),{src:(function(u){var v=String(u||'').replace(/\/nav-component[^\/?#]*\.js/,'/mia-intranet.js');return(!u||v===String(u))?'mia-intranet.js':v;})(document.currentScript&&document.currentScript.src)}));}}catch(e){}

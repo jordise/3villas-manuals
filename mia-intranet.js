@@ -10,10 +10,11 @@
 //  Mia solo lee. No escribe, no envía, no borra.
 //
 //  Reglas de este fichero:
-//   · Add-only: no cambia ni una regla CSS de las páginas existentes.
-//     El único ajuste es un style inline en los elementos sticky que
-//     quedaban justo debajo de la cabecera, para que bajen la altura
-//     de la fila. Al quitar la fila se devuelve el valor original.
+//   · Add-only: no cambia ni una regla CSS de las páginas existentes y no
+//     toca el style de ningún elemento suyo. La fila no es sticky: es un
+//     bloque normal debajo de la cabecera, sin z-index, que se va con el
+//     scroll. Las barras de filtros de las páginas se quedan donde estaban,
+//     y al quitar la fila la página es exactamente la de antes.
 //   · Toda clase de Mia lleva el prefijo mia- o vive dentro de
 //     .mia-row/.mia-panel: villa.html tiene un .h-btn global.
 //   · Nunca se pinta ni se registra el código de la caja de llaves:
@@ -49,7 +50,6 @@ const VIEW_PAYMENTS  = 'Vi_bookingsall_and_paymen_editb';
    de sesión + 15 s de modelo). Si no, el navegador se rinde con la respuesta
    ya de camino. */
 const TIMEOUT_MS     = 22000;
-const HEAD_FALLBACK  = 48;             // alto de cabecera si no se puede medir
 const MAX_ROWS       = 5;              // filas por lista (igual que el límite de la consulta)
 const K_EASY         = '3v_easy';      // localStorage: texto más legible
 const K_OFF          = '3v_mia_off';   // sessionStorage: Mia apagada esta sesión
@@ -97,16 +97,6 @@ const PAGES = {
   ocupacion:'listado-ocupacion.html',
   villa    :'villa.html',
   notas    :'notas-equipo-reservas.html'
-};
-
-/* Familias de Portal_Name. La palabra que usa la gente no es el valor que
-   guarda Caspio (bookingcom, airbnbOfficial, direct). Entradas NO tiene
-   parámetro de source en la URL, así que esto solo sirve para la consulta. */
-const SOURCES = {
-  booking:['bookingcom','Booking.com'], 'booking.com':['bookingcom','Booking.com'],
-  bookingcom:['bookingcom','Booking.com'],
-  airbnb:['airbnbOfficial','Airbnb'], 'airbnbofficial':['airbnbOfficial','Airbnb'],
-  directa:['direct','Direct'], directo:['direct','Direct'], direct:['direct','Direct']
 };
 
 /* tareas.html restoreFiltersFromURL() lee est(1583) u(1585) fd/fh(1591)
@@ -254,15 +244,19 @@ function miaOff(){ try{ return sessionStorage.getItem(K_OFF)==='1'; }catch(e){ r
 function setMiaOff(){ try{ sessionStorage.setItem(K_OFF,'1'); }catch(e){} }
 
 /* ════════════════ CSS (solo lo nuevo — add-only) ════════════════ */
-/* z-index 350: por encima del #filterBar de contactos (300) y por debajo de
-   los modales de las páginas (9000+). */
+/* La fila NO es sticky: es un bloque normal debajo de la cabecera y se va con
+   el scroll. Sin position, sin top y sin z-index no hay nada que empujar, así
+   que ninguna barra de la página cambia de sitio. */
 const CSS = `
-.mia-row{position:sticky;top:0;z-index:350;background:#fff;border-bottom:1px solid var(--gray-2,#e8eaed);padding:6px 12px 5px}
+.mia-row{background:#fff;border-bottom:1px solid var(--gray-2,#e8eaed);padding:6px 12px 5px}
 .mia-row .mia-in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:8px}
 .mia-row .mia-mk{width:30px;height:30px;flex-shrink:0}
-.mia-field{flex:1;display:flex;align-items:center;height:44px;border:1.5px solid var(--gray-2,#e8eaed);border-radius:22px;padding:0 14px;background:var(--gray-1,#f4f5f7);min-width:0}
+.mia-field{flex:1;display:flex;align-items:center;height:44px;cursor:text;border:1.5px solid var(--gray-2,#e8eaed);border-radius:22px;padding:0 14px;background:var(--gray-1,#f4f5f7);min-width:0}
 .mia-field:focus-within{border-color:var(--red,#C8102E);background:#fff}
-.mia-field input{flex:1;height:100%;border:none;background:transparent;font-family:inherit;font-size:16px;color:var(--gray-5,#2d3142);min-width:0;outline:none}
+/* 44 px de alto propios, no el 100% del hueco: con box-sizing:border-box el
+   hueco interior del campo son 41 px y la zona tactil del input se quedaba
+   corta. Sobresale 1,5 px por lado, y como es transparente no se ve. */
+.mia-field input{flex:1;height:44px;box-sizing:border-box;border:none;background:transparent;font-family:inherit;font-size:16px;color:var(--gray-5,#2d3142);min-width:0;outline:none}
 .mia-field input::placeholder{color:#5c6273}
 .mia-go{height:44px;padding:0 14px;border:none;border-radius:22px;background:var(--red,#C8102E);color:#fff;font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;letter-spacing:.3px;cursor:pointer;flex-shrink:0}
 .mia-go:hover{background:var(--red-dark,#9e0c24)}
@@ -286,8 +280,12 @@ const CSS = `
 .mia-panel .mia-close{width:44px;height:44px;border:1.5px solid var(--gray-2,#e8eaed);border-radius:50%;background:#fff;color:var(--mia-muted);font-size:16px;cursor:pointer;flex-shrink:0;padding:0}
 .mia-panel .mchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .mia-panel .mchips .mia-lb{font-size:14px;font-weight:600;color:var(--mia-muted)}
-.mia-panel .mchip{display:inline-flex;align-items:center;gap:2px;font-size:14px;font-weight:600;color:var(--red,#C8102E);background:var(--red-light,#fce8eb);border:1.5px solid rgba(200,16,46,.25);border-radius:22px;padding:0 4px 0 12px;min-height:36px}
-.mia-panel .mchip .mia-x{width:36px;height:36px;border:none;background:none;padding:0;margin:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+/* El chip mide 44 px de alto y la equis ocupa 44x44 dentro de el: la zona
+   tactil cumple el minimo sin que la fila de chips crezca. El disco visible
+   sigue siendo de 26 px. box-sizing se pone aqui: hay paginas que no lo
+   declaran globalmente. */
+.mia-panel .mchip{box-sizing:border-box;display:inline-flex;align-items:center;gap:2px;font-size:14px;font-weight:600;color:var(--red,#C8102E);background:var(--red-light,#fce8eb);border:1.5px solid rgba(200,16,46,.25);border-radius:22px;padding:0 0 0 12px;height:44px}
+.mia-panel .mchip .mia-x{box-sizing:border-box;width:44px;height:44px;border:none;background:none;padding:0;margin:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .mia-panel .mchip .mia-x i{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(200,16,46,.12);color:#9e0c24;font-size:13px;font-weight:900;line-height:1;font-style:normal}
 .mia-panel .mia-note{font-size:15px;color:var(--mia-muted);max-width:62ch}
 .mia-panel .mcard{background:#fff;border:1px solid var(--gray-2,#e8eaed);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
@@ -311,7 +309,7 @@ const CSS = `
 .mia-panel .mia-btns{display:flex;flex-wrap:wrap;gap:8px}
 .mia-panel .mia-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border-radius:8px;border:1.5px solid var(--gray-2,#e8eaed);background:#fff;color:var(--gray-5,#2d3142);font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;letter-spacing:.2px;cursor:pointer;text-decoration:none;text-transform:uppercase}
 .mia-panel .mia-btn.mia-primary{background:var(--red,#C8102E);border-color:var(--red,#C8102E);color:#fff}
-.mia-panel .mia-list{display:flex;flex-direction:column;gap:6px}
+.mia-panel .mia-list{display:flex;flex-direction:column;gap:8px}
 .mia-panel .mia-vrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:8px 12px;border:1px solid var(--gray-2,#e8eaed);border-radius:10px;background:#fff}
 .mia-panel .mia-vrow .mia-vmain{flex:1 1 55%;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;min-height:44px;padding:0;border:none;background:none;text-align:left;font-family:inherit;font-size:15px;color:var(--gray-5,#2d3142);text-decoration:none;cursor:pointer}
 .mia-panel .mia-vrow .mia-n{font-family:Montserrat,sans-serif;font-weight:800;font-size:15px}
@@ -391,7 +389,6 @@ body.easy .mia-panel{font-size:17px}
 
 /* ════════════════ ESTADO DEL MÓDULO ════════════════ */
 let ROW=null, PANEL=null, BODY=null, INPUT=null, AABTN=null, ANCHOR=null;
-let ANCHOR_H=HEAD_FALLBACK;
 let ST={ q:'' };
 let USERS=null;         // mapa UserID → Name (solo como último recurso, para la ficha)
 let downShown=false;
@@ -413,79 +410,6 @@ function setEasy(on){
 }
 function easyOn(){ try{ return localStorage.getItem(K_EASY)==='1'; }catch(e){ return false; } }
 
-/* ════════════════ SHIM DE STICKY ════════════════
-   Los elementos pegados justo debajo de la cabecera bajan la altura de la
-   fila. Se hace con style inline: el CSS de las páginas no se toca.
-   El barrido completo (querySelectorAll('*')) solo se hace en las pasadas
-   con temporizador y en load. Al cambiar el tamaño de la ventana solo se
-   recalcula la lista ya conocida. */
-const SHIMMED=[];   // [{el, obs, inline}]
-function rowH(){ return ROW?Math.round(ROW.getBoundingClientRect().height):0; }
-
-function reapply(el){
-  const h=rowH(); if(!h)return;
-  let orig=parseFloat(el.dataset.miaTop);
-  if(!isFinite(orig))return;
-  const cur=el.style.top, curN=parseFloat(cur);
-  /* La página ha vuelto a medir su cabecera (tareas.html fixStickyTops pone
-     nav.offsetHeight; contactos.html pone el top de #filterBar por JS). Ese
-     número es la nueva base: se respeta y se le suma la fila. */
-  if(isFinite(curN)&&curN>=ANCHOR_H-6&&curN<orig+h){ orig=curN; el.dataset.miaTop=String(curN); }
-  const want=(orig+h)+'px';
-  /* Solo se escribe si el valor actual no es ya el esperado: sin esto el
-     MutationObserver se dispararía a sí mismo en bucle. */
-  if((!isFinite(curN)||curN<orig+h)&&cur!==want)el.style.top=want;
-}
-function watch(el){
-  if(typeof MutationObserver==='undefined')return null;
-  const obs=new MutationObserver(function(){ reapply(el); });
-  obs.observe(el,{attributes:true,attributeFilter:['style']});
-  return obs;
-}
-function scanSticky(){
-  if(!ROW)return;
-  const h=rowH(); if(!h)return;
-  let all;
-  try{ all=document.querySelectorAll('*'); }catch(e){ return; }
-  for(let i=0;i<all.length;i++){
-    const el=all[i];
-    if(el===ROW||el===PANEL||el===ANCHOR)continue;
-    if(el.hasAttribute('data-mia-shim'))continue;
-    let cs;
-    try{ cs=getComputedStyle(el); }catch(e){ continue; }
-    if(cs.position!=='sticky')continue;
-    const t=parseFloat(cs.top);
-    if(!isFinite(t))continue;
-    /* Solo lo que queda debajo de la cabecera. Un top:0 (la propia cabecera
-       de la página) no se toca nunca. */
-    if(t<ANCHOR_H-6)continue;
-    el.setAttribute('data-mia-shim','1');
-    el.dataset.miaTop=String(t);
-    const inline=el.style.top;
-    el.style.top=(t+h)+'px';
-    SHIMMED.push({el:el,obs:watch(el),inline:inline});
-  }
-}
-function reapplyAll(){
-  for(let i=0;i<SHIMMED.length;i++)reapply(SHIMMED[i].el);
-}
-function unshim(){
-  for(let i=0;i<SHIMMED.length;i++){
-    const s=SHIMMED[i];
-    if(s.obs)s.obs.disconnect();
-    s.el.style.top=s.inline;
-    s.el.removeAttribute('data-mia-shim');
-    try{ delete s.el.dataset.miaTop; }catch(e){}
-  }
-  SHIMMED.length=0;
-}
-function measureAnchor(){
-  if(!ANCHOR)return;
-  const h=Math.round(ANCHOR.getBoundingClientRect().height);
-  if(h>0)ANCHOR_H=h;
-  if(ROW)ROW.style.top=ANCHOR_H+'px';
-}
-
 /* ════════════════ MONTAJE ════════════════ */
 function anchor(){
   return document.querySelector('nav.top-nav')
@@ -497,13 +421,15 @@ function buildRow(){
   const row=E('div','mia-row'); row.id='miaRow';
   const inn=E('div','mia-in');
   const mk=E('span'); mk.innerHTML=MARK; inn.appendChild(mk.firstChild);
-  const field=E('div','mia-field');
+  /* <label for>: el campo entero reenvia el toque al input, asi que la zona
+     tactil es el rectangulo de 44 px que se ve, no solo el texto. */
+  const field=E('label','mia-field');
+  field.setAttribute('for','miaInput');
   const inp=document.createElement('input');
   inp.type='text'; inp.id='miaInput'; inp.autocomplete='off';
   inp.setAttribute('placeholder',T.ph); inp.setAttribute('aria-label',T.ph);
   inp.addEventListener('keydown',function(ev){
     if(ev.key==='Enter'){ ev.preventDefault(); onAsk(); }
-    else if(ev.key==='Escape'||ev.key==='Esc'){ closePanel(); }
   });
   field.appendChild(inp);
   /* El botón va FUERA del campo: los dos miden 44 px de alto y uno de 44
@@ -518,9 +444,6 @@ function buildRow(){
 function buildPanel(){
   const p=E('div','mia-panel'); p.id='miaPanel';
   p.setAttribute('aria-live','polite');
-  p.addEventListener('keydown',function(ev){
-    if(ev.key==='Escape'||ev.key==='Esc'){ ev.stopPropagation(); closePanel(); }
-  });
   const inn=E('div','mia-in'); inn.id='miaPanelIn';
   p.appendChild(inn); BODY=inn;
   return p;
@@ -532,24 +455,51 @@ function buildAa(){
   b.addEventListener('click',function(){ setEasy(!document.body.classList.contains('easy')); });
   return b;
 }
-/* El Aa entra en .nav-btns o .wp-nav-btns delante del botón de menú, con el
-   alto del botón de al lado para que la cabecera no cambie de altura. Si no
-   hay ninguno de los dos (index, permisos, la familia de villa.html) NO se
-   toca la cabecera: el Aa se pone al final de la fila de Mia, a 44 px. */
+/* El Aa entra en .nav-btns o .wp-nav-btns DELANTE del botón de menú, con el
+   alto del botón de al lado. Delante: así el botón de menú y todo lo que va
+   detrás no se mueven ni un píxel, solo crece el hueco por la izquierda.
+   Si no hay ninguno de los dos contenedores (index, permisos, la familia de
+   villa.html), o si al meterlo la cabecera crece —pantallas estrechas donde
+   la fila de botones dobla—, la cabecera no se toca: el Aa se va a la fila
+   de Mia, a 44 px. Se revisa en los dos sentidos al cambiar el tamaño. */
+let AASLOT='';                       // 'head' | 'row'
+function aaBtns(){
+  return document.querySelector('.nav-btns')||document.querySelector('.wp-nav-btns');
+}
+/* buscar-villa.html y XXbuscar-fichaXX.html llaman al suyo button.nav-menu */
+function aaMenu(btns){
+  return btns.querySelector('.nav-menu-btn,.wp-nav-menu,.nav-hamburger,button.nav-menu');
+}
+function aaToRow(){
+  if(!AABTN||!ROW)return false;
+  AABTN.classList.add('mia-aa-row');
+  AABTN.style.width=''; AABTN.style.height='';
+  const inn=ROW.querySelector('.mia-in');
+  (inn||ROW).appendChild(AABTN);
+  AASLOT='row';
+  return true;
+}
+function placeAaNow(){
+  if(!AABTN)return;
+  const btns=aaBtns();
+  if(!btns){ aaToRow(); return; }
+  if(AABTN.parentNode)AABTN.parentNode.removeChild(AABTN);
+  AABTN.classList.remove('mia-aa-row');
+  AABTN.style.width=''; AABTN.style.height='';
+  /* La altura de la cabecera ANTES de meter el botón, con el botón fuera. */
+  const before=ANCHOR?ANCHOR.offsetHeight:0;
+  const menu=aaMenu(btns);
+  const ref=menu||btns.querySelector('button,a');
+  const h=ref?Math.round(ref.getBoundingClientRect().height):0;
+  if(menu)btns.insertBefore(AABTN,menu); else btns.appendChild(AABTN);
+  if(h>=24&&h<=40){ AABTN.style.width=h+'px'; AABTN.style.height=h+'px'; }
+  const after=ANCHOR?ANCHOR.offsetHeight:0;
+  if(after>before&&aaToRow())return;   /* la cabecera crecía: mejor en la fila */
+  AASLOT='head';
+}
 function placeAa(){
   AABTN=buildAa();
-  const btns=document.querySelector('.nav-btns')||document.querySelector('.wp-nav-btns');
-  if(btns){
-    const menu=btns.querySelector('.nav-menu-btn,.wp-nav-menu,.nav-hamburger');
-    const ref=menu||btns.querySelector('button,a');
-    const h=ref?Math.round(ref.getBoundingClientRect().height):0;
-    if(menu)btns.insertBefore(AABTN,menu); else btns.appendChild(AABTN);
-    if(h>=24&&h<=40){ AABTN.style.width=h+'px'; AABTN.style.height=h+'px'; }
-    return;
-  }
-  AABTN.classList.add('mia-aa-row');
-  const inn=ROW.querySelector('.mia-in');
-  if(inn)inn.appendChild(AABTN); else ROW.appendChild(AABTN);
+  placeAaNow();
 }
 /* El boton Aa de la cabecera NO se quita: es texto mas legible, no busca
    nada, no depende del Worker, y quitarlo dejaria a quien lo tenga encendido
@@ -561,8 +511,8 @@ function hideRow(keepPanel){
   if(!keepPanel){
     if(PANEL&&PANEL.parentNode)PANEL.parentNode.removeChild(PANEL);
     PANEL=null; BODY=null;
+    unbindEsc();
   }
-  unshim();   /* devolver los sticky a su sitio y soltar los observadores */
 }
 
 function mount(){
@@ -579,26 +529,41 @@ function mount(){
   PANEL=buildPanel();
   a.parentNode.insertBefore(ROW,a.nextSibling);
   ROW.parentNode.insertBefore(PANEL,ROW.nextSibling);
+  bindEsc();
   placeAa();
 
   if(easyOn())setEasy(true);
 
-  measureAnchor();
-  scanSticky();
-  /* Las páginas colocan barras por JS después de cargar datos (villa.html
-     #linksBar, contactos #filterBar, tareas fixStickyTops a los 100 ms). */
-  setTimeout(function(){ measureAnchor(); scanSticky(); },150);
-  setTimeout(function(){ measureAnchor(); scanSticky(); },400);
-  setTimeout(function(){ measureAnchor(); scanSticky(); },1000);
-  window.addEventListener('load',function(){ measureAnchor(); scanSticky(); });
-  let rt=null;
+  /* Lo único que se mira al cambiar el tamaño es dónde cabe el botón Aa. */
+  let at=null;
   window.addEventListener('resize',function(){
-    clearTimeout(rt);
-    rt=setTimeout(function(){ measureAnchor(); reapplyAll(); },120);
+    clearTimeout(at);
+    at=setTimeout(function(){ if(AABTN&&(ROW||AASLOT==='head'))placeAaNow(); },150);
   });
 }
 
 /* ════════════════ PANEL ════════════════ */
+/* Escape cierra el panel desde cualquier parte de la pagina: un solo
+   escuchador en document, puesto una vez al montar y quitado al soltar el
+   panel. Va en fase de captura para que llegue aunque la pagina pare el
+   evento antes de que suba, y solo hace algo con el panel abierto: con el
+   panel cerrado no se toca el Escape de la pagina. */
+let ESCH=null;
+function bindEsc(){
+  if(ESCH)return;
+  ESCH=function(ev){
+    if(ev.key!=='Escape'&&ev.key!=='Esc')return;
+    if(!PANEL||!PANEL.classList.contains('show'))return;
+    ev.stopPropagation();
+    closePanel();
+  };
+  document.addEventListener('keydown',ESCH,true);
+}
+function unbindEsc(){
+  if(!ESCH)return;
+  document.removeEventListener('keydown',ESCH,true);
+  ESCH=null;
+}
 function openPanel(){ if(PANEL)PANEL.classList.add('show'); }
 function closePanel(){ if(PANEL)PANEL.classList.remove('show'); if(BODY)BODY.textContent=''; }
 function clearPanel(){ if(BODY)BODY.textContent=''; }
@@ -699,24 +664,42 @@ function mapPairs(m){
   return out;
 }
 /* Nombre → id. Solo claves que sean id numéricos: contactsMap guarda también
-   entradas nombre→nombre. */
-function nameToId(name){
+   entradas nombre→nombre.
+   Se compara por PRINCIPIO DE PALABRA, sin acentos y en minúsculas: cada
+   palabra de lo que ha dicho el usuario tiene que empezar alguna palabra del
+   nombre del mapa. "Ana" no es "Mariana". Si coinciden dos personas no se
+   resuelve ninguna: quien llama lo dice en "No pude aplicar". */
+function nameWords(v){ return String(v==null?'':v).split(/[^a-z0-9]+/).filter(Boolean); }
+function nameHit(name,qw){
+  const parts=nameWords(name);
+  for(let i=0;i<qw.length;i++){
+    let ok=false;
+    for(let j=0;j<parts.length&&!ok;j++)if(parts[j].indexOf(qw[i])===0)ok=true;
+    if(!ok)return false;
+  }
+  return true;
+}
+function findUser(name){
   const q=fold(name);
-  if(!q)return '';
-  if(isId(q))return q;
+  if(!q)return {id:'',many:false};
+  if(isId(q))return {id:q,many:false};
+  const qw=nameWords(q);
+  if(!qw.length)return {id:'',many:false};
   const maps=['allUsersMap','managersMap','contactsMap'];
-  let loose='';
+  const ids=[];
   for(let i=0;i<maps.length;i++){
     const pairs=mapPairs(globalMap(maps[i]));
     for(let j=0;j<pairs.length;j++){
       const k=pairs[j][0], v=fold(pairs[j][1]);
       if(!isId(k)||!v)continue;
-      if(v===q)return k;
-      if(!loose&&v.indexOf(q)>=0)loose=k;
+      if(!nameHit(v,qw))continue;
+      if(ids.indexOf(k)<0)ids.push(k);
     }
   }
-  return loose;
+  if(ids.length===1)return {id:ids[0],many:false};
+  return {id:'',many:ids.length>1};
 }
+function nameToId(name){ return findUser(name).id; }
 
 /* ════════════════ CASPIO (lectura con el token del usuario) ════════════════ */
 /* Toda respuesta pasa por aquí: los campos sensibles se borran nada más
@@ -787,10 +770,10 @@ function bookingsWhere(b){
   }
   const mgr=b.manager?nameToId(b.manager):'';
   if(mgr)parts.push(F.villaManager+"='"+sq(mgr)+"'");
-  const cln=b.cleaner?nameToId(b.cleaner):'';
-  if(cln)parts.push(F.cleaner+'='+sq(cln));
-  const fam=b.source?SOURCES[fold(b.source)]:null;
-  if(fam)parts.push(F.portalName+' IN ('+fam.map(function(s){ return "'"+sq(s)+"'"; }).join(',')+')');
+  /* Source y limpieza NO entran aquí. Entradas no tiene parámetro para
+     ninguno de los dos, así que el enlace no los lleva y el chip no los
+     dice; si la consulta sí los aplicara, la ficha enseñaría menos reservas
+     que el enlace del mismo panel. Los dos van a "No pude aplicar". */
   return parts.join(' AND ');
 }
 async function fetchBookings(b,limit,order){
@@ -835,12 +818,15 @@ function payTable(rows){
 function kvRow(kv,k,v){ kv.appendChild(E('span','mia-k',k)); kv.appendChild(E('span','mia-v',v)); }
 
 /* Enlace a Entradas para una reserva concreta: ventana de un día antes a un
-   día después, para que la reserva caiga dentro pase lo que pase. */
+   día después, para que la reserva caiga dentro pase lo que pase.
+   Primero el código y solo si no hay, el nombre: el WHERE de inq de
+   entradas-equipo mete el texto sin escapar, así que un apóstrofo en el
+   nombre le rompe la consulta. El código es de Hostaway y no lo lleva. */
 function entradasParamsFor(r){
   const code=String(g(r,'confirmCode')||'').trim();
   const guest=String(g(r,'guestName')||'').trim();
   const p={ desde:addDays(dOnly(g(r,'checkIn')),-1), hasta:addDays(dOnly(g(r,'checkOut')),1) };
-  if(guest)p.inq=guest; else if(code)p.cod=code;
+  if(code)p.cod=code; else if(guest)p.inq=guest;
   return p;
 }
 
@@ -958,8 +944,9 @@ function bookingsPlan(b){
     if(isDate(b.check_in_to)){ p.hasta=b.check_in_to; chips.check_in_to=b.check_in_to; }
   }
   if(b.manager){
-    const id=nameToId(b.manager);
-    if(id){ p.mgr=id; chips.manager=b.manager; } else no.push('manager: '+b.manager);
+    const u=findUser(b.manager);
+    if(u.id){ p.mgr=u.id; chips.manager=b.manager; }
+    else no.push('manager: '+b.manager+(u.many?' (varios)':''));
   }
   if(b.cleaner)no.push('limpieza: '+b.cleaner);
   if(b.source)no.push('source: '+b.source);
@@ -1001,12 +988,18 @@ async function doBookingsCard(b){
   if(rows===null){ say(note(T.noBooking)); return; }
 
   if(!rows.length){
+    /* Sin resultados no se deja al usuario en un callejón: el mismo enlace
+       de Entradas que llevaría el panel de lista, con lo que sí se pudo
+       aplicar (código o inquilino, villa y fechas). */
     const box=E('div');
     const chips=chipsBlock(plan.chips,b,function(){ doBookingsCard(b); });
     if(chips)box.appendChild(chips);
     box.appendChild(note(T.noBooking));
     const na=noApplyBlock(plan.no);
     if(na)box.appendChild(na);
+    const btns=E('div','mia-btns');
+    btns.appendChild(btn(T.openEnt,link('entradas',plan.params),true));
+    box.appendChild(btns);
     say(box);
     return;
   }
@@ -1042,6 +1035,13 @@ async function doBookingsStay(b){
   }
   const na=noApplyBlock(plan.no);
   if(na)box.appendChild(na);
+  if(!rows.length){
+    /* Ninguna reserva: queda la ventana de ±30 días, que es lo único que
+       Entradas sabe entender de una pregunta de estancia. */
+    const btns=E('div','mia-btns');
+    btns.appendChild(btn(T.openEnt,link('entradas',plan.params),true));
+    box.appendChild(btns);
+  }
   say(box);
 }
 async function doBookings(b,card){
@@ -1093,8 +1093,9 @@ function tasksPlan(t){
     else no.push('tipo: '+t.type);       /* tt es un id de catálogo: no se inventa */
   }
   if(t.user){
-    const id=nameToId(t.user);
-    if(id){ p.u=id; chips.user=t.user; } else no.push('usuario: '+t.user);
+    const u=findUser(t.user);
+    if(u.id){ p.u=u.id; chips.user=t.user; }
+    else no.push('usuario: '+t.user+(u.many?' (varios)':''));
   }
   if(isDate(t.from)){ p.fd=t.from; chips.from=t.from; }
   if(isDate(t.to)){ p.fh=t.to; chips.to=t.to; }
@@ -1127,23 +1128,23 @@ function doTasks(t){
 }
 
 /* ════════════════ OCUPACIÓN Y VILLAS ════════════════ */
+/* Ocupación no admite ningún filtro por enlace: el enlace va sin parámetros,
+   así que NO hay chips que enseñar —un chip diría un filtro que no existe—.
+   Lo que se entiende se dice como instrucción ("abre la página y pon…") y lo
+   que no (el texto suelto de other) va a "No pude aplicar". */
 function doAvailability(a){
-  const render=function(){
-    const chips=chipsBlock(a,a,render);
-    const box=E('div');
-    if(chips)box.appendChild(chips);
-    const bits=[];
-    if(isDate(a.from)||isDate(a.to))bits.push(fmtDate(a.from)+' → '+fmtDate(a.to));
-    if(a.pax)bits.push(a.pax+' plazas');
-    if(a.pool)bits.push('piscina');
-    (Array.isArray(a.other)?a.other:[]).forEach(function(o){ if(o)bits.push(String(o)); });
-    box.appendChild(note(T.ocuNote+' '+(bits.join(', ')||'—')));
-    const btns=E('div','mia-btns');
-    btns.appendChild(btn(T.openOcu,link('ocupacion',{}),true));
-    box.appendChild(btns);
-    say(box);
-  };
-  render();
+  const box=E('div');
+  const bits=[];
+  if(isDate(a.from)||isDate(a.to))bits.push(fmtDate(a.from)+' → '+fmtDate(a.to));
+  if(a.pax)bits.push(a.pax+' plazas');
+  if(a.pool)bits.push('piscina');
+  box.appendChild(note(T.ocuNote+' '+(bits.join(', ')||'—')));
+  const na=noApplyBlock((Array.isArray(a.other)?a.other:[]).map(function(o){ return String(o==null?'':o); }));
+  if(na)box.appendChild(na);
+  const btns=E('div','mia-btns');
+  btns.appendChild(btn(T.openOcu,link('ocupacion',{}),true));
+  box.appendChild(btns);
+  say(box);
 }
 async function doVilla(v){
   const name=String((v&&v.name)||'').trim();
@@ -1194,7 +1195,7 @@ function doUnknown(data){
 /* ════════════════ PREGUNTA ════════════════ */
 /* Worker caído o apagado: un aviso y Mia se retira hasta la próxima sesión.
    El panel con el aviso se queda hasta que el usuario lo cierre; la fila
-   desaparece y los sticky vuelven a su sitio. */
+   desaparece y la página queda como si Mia no hubiera estado. */
 function fail(){
   if(!downShown){ downShown=true; say(note(T.down)); }
   setMiaOff();
