@@ -1487,12 +1487,12 @@ function doAvailability(a,extraNo){
   box.appendChild(btns);
   say(box);
 }
-async function doVilla(v){
+async function doVilla(v,extraNo){
   const name=String((v&&v.name)||'').trim();
-  if(!name){ say(note(T.noVilla)); return; }
+  if(!name){ sayWithNo(note(T.noVilla),extraNo); return; }
   let rows;
   try{ rows=await proxyGet('action=data&table=TaVillas&limit=500'); }
-  catch(e){ say(note('No he podido leer las villas.')); return; }
+  catch(e){ sayWithNo(note('No he podido leer las villas.'),extraNo); return; }
   const q=fold(name);
   const hits=rows.filter(function(r){
     const a=fold(r.Name_villa_para_inquilinos);
@@ -1500,7 +1500,7 @@ async function doVilla(v){
     return (a&&a.indexOf(q)>=0)||(b&&b.indexOf(q)>=0);
   }).slice(0,10);
 
-  if(!hits.length){ say(note(T.noVilla)); return; }
+  if(!hits.length){ sayWithNo(note(T.noVilla),extraNo); return; }
   const box=E('div');
   if(hits.length===1){
     const id=String(hits[0].villaid||'');
@@ -1532,6 +1532,17 @@ async function doVilla(v){
     });
     box.appendChild(list);
   }
+  const naV=noApplyBlock(extraNo);
+  if(naV)box.appendChild(naV);
+  say(box);
+}
+/* Una nota mas lo que el Worker no pudo aplicar, en un solo bloque. */
+function sayWithNo(el,extraNo){
+  const na=noApplyBlock(extraNo);
+  if(!na){ say(el); return; }
+  const box=E('div');
+  box.appendChild(el);
+  box.appendChild(na);
   say(box);
 }
 function doUnknown(data){
@@ -1616,7 +1627,7 @@ async function onAsk(){
     }
     else if(target==='notes')await doNotes(Object.assign({},data.notes||{}),um);
     else if(target==='availability')doAvailability(Object.assign({},data.availability||{}),um);
-    else if(target==='villa')await doVilla(data.villa||{});
+    else if(target==='villa')await doVilla(data.villa||{},um);
     else doUnknown(data);
   }catch(e){ dbg('render ko'); say(note(T.unknown)); }
 }
