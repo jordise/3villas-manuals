@@ -131,7 +131,7 @@ const T = {
   notes     :'Notas',
   openVilla :'Ver villa',
   openOcu   :'Abrir Ocupación',
-  noApply   :'No pude aplicar:',
+  noApply   :'No pude aplicar:',   /* la lista se cierra con un punto */
   down      :'Mia no está disponible ahora. Los filtros de siempre funcionan igual.',
   expired   :'Tu sesión ha caducado. Vuelve a entrar.',
   busyWait  :'Mia está ocupada. Espera un momento y vuelve a preguntar.',
@@ -256,7 +256,7 @@ function own(map,key){
    u= vacío, y entradas-equipo deja de aplicar su ventana de fechas guardada
    con desde= y hasta= vacíos. Sin la marca, un valor vacío se caía de la URL
    y la página volvía a poner su preferencia encima de lo que pidió Mia. */
-const EMPTY='\u0000mia-vacio';
+const EMPTY=typeof Symbol==='function'?Symbol('mia-vacio'):{mia:'vacio'};
 function link(page,params){
   const base=own(PAGES,page); if(!base)return null;
   const qs=Object.keys(params||{})
@@ -372,13 +372,21 @@ const CSS = `
 .mia-panel .mia-payhint{display:none;font-size:14px;color:var(--mia-muted);padding-top:4px}
 .mia-panel .mia-payw.mia-scrolls+.mia-payhint{display:block}
 /* La fecha repetida bajo el concepto solo se ve en pantallas muy estrechas. */
-.mia-panel .mia-pay td.mia-c .mia-dsub{display:none}
+.mia-panel .mia-pay td.mia-c .mia-dsub{display:none;font-size:16px;color:var(--mia-muted)}
 @media (max-width:359px){
   /* Sin sitio para tres columnas: la fecha se va debajo del concepto y quedan
      Concepto e Importe, que es lo que hay que leer. */
   .mia-panel .mia-pay{min-width:0}
   .mia-panel .mia-pay th.mia-d,.mia-panel .mia-pay td.mia-d{display:none}
-  .mia-panel .mia-pay td.mia-c .mia-dsub{display:block;font-size:14px;color:var(--mia-muted)}
+  .mia-panel .mia-pay td.mia-c .mia-dsub{display:block}
+}
+/* Con Aa el texto es mayor, así que el corte llega antes: a 360-389 px las tres
+   columnas ya no caben y la fecha se va debajo del concepto igual que a 320. */
+@media (max-width:389px){
+  body.easy .mia-panel .mia-pay{min-width:0}
+  body.easy .mia-panel .mia-pay th.mia-d,
+  body.easy .mia-panel .mia-pay td.mia-d{display:none}
+  body.easy .mia-panel .mia-pay td.mia-c .mia-dsub{display:block}
 }
 .mia-panel .mia-pay{width:100%;min-width:min(100%,260px);border-collapse:collapse;font-size:16px;font-variant-numeric:tabular-nums}
 .mia-panel .mia-pay th{font-size:14px;font-weight:600;color:var(--mia-muted);text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--gray-2,#e8eaed)}
@@ -501,8 +509,10 @@ body.easy .mia-panel .mia-sec{font-size:17px}
 body.easy .mia-panel .mia-kv .mia-k,
 body.easy .mia-panel .mchips .mia-lb,
 body.easy .mia-panel .mia-pay th,
-body.easy .mia-panel .mia-payhint,
-body.easy .mia-panel .mia-pay td.mia-c .mia-dsub{font-size:16px}
+body.easy .mia-panel .mia-payhint{font-size:16px}
+/* La fecha de debajo del concepto mide lo mismo que la columna a la que
+   sustituye: 16 sin Aa, 18 con Aa. */
+body.easy .mia-panel .mia-pay td.mia-c .mia-dsub{font-size:18px}
 body.easy .mia-panel .mia-foot{font-size:15px}
 body.easy .mia-row .mia-go{font-size:15px}
 body.easy .mia-panel .mia-btn,
@@ -686,6 +696,13 @@ function closePanel(){
     PANEL=null; BODY=null;
     const st=document.getElementById('miaStyles');
     if(st&&st.parentNode)st.parentNode.removeChild(st);
+    /* La hoja de la fuente del Aa también se va: sin estilos de Mia ya no la
+       usa nadie. Si Mia vuelve a montarse con el Aa encendido, loadEasyFont la
+       pide otra vez, y como comprueba por id sigue habiendo una sola por
+       carga de página. */
+    const ff=document.getElementById('miaEasyFont');
+    if(ff&&ff.parentNode)ff.parentNode.removeChild(ff);
+    fontLoaded=false;
     unbindEsc();
   }
 }
@@ -705,6 +722,9 @@ function panelHead(){
   return top;
 }
 function say(node){
+  /* El panel puede haberse ido entre la pregunta y la respuesta (Worker caído
+     y el usuario cierra el aviso). Entonces no hay dónde escribir: se calla. */
+  if(!BODY||!PANEL)return;
   clearPanel();
   BODY.appendChild(panelHead());
   if(node)BODY.appendChild(node);
@@ -750,9 +770,10 @@ function chipsBlock(chips,filters,onChange){
   return wrap;
 }
 function noApplyBlock(list){
-  const l=(list||[]).filter(Boolean);
+  const l=(list||[]).filter(Boolean).map(String);
   if(!l.length)return null;
-  return note(T.noApply+' '+l.map(String).join(', '));
+  const txt=l.join(', ');
+  return note(T.noApply+' '+txt+(/[.!?]$/.test(txt)?'':'.'));
 }
 function btn(label,href,primary){
   const a=document.createElement('a');
@@ -857,6 +878,14 @@ function findUser(name){
   return {id:'',many:(exact.length||ids.length)>1};
 }
 function nameToId(name){ return findUser(name).id; }
+/* id → nombre, del mismo mapa que ya tiene la página. */
+function userName(id){
+  const k=String(id==null?'':id).trim();
+  if(!k)return '';
+  const pairs=userPairs();
+  for(let i=0;i<pairs.length;i++)if(String(pairs[i][0])===k)return pairs[i][1];
+  return '';
+}
 
 /* ════════════════ CASPIO (lectura con el token del usuario) ════════════════ */
 /* Toda respuesta pasa por aquí: los campos sensibles se borran nada más
@@ -959,7 +988,11 @@ function bookingsWhere(b){
     parts.push('('+c+')');
   }
   if(isDate(b.stay_on)){
-    parts.push('('+F.checkIn+"<='"+b.stay_on+"T23:59:59' AND "+F.checkOut+">='"+b.stay_on+"T00:00:00')");
+    /* "quién está el 14" es la estancia entera; pero si la pregunta dice
+       salida o entrada, manda el tipo: ese día se va o llega, no está. */
+    if(b.tipo==='salida')parts.push('('+F.checkOut+">='"+b.stay_on+"T00:00:00' AND "+F.checkOut+"<='"+b.stay_on+"T23:59:59')");
+    else if(b.tipo==='entrada')parts.push('('+F.checkIn+">='"+b.stay_on+"T00:00:00' AND "+F.checkIn+"<='"+b.stay_on+"T23:59:59')");
+    else parts.push('('+F.checkIn+"<='"+b.stay_on+"T23:59:59' AND "+F.checkOut+">='"+b.stay_on+"T00:00:00')");
   }else{
     /* Misma condición que buildWhere() de entradas-equipo (línea 1348): la
        ventana vale para la ENTRADA o para la SALIDA. Con solo el check-in, una
@@ -1153,6 +1186,10 @@ async function renderState(r,ctx){
 function moreBlock(box,plan,b){
   box.appendChild(note(T.more));
   if(b&&b.manager&&findUser(b.manager).id)box.appendChild(note(T.noMgrLink));
+  /* Si lo único que llevaría el enlace son los parámetros vacíos, no lleva
+     nada: abriría Entradas sin filtro y eso no es "ver el resto". */
+  const real=Object.keys(plan.params||{}).filter(function(k){ return plan.params[k]!==EMPTY; });
+  if(!real.length)return;
   const btns=E('div','mia-btns');
   btns.appendChild(btn(T.openEnt,link('entradas',plan.params)));
   box.appendChild(btns);
@@ -1200,7 +1237,10 @@ function bookingsPlan(b){
      se queda porque la ficha y la lista sí filtran por manager. */
   if(b.manager){
     const u=findUser(b.manager);
-    if(u.id)chips.manager=b.manager;
+    /* El chip dice el nombre del mapa, igual que renderChips() de la página
+       (allUsersMap.get(id)); si el mapa no tiene nombre, lo que escribió quien
+       preguntó. */
+    if(u.id)chips.manager=userName(u.id)||b.manager;
     else no.push('manager: '+b.manager+(u.many?' (varios)':''));
   }
   if(b.cleaner)no.push('limpieza: '+b.cleaner);
@@ -1213,14 +1253,14 @@ function bookingsPlan(b){
   if(p.desde===undefined&&p.hasta===undefined){ p.desde=EMPTY; p.hasta=EMPTY; }
   return {params:p,chips:chips,no:no};
 }
-function doBookingsLink(b,extraNo){
+function doBookingsLink(b,extraNo){   /* extraNo = data.unmatched */
   const render=function(){
-    const plan=bookingsPlan(b);
+    const plan=bookingsPlan(b); plan.no=plan.no.concat(extraNo||[]);
     const box=E('div');
     const chips=chipsBlock(plan.chips,b,render);
     if(chips)box.appendChild(chips);
     box.appendChild(note(T.usedHere));
-    const na=noApplyBlock(plan.no.concat(extraNo||[]));
+    const na=noApplyBlock(plan.no);
     if(na)box.appendChild(na);
     const href=link('entradas',plan.params);
     const btns=E('div','mia-btns');
@@ -1236,8 +1276,8 @@ function doBookingsLink(b,extraNo){
   };
   render();
 }
-async function doBookingsCard(b){
-  const plan=bookingsPlan(b);
+async function doBookingsCard(b,extraNo){
+  const plan=bookingsPlan(b); plan.no=plan.no.concat(extraNo||[]);
   /* Sin código: las más recientes primero, para que las cinco que se
      enseñan sean las útiles. */
   const order=(b.code&&String(b.code).trim())?'':F.checkIn+' DESC';
@@ -1251,7 +1291,7 @@ async function doBookingsCard(b){
        de Entradas que llevaría el panel de lista, con lo que sí se pudo
        aplicar (código o inquilino, villa y fechas). */
     const box=E('div');
-    const chips=chipsBlock(plan.chips,b,function(){ doBookingsCard(b); });
+    const chips=chipsBlock(plan.chips,b,function(){ doBookingsCard(b,extraNo); });
     if(chips)box.appendChild(chips);
     box.appendChild(note(T.noBooking));
     const na=noApplyBlock(plan.no);
@@ -1263,12 +1303,12 @@ async function doBookingsCard(b){
     return;
   }
   if(rows.length===1){
-    await renderState(rows[0],{chips:plan.chips,no:plan.no,filters:b,onChange:function(){ doBookingsCard(b); }});
+    await renderState(rows[0],{chips:plan.chips,no:plan.no,filters:b,onChange:function(){ doBookingsCard(b,extraNo); }});
     return;
   }
 
   const box=E('div');
-  const chips=chipsBlock(plan.chips,b,function(){ doBookingsCard(b); });
+  const chips=chipsBlock(plan.chips,b,function(){ doBookingsCard(b,extraNo); });
   if(chips)box.appendChild(chips);
   box.appendChild(note(T.many));
   box.appendChild(resultList(rows,T.openEnt,function(r){ return link('entradas',entradasParamsFor(r)); }));
@@ -1279,19 +1319,19 @@ async function doBookingsCard(b){
 }
 /* "quién está el 14" — nunca un enlace de un día. Se lista lo que devuelve
    la consulta de estancia; si la consulta falla, ventana de ±30 días. */
-async function doBookingsStay(b){
-  const plan=bookingsPlan(b);
+async function doBookingsStay(b,extraNo){
+  const plan=bookingsPlan(b); plan.no=plan.no.concat(extraNo||[]);
   let rows;
   try{ rows=await fetchBookings(b,MAX_ROWS,F.checkIn+' DESC'); }
   catch(e){ doBookingsLink(b); return; }
   if(rows===null){ doBookingsLink(b); return; }
   if(rows.length===1){
-    await renderState(rows[0],{chips:plan.chips,no:plan.no,filters:b,onChange:function(){ doBookings(b); }});
+    await renderState(rows[0],{chips:plan.chips,no:plan.no,filters:b,onChange:function(){ doBookings(b,false,extraNo); }});
     return;
   }
 
   const box=E('div');
-  const chips=chipsBlock(plan.chips,b,function(){ doBookings(b); });
+  const chips=chipsBlock(plan.chips,b,function(){ doBookings(b,false,extraNo); });
   if(chips)box.appendChild(chips);
   box.appendChild(note(rows.length?T.many:T.noBooking));
   if(rows.length){
@@ -1309,27 +1349,27 @@ async function doBookingsStay(b){
   }
   say(box);
 }
-async function doBookings(b,card){
-  if(isDate(b.stay_on)){ await doBookingsStay(b); return; }
+async function doBookings(b,card,extraNo){
+  if(isDate(b.stay_on)){ await doBookingsStay(b,extraNo); return; }
   /* Con nombre, con código o con manager se consulta y se enseña la ficha o la
      lista: son las tres preguntas cuya respuesta el enlace no puede dar bien
      (el manager lo pisa la preferencia de la página, y sin fechas la ventana
      guardada esconde la reserva). */
   const named=(b.code&&String(b.code).trim())||(b.guest&&String(b.guest).trim());
   const mgr=b.manager?findUser(b.manager).id:'';
-  if(card||named||mgr){ await doBookingsCard(b); return; }
-  doBookingsLink(b);
+  if(card||named||mgr){ await doBookingsCard(b,extraNo); return; }
+  doBookingsLink(b,extraNo);
 }
 
 /* ════════════════ NOTAS ════════════════ */
-async function doNotes(n){
+async function doNotes(n,extraNo){
   const code=String((n&&n.code)||'').trim();
   const guest=String((n&&n.guest)||'').trim();
   /* Un chip por cada condición aplicada de verdad, igual que en reservas. */
   const chips={};
   if(code)chips.code=code;
   if(guest)chips.guest=guest;
-  const again=function(){ doNotes(n); };
+  const again=function(){ doNotes(n,extraNo); };
   const head=function(box){
     const c=chipsBlock(chips,n,again);
     if(c)box.appendChild(c);
@@ -1337,6 +1377,8 @@ async function doNotes(n){
   if(code){
     const box=E('div');
     head(box);
+    const naC=noApplyBlock(extraNo);
+    if(naC)box.appendChild(naC);
     const btns=E('div','mia-btns');
     btns.appendChild(btn(T.openNotes,link('notas',{TaBookings2021_FS_confirmation_code:code}),true));
     box.appendChild(btns);
@@ -1353,6 +1395,8 @@ async function doNotes(n){
     /* Sin reservas no hay notas que abrir: queda el enlace a Entradas con el
        nombre, que es lo único que se pudo aplicar. */
     box.appendChild(note(T.noBooking));
+    const naZ=noApplyBlock(extraNo);
+    if(naZ)box.appendChild(naZ);
     const btns=E('div','mia-btns');
     btns.appendChild(btn(T.openEnt,link('entradas',bookingsPlan({guest:guest}).params),true));
     box.appendChild(btns);
@@ -1365,6 +1409,8 @@ async function doNotes(n){
     return c?link('notas',{TaBookings2021_FS_confirmation_code:c}):'';
   }));
   if(rows.length>=MAX_ROWS)moreBlock(box,bookingsPlan({guest:guest}),{guest:guest});
+  const naL=noApplyBlock(extraNo);
+  if(naL)box.appendChild(naL);
   say(box);
 }
 
@@ -1398,9 +1444,9 @@ function tasksPlan(t){
   if(t.important===true){ p.imp='1'; chips.important=true; }
   return {params:p,chips:chips,no:no};
 }
-function doTasks(t){
+function doTasks(t,extraNo){
   const render=function(){
-    const plan=tasksPlan(t);
+    const plan=tasksPlan(t); plan.no=plan.no.concat(extraNo||[]);
     const box=E('div');
     const chips=chipsBlock(plan.chips,t,render);
     if(chips)box.appendChild(chips);
@@ -1427,14 +1473,14 @@ function doTasks(t){
    así que NO hay chips que enseñar —un chip diría un filtro que no existe—.
    Lo que se entiende se dice como instrucción ("abre la página y pon…") y lo
    que no (el texto suelto de other) va a "No pude aplicar". */
-function doAvailability(a){
+function doAvailability(a,extraNo){
   const box=E('div');
   const bits=[];
   if(isDate(a.from)||isDate(a.to))bits.push(fmtDate(a.from)+' → '+fmtDate(a.to));
   if(a.pax)bits.push(a.pax+' plazas');
   if(a.pool)bits.push('piscina');
   box.appendChild(note(T.ocuNote+' '+(bits.join(', ')||'—')));
-  const na=noApplyBlock((Array.isArray(a.other)?a.other:[]).map(function(o){ return String(o==null?'':o); }));
+  const na=noApplyBlock((Array.isArray(a.other)?a.other:[]).map(function(o){ return String(o==null?'':o); }).concat(extraNo||[]));
   if(na)box.appendChild(na);
   const btns=E('div','mia-btns');
   btns.appendChild(btn(T.openOcu,link('ocupacion',{}),true));
@@ -1468,11 +1514,20 @@ async function doVilla(v){
     hits.forEach(function(r){
       const id=String(r.villaid||'');
       const row=E('div','mia-vrow');
-      const a=document.createElement('a');
-      a.className='mia-vmain';
-      a.setAttribute('href',link('villa',{villa_id:id})||'#');
-      a.appendChild(E('span','mia-n',String(r.Name_villa_para_inquilinos||r.Name||'—')));
-      row.appendChild(a);
+      const nm=String(r.Name_villa_para_inquilinos||r.Name||'—');
+      /* Mismo criterio que con una sola villa: sin id numérico no hay enlace,
+         se enseña el nombre y ya está. */
+      if(isId(id)){
+        const a=document.createElement('a');
+        a.className='mia-vmain';
+        a.setAttribute('href',link('villa',{villa_id:id}));
+        a.appendChild(E('span','mia-n',nm));
+        row.appendChild(a);
+      }else{
+        const d=E('div','mia-vmain');
+        d.appendChild(E('span','mia-n',nm));
+        row.appendChild(d);
+      }
       list.appendChild(row);
     });
     box.appendChild(list);
@@ -1544,20 +1599,23 @@ async function onAsk(){
   if(data.enabled===false){ fail(true); return; }   /* apagada a propósito: hasta la próxima sesión */
   if(data.error==='modelo'||data.error==='ocupado'){ say(note(T.busy)); return; }
   const target=String(data.target||'unknown');
+  /* Lo que el Worker no supo mapear se dice SIEMPRE, en el camino que sea:
+     antes solo salía en la respuesta "no he entendido". */
+  const um=(Array.isArray(data.unmatched)?data.unmatched:[]).map(function(x){ return String(x==null?'':x).trim(); }).filter(Boolean);
   try{
     if(target==='bookings'){
       const b=Object.assign({},data.bookings||{});
       await ensureUsers(b.manager);
       const card=data.answer_card==='state'&&((b.code&&String(b.code).trim())||(b.guest&&String(b.guest).trim()));
-      await doBookings(b,card);
+      await doBookings(b,card,um);
     }
     else if(target==='tasks'){
       const t=Object.assign({},data.tasks||{});
       await ensureUsers(t.user);
-      doTasks(t);
+      doTasks(t,um);
     }
-    else if(target==='notes')await doNotes(Object.assign({},data.notes||{}));
-    else if(target==='availability')doAvailability(Object.assign({},data.availability||{}));
+    else if(target==='notes')await doNotes(Object.assign({},data.notes||{}),um);
+    else if(target==='availability')doAvailability(Object.assign({},data.availability||{}),um);
     else if(target==='villa')await doVilla(data.villa||{});
     else doUnknown(data);
   }catch(e){ dbg('render ko'); say(note(T.unknown)); }
@@ -1565,7 +1623,7 @@ async function onAsk(){
 
 /* ════════════════ ARRANQUE ════════════════ */
 function start(){ try{ mount(); }catch(e){ dbg('mount ko'); } }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
 else start();
 
 })();
