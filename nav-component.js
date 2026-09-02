@@ -386,3 +386,6 @@
   }
 
 })();
+
+/* Mia v1 (2026-09-02): carga mia-intranet.js si hay sesion. Quitar esta linea = desactivar Mia. */
+try{if(typeof Auth!=='undefined'&&Auth.token&&Auth.token()){var s=document.createElement('script');s.src='mia-intranet.js';s.defer=true;document.head.appendChild(s);}}catch(e){}
