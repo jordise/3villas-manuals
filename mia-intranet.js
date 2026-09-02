@@ -137,16 +137,19 @@ const T = {
   busyWait  :'Mia está ocupada. Espera un momento y vuelve a preguntar.',
   busy      :'Mia está ocupada. Prueba otra vez en un momento.',
   badQ      :'No he entendido la pregunta.',
-  noBooking :'No encuentro esa reserva',
-  noVilla   :'No encuentro esa villa',
+  noBooking :'No encuentro esa reserva.',
+  noVilla   :'No encuentro esa villa.',
   many      :'He encontrado varias reservas. Elige una:',
-  more      :'Hay más resultados. Abre Entradas para verlos todos.',
+  more      :'Hay más resultados. Ábrelos todos en Entradas.',
+  noMgrLink :'El enlace de Entradas no filtra por manager: ese filtro solo lo aplico yo aquí.',
   unknown   :'No he entendido. Prueba con un nombre, un código de reserva, una villa o unas fechas.',
   ocuNote   :'Ocupación no admite filtros por enlace todavía. Abre la página y pon:',
   loading   :'Un momento…',
   close     :'Cerrar',
+  panelLabel:'Respuesta de Mia',
+  payScroll :'Arrastra la tabla para ver el resto.',
   rmFilter  :'Quitar filtro',
-  guest     :'Huésped', dates:'Fechas', vm:'Villa manager', state:'Estado',
+  guest     :'Inquilino', dates:'Fechas', vm:'Villa Manager', state:'Estado',
   payments  :'Pagos', concept:'Concepto', date:'Fecha', amount:'Importe', total:'Total',
   nights    :'noches'
 };
@@ -240,13 +243,28 @@ function isOk(val){
   return ['0','x','no','false','pendiente','n/a','na','null','none','–','-'].indexOf(s)<0;
 }
 function g(r,key){ const v=r[F[key]]; return (v===undefined||v===null)?'':v; }
+/* Todo lo que viene del Worker se busca así: sin esto, type:"constructor" o
+   "__proto__" devolvían una función del prototipo y se colaban en la URL. */
+function own(map,key){
+  const k=String(key==null?'':key);
+  return Object.prototype.hasOwnProperty.call(map,k)?map[k]:undefined;
+}
 
 /* Enlaces: solo páginas de la lista blanca y parámetros codificados */
+/* Marca para "este parámetro va en la URL, pero vacío". Las páginas miran
+   p.has(clave), no su valor: tareas.html borra el usuario preseleccionado con
+   u= vacío, y entradas-equipo deja de aplicar su ventana de fechas guardada
+   con desde= y hasta= vacíos. Sin la marca, un valor vacío se caía de la URL
+   y la página volvía a poner su preferencia encima de lo que pidió Mia. */
+const EMPTY='\u0000mia-vacio';
 function link(page,params){
-  const base=PAGES[page]; if(!base)return null;
+  const base=own(PAGES,page); if(!base)return null;
   const qs=Object.keys(params||{})
-    .filter(function(k){ const v=params[k]; return v!==''&&v!=null; })
-    .map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]); })
+    .filter(function(k){ const v=params[k]; return v===EMPTY||(v!==''&&v!=null); })
+    .map(function(k){
+      const v=params[k];
+      return encodeURIComponent(k)+'='+(v===EMPTY?'':encodeURIComponent(v));
+    })
     .join('&');
   return qs?base+'?'+qs:base;
 }
@@ -306,6 +324,7 @@ const CSS = `
    ocupar sitio. */
 /* Aa: siempre dentro de la fila, 44x44 de verdad (no una zona táctil
    simulada), a 8 px de lo de al lado como el resto de la fila. */
+@media (prefers-reduced-motion:reduce){.mia-row *,.mia-panel *{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 .mia-aa{box-sizing:border-box;font-family:'Atkinson Hyperlegible','Open Sans',sans-serif;background:var(--gray-1,#f4f5f7);border:1.5px solid var(--gray-2,#e8eaed);color:#5c6273;width:44px;height:44px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:background .15s,color .15s}
 .mia-aa.on{background:var(--gray-5,#2d3142);border-color:var(--gray-5,#2d3142);color:#fff}
 
@@ -314,7 +333,7 @@ const CSS = `
 .mia-panel .mia-in{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
 .mia-panel .mia-top{display:flex;align-items:center;gap:8px}
 .mia-panel .mia-top .mia-mk{width:30px;height:30px;flex-shrink:0}
-.mia-panel .mia-top .mia-q{flex:1;min-width:0;overflow-wrap:anywhere;word-break:break-word;font-size:15px;color:var(--mia-muted)}
+.mia-panel .mia-top .mia-q{flex:1;min-width:0;overflow-wrap:anywhere;word-break:break-word;font-size:16px;color:var(--mia-muted)}
 .mia-panel .mia-top .mia-q b{color:var(--gray-5,#2d3142);font-weight:600}
 .mia-panel .mia-close{width:44px;height:44px;border:1.5px solid var(--gray-2,#e8eaed);border-radius:50%;background:#fff;color:var(--mia-muted);font-size:16px;cursor:pointer;flex-shrink:0;padding:0}
 .mia-panel .mchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -323,18 +342,21 @@ const CSS = `
    tactil cumple el minimo sin que la fila de chips crezca. El disco visible
    sigue siendo de 26 px. box-sizing se pone aqui: hay paginas que no lo
    declaran globalmente. */
-.mia-panel .mchip{box-sizing:border-box;display:inline-flex;align-items:center;gap:2px;font-size:14px;font-weight:600;color:var(--red,#C8102E);background:var(--red-light,#fce8eb);border:1.5px solid rgba(200,16,46,.25);border-radius:22px;padding:0 0 0 12px;height:44px}
-.mia-panel .mchip .mia-x{box-sizing:border-box;width:44px;height:44px;border:none;background:none;padding:0;margin:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.mia-panel .mchip{box-sizing:border-box;display:inline-flex;align-items:center;gap:2px;font-size:16px;font-weight:600;color:var(--red,#C8102E);background:var(--red-light,#fce8eb);border:1.5px solid rgba(200,16,46,.25);border-radius:22px;padding:0 0 0 12px;min-width:0;max-width:100%;height:auto;min-height:44px;overflow-wrap:anywhere;word-break:break-word}
+/* El margen negativo se come el borde del chip: una linea sigue midiendo 44
+   exactos y la equis mantiene sus 44x44 de zona tactil. Si el texto dobla, el
+   chip crece y la equis se queda arriba, a la vista. */
+.mia-panel .mchip .mia-x{box-sizing:border-box;width:44px;height:44px;border:none;background:none;padding:0;margin:-1.5px 0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-start}
 .mia-panel .mchip .mia-x i{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(200,16,46,.12);color:#9e0c24;font-size:13px;font-weight:900;line-height:1;font-style:normal}
-.mia-panel .mia-note{min-width:0;overflow-wrap:anywhere;word-break:break-word;font-size:15px;color:var(--mia-muted);max-width:62ch}
+.mia-panel .mia-note{min-width:0;overflow-wrap:anywhere;word-break:break-word;font-size:16px;color:var(--mia-muted);max-width:62ch}
 .mia-panel .mcard{background:#fff;border:1px solid var(--gray-2,#e8eaed);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
 .mia-panel .mcard-h{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--red,#C8102E);color:#fff}
-.mia-panel .mcard-h .mia-t{font-family:Montserrat,sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;flex:1;line-height:1.2}
-.mia-panel .mcard-h .mia-id{font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;background:rgba(255,255,255,.12);padding:3px 9px;border-radius:20px;white-space:nowrap}
+.mia-panel .mcard-h .mia-t{font-family:Montserrat,sans-serif;font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;flex:1;min-width:0;overflow-wrap:anywhere;word-break:break-word;line-height:1.2}
+.mia-panel .mcard-h .mia-id{font-family:Montserrat,sans-serif;font-size:14px;font-weight:800;background:rgba(255,255,255,.12);padding:3px 9px;border-radius:20px;min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
 .mia-panel .mcard-b{padding:14px 14px 16px;display:flex;flex-direction:column;gap:12px}
 .mia-panel .mia-kv{display:grid;grid-template-columns:100px 1fr;gap:8px 12px;font-size:16px;line-height:1.5}
 .mia-panel .mia-kv .mia-k{font-size:14px;font-weight:600;color:var(--mia-muted);padding-top:2px}
-.mia-panel .mia-kv .mia-v{color:var(--gray-5,#2d3142)}
+.mia-panel .mia-kv .mia-v{min-width:0;overflow-wrap:anywhere;word-break:break-word;color:var(--gray-5,#2d3142)}
 .mia-panel .mia-sec{font-family:Montserrat,sans-serif;font-size:15px;font-weight:700;color:var(--gray-5,#2d3142);padding-bottom:6px;border-bottom:1px solid var(--gray-2,#e8eaed);margin-bottom:8px}
 .mia-panel .mia-states{display:flex;flex-wrap:wrap;gap:6px}
 .mia-panel .mia-st{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:600;border-radius:22px;padding:6px 12px;min-height:36px;border:1.5px solid var(--gray-2,#e8eaed);background:#fff;color:var(--gray-5,#2d3142)}
@@ -343,11 +365,26 @@ const CSS = `
 .mia-panel .mia-st.bad{border-color:rgba(158,12,36,.35);background:var(--red-light,#fce8eb);color:#9e0c24}
 /* La tabla de pagos vive en su propio carril: con Aa y a 320 px no cabe, y
    antes empujaba el panel entero a lo ancho. */
-.mia-panel .mia-payw{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.mia-panel .mia-pay{width:100%;min-width:min(100%,260px);border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+.mia-panel .mia-payw{position:relative;width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* Aviso de que el carril se puede arrastrar. Solo se pinta cuando de verdad
+   sobra ancho: lo pone el JS con la clase mia-scrolls. */
+.mia-panel .mia-payw.mia-scrolls{padding-bottom:2px}
+.mia-panel .mia-payhint{display:none;font-size:14px;color:var(--mia-muted);padding-top:4px}
+.mia-panel .mia-payw.mia-scrolls+.mia-payhint{display:block}
+/* La fecha repetida bajo el concepto solo se ve en pantallas muy estrechas. */
+.mia-panel .mia-pay td.mia-c .mia-dsub{display:none}
+@media (max-width:359px){
+  /* Sin sitio para tres columnas: la fecha se va debajo del concepto y quedan
+     Concepto e Importe, que es lo que hay que leer. */
+  .mia-panel .mia-pay{min-width:0}
+  .mia-panel .mia-pay th.mia-d,.mia-panel .mia-pay td.mia-d{display:none}
+  .mia-panel .mia-pay td.mia-c .mia-dsub{display:block;font-size:14px;color:var(--mia-muted)}
+}
+.mia-panel .mia-pay{width:100%;min-width:min(100%,260px);border-collapse:collapse;font-size:16px;font-variant-numeric:tabular-nums}
 .mia-panel .mia-pay th{font-size:14px;font-weight:600;color:var(--mia-muted);text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--gray-2,#e8eaed)}
 .mia-panel .mia-pay td{padding:9px 10px 9px 0;border-bottom:1px solid var(--gray-1,#f4f5f7);vertical-align:top}
 .mia-panel .mia-pay td.mia-n,.mia-panel .mia-pay th.mia-n{text-align:right;white-space:nowrap;padding-left:12px;padding-right:0}
+.mia-panel .mia-pay td.mia-c{min-width:0;overflow-wrap:anywhere;word-break:break-word}
 /* Anillo de foco propio en todos los mandos de Mia: no se hereda ni se
    depende del CSS de la página, que en varias no tiene ninguno. */
 .mia-row .mia-go:focus-visible,
@@ -363,13 +400,13 @@ body.dark .mia-panel .mia-btn:focus-visible,
 body.dark .mia-panel .mchip .mia-x:focus-visible,
 body.dark .mia-panel .mia-vrow .mia-vmain:focus-visible{outline-color:#ff9fae}
 .mia-panel .mia-btns{display:flex;flex-wrap:wrap;gap:8px}
-.mia-panel .mia-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border-radius:8px;border:1.5px solid var(--gray-2,#e8eaed);background:#fff;color:var(--gray-5,#2d3142);font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;letter-spacing:.2px;cursor:pointer;text-decoration:none;text-transform:uppercase}
+.mia-panel .mia-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:auto;min-height:44px;padding:8px 16px;border-radius:8px;border:1.5px solid var(--gray-2,#e8eaed);background:#fff;color:var(--gray-5,#2d3142);font-family:Montserrat,sans-serif;font-size:14px;min-width:0;overflow-wrap:anywhere;font-weight:800;letter-spacing:.2px;cursor:pointer;text-decoration:none;text-transform:uppercase}
 .mia-panel .mia-btn.mia-primary{background:var(--red,#C8102E);border-color:var(--red,#C8102E);color:#fff}
 .mia-panel .mia-list{display:flex;flex-direction:column;gap:8px}
 .mia-panel .mia-vrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:8px 12px;border:1px solid var(--gray-2,#e8eaed);border-radius:10px;background:#fff}
-.mia-panel .mia-vrow .mia-vmain{flex:1 1 55%;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;min-height:44px;padding:0;border:none;background:none;text-align:left;font-family:inherit;font-size:15px;color:var(--gray-5,#2d3142);text-decoration:none;cursor:pointer}
-.mia-panel .mia-vrow .mia-n{font-family:Montserrat,sans-serif;font-weight:800;font-size:15px}
-.mia-panel .mia-vrow .mia-m{font-size:14px;color:var(--mia-muted)}
+.mia-panel .mia-vrow .mia-vmain{flex:1 1 55%;min-width:0;overflow-wrap:anywhere;word-break:break-word;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;min-height:44px;padding:0;border:none;background:none;text-align:left;font-family:inherit;font-size:15px;color:var(--gray-5,#2d3142);text-decoration:none;cursor:pointer}
+.mia-panel .mia-vrow .mia-n{font-family:Montserrat,sans-serif;font-weight:800;font-size:16px;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.mia-panel .mia-vrow .mia-m{font-size:16px;min-width:0;overflow-wrap:anywhere;word-break:break-word;color:var(--mia-muted)}
 .mia-panel .mia-foot{font-size:13px;color:var(--mia-muted)}
 @media (max-width:480px){
   .mia-panel .mia-vrow .mia-m{flex-basis:100%}
@@ -427,24 +464,47 @@ body.dark .mia-panel .mia-pay th{border-bottom-color:rgba(255,255,255,.18)}
    cabecera ni sus filtros. ── */
 body.easy .mia-row,
 body.easy .mia-panel{font-family:'Atkinson Hyperlegible','Open Sans',sans-serif}
-body.easy .mia-field input{font-size:17px}
-body.easy .mia-panel{font-size:17px}
+/* Con Aa TODO el texto de Mia sube: la pregunta, las notas, los valores de la
+   ficha, la tabla de pagos, los nombres de la lista, sus datos, los botones y
+   el titulo de la ficha. Ni una regla toca la pagina. */
+body.easy .mia-field input{font-size:19px}
+body.easy .mia-panel{font-size:18px}
 body.easy .mia-panel .mia-note,
-body.easy .mia-panel .mia-q,
+body.easy .mia-panel .mia-top .mia-q,
 body.easy .mia-panel .mia-kv,
 body.easy .mia-panel .mia-kv .mia-k,
+body.easy .mia-panel .mia-kv .mia-v,
 body.easy .mia-panel .mia-sec,
 body.easy .mia-panel .mia-st,
 body.easy .mia-panel .mia-pay,
+body.easy .mia-panel .mia-pay td,
 body.easy .mia-panel .mchip,
 body.easy .mia-panel .mia-vrow,
+body.easy .mia-panel .mia-vrow .mia-n,
+body.easy .mia-panel .mia-vrow .mia-m,
+body.easy .mia-panel .mia-btn,
 body.easy .mia-panel .mia-foot{font-family:'Atkinson Hyperlegible','Open Sans',sans-serif}
+body.easy .mia-panel .mia-note,
+body.easy .mia-panel .mia-top .mia-q,
+body.easy .mia-panel .mia-kv,
+body.easy .mia-panel .mia-kv .mia-v,
+body.easy .mia-panel .mia-pay,
+body.easy .mia-panel .mia-pay td,
+body.easy .mia-panel .mia-vrow .mia-n,
+body.easy .mia-panel .mia-vrow .mia-m,
+body.easy .mia-panel .mchip,
+body.easy .mia-panel .mia-st{font-size:18px}
+body.easy .mia-panel .mcard-h .mia-t{font-size:18px}
+body.easy .mia-panel .mcard-h .mia-id{font-size:16px}
+body.easy .mia-panel .mia-btn{font-size:16px}
+body.easy .mia-panel .mia-sec{font-size:17px}
 body.easy .mia-panel .mia-kv .mia-k,
 body.easy .mia-panel .mchips .mia-lb,
-body.easy .mia-panel .mia-foot,
-body.easy .mia-panel .mia-pay th{font-size:15px}
-body.easy .mia-panel .mia-st,
-body.easy .mia-panel .mchip{font-size:15px}
+body.easy .mia-panel .mia-pay th,
+body.easy .mia-panel .mia-payhint,
+body.easy .mia-panel .mia-pay td.mia-c .mia-dsub{font-size:16px}
+body.easy .mia-panel .mia-foot{font-size:15px}
+body.easy .mia-row .mia-go{font-size:15px}
 body.easy .mia-panel .mia-btn,
 body.easy .mia-panel .mcard-h .mia-t,
 body.easy .mia-go{text-transform:none;letter-spacing:0}
@@ -459,17 +519,27 @@ let downShown=false;
 /* ════════════════ TEXTO MÁS LEGIBLE (Aa) ════════════════ */
 let fontLoaded=false;
 function loadEasyFont(){
-  if(fontLoaded)return; fontLoaded=true;
+  /* Una sola hoja de la fuente por página, aunque se encienda y se apague
+     varias veces o el módulo se cargue dos veces. */
+  if(fontLoaded||document.getElementById('miaEasyFont'))return;
+  fontLoaded=true;
   const l=document.createElement('link');
+  l.id='miaEasyFont';
   l.rel='stylesheet';
   l.href='https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap';
   document.head.appendChild(l);
 }
+/* Se escribe en el almacenamiento SOLO si el valor cambia: abrir una página
+   con el Aa ya encendido no escribe nada. */
 function setEasy(on){
-  document.body.classList.toggle('easy',!!on);
-  if(AABTN){ AABTN.classList.toggle('on',!!on); AABTN.setAttribute('aria-pressed',on?'true':'false'); }
-  if(on)loadEasyFont();
-  try{ localStorage.setItem(K_EASY,on?'1':'0'); }catch(e){}
+  const v=!!on;
+  document.body.classList.toggle('easy',v);
+  if(AABTN){ AABTN.classList.toggle('on',v); AABTN.setAttribute('aria-pressed',v?'true':'false'); }
+  if(v)loadEasyFont();
+  try{
+    const want=v?'1':'0';
+    if(localStorage.getItem(K_EASY)!==want)localStorage.setItem(K_EASY,want);
+  }catch(e){}
 }
 function easyOn(){ try{ return localStorage.getItem(K_EASY)==='1'; }catch(e){ return false; } }
 
@@ -517,6 +587,8 @@ function buildRow(){
 function buildPanel(){
   const p=E('div','mia-panel'); p.id='miaPanel';
   p.setAttribute('aria-live','polite');
+  p.setAttribute('role','region');
+  p.setAttribute('aria-label',T.panelLabel);
   const inn=E('div','mia-in'); inn.id='miaPanelIn';
   p.appendChild(inn); BODY=inn;
   return p;
@@ -603,7 +675,20 @@ function unbindEsc(){
   ESCH=null;
 }
 function openPanel(){ if(PANEL)PANEL.classList.add('show'); }
-function closePanel(){ if(PANEL)PANEL.classList.remove('show'); if(BODY)BODY.textContent=''; }
+function closePanel(){
+  if(PANEL)PANEL.classList.remove('show');
+  if(BODY)BODY.textContent='';
+  /* Si la fila ya no está (Worker caído) el panel era lo último de Mia en la
+     página: al cerrarlo se va el nodo, se va la hoja de estilos y se suelta el
+     escuchador de Escape, que a partir de ahí es solo de la página. */
+  if(!ROW){
+    if(PANEL&&PANEL.parentNode)PANEL.parentNode.removeChild(PANEL);
+    PANEL=null; BODY=null;
+    const st=document.getElementById('miaStyles');
+    if(st&&st.parentNode)st.parentNode.removeChild(st);
+    unbindEsc();
+  }
+}
 function clearPanel(){ if(BODY)BODY.textContent=''; }
 
 function panelHead(){
@@ -638,7 +723,7 @@ const CHIP_LABELS = {
   urgent:'Urgente', important:'Importante', pax:'Plazas', pool:'Piscina'
 };
 function chipText(k,v){
-  const lbl=CHIP_LABELS[k]||k;
+  const lbl=own(CHIP_LABELS,k)||k;
   if(k==='stay_on')return lbl+' '+fmtShort(v);
   if(v===true)return lbl;
   if(isDate(v))return lbl+': '+fmtDate(v);
@@ -657,7 +742,7 @@ function chipsBlock(chips,filters,onChange){
     c.appendChild(document.createTextNode(chipText(k,chips[k])));
     const x=E('button','mia-x'); x.type='button';
     x.appendChild(E('i',null,'✕'));
-    x.title=T.rmFilter; x.setAttribute('aria-label',T.rmFilter+' '+(CHIP_LABELS[k]||k));
+    x.title=T.rmFilter; x.setAttribute('aria-label',T.rmFilter+' '+(own(CHIP_LABELS,k)||k));
     x.addEventListener('click',function(){ delete filters[k]; onChange(); });
     c.appendChild(x);
     wrap.appendChild(c);
@@ -783,7 +868,7 @@ function nameToId(name){ return findUser(name).id; }
    NO entran: son el id de ocho caracteres de la persona, no un código. Las
    fotos de la llave del agua y los importes de tarjeta tampoco: no son
    secretos y la ficha los necesita. */
-const SENSITIVE=/keybox|password|wifi|alarm|key_com|notas_keyholder|keyholdernotes|safe_box|card_|token_id|dni|passport/i;
+const SENSITIVE=/keybox|password|wifi|alarm|key_com|notas_keyholder|keyholdernotes|safe_box|card_|token_id|dni|passport|registrodepolicia|cuenta_bancaria|swift_bic|nif/i;
 function stripSensitive(rows){
   for(let i=0;i<rows.length;i++){
     const r=rows[i]; if(!r||typeof r!=='object')continue;
@@ -831,7 +916,10 @@ async function loadUsers(){
    (tareas.html guarda allUsersMap dentro de su IIFE, así que no se ve). */
 async function ensureUsers(name){
   const raw=String(name==null?'':name).trim();
-  if(!raw||isUserId(raw))return;
+  if(!raw)return;
+  /* También para un token con forma de id: con el mapa cargado se comprueba
+     que existe de verdad, así "LIMPIEZ4" no acaba en u= como si fuera una
+     persona. */
   if(userPairs().length)return;
   await loadUsers();
 }
@@ -878,13 +966,18 @@ function bookingsWhere(b){
        pregunta de salida ("quién se va el 6") no encontraba nada, y el Worker
        manda las salidas con la fecha en check_in_from/to a propósito. */
     const d=isDate(b.check_in_from)?b.check_in_from:'', h=isDate(b.check_in_to)?b.check_in_to:'';
-    if(d&&h){
-      parts.push('(('+F.checkIn+">='"+d+"T00:00:00' AND "+F.checkIn+"<='"+h+"T23:59:59') OR ("
-        +F.checkOut+">='"+d+"T00:00:00' AND "+F.checkOut+"<='"+h+"T23:59:59'))");
-    }else if(d){
-      parts.push('(('+F.checkIn+">='"+d+"T00:00:00') OR ("+F.checkOut+">='"+d+"T00:00:00'))");
-    }else if(h){
-      parts.push('(('+F.checkIn+"<='"+h+"T23:59:59') OR ("+F.checkOut+"<='"+h+"T23:59:59'))");
+    /* La página trae entradas Y salidas en la ventana y luego enseña una de
+       las dos según tipo (renderCards, línea 1423). Mia hace lo mismo en la
+       consulta: con tipo salida solo la salida, con tipo entrada solo la
+       entrada. Si no, "quién se va el 6" traía también a los que llegaban. */
+    const only=b.tipo==='salida'?'out':(b.tipo==='entrada'?'in':'');
+    const inC=[], outC=[];
+    if(d){ inC.push(F.checkIn+">='"+d+"T00:00:00'"); outC.push(F.checkOut+">='"+d+"T00:00:00'"); }
+    if(h){ inC.push(F.checkIn+"<='"+h+"T23:59:59'"); outC.push(F.checkOut+"<='"+h+"T23:59:59'"); }
+    if(inC.length){
+      if(only==='in')parts.push('('+inC.join(' AND ')+')');
+      else if(only==='out')parts.push('('+outC.join(' AND ')+')');
+      else parts.push('(('+inC.join(' AND ')+') OR ('+outC.join(' AND ')+'))');
     }
   }
   const mgr=b.manager?nameToId(b.manager):'';
@@ -923,16 +1016,29 @@ function payTable(rows){
   const box=E('div');
   box.appendChild(E('div','mia-sec',T.payments));
   if(!rows.length){ box.appendChild(note('Sin líneas de pago.')); return box; }
-  let total=0, html='<tr><th>'+escapeHtml(T.concept)+'</th><th>'+escapeHtml(T.date)+'</th><th class="mia-n">'+escapeHtml(T.amount)+'</th></tr>';
+  /* La fecha viaja dos veces: en su columna y, repetida, debajo del concepto.
+     Por debajo de 360 px el CSS esconde la columna y enseña la de debajo, así
+     que Concepto e Importe caben sin arrastrar nada. */
+  let total=0, html='<tr><th class="mia-c">'+escapeHtml(T.concept)+'</th><th class="mia-d">'+escapeHtml(T.date)
+    +'</th><th class="mia-n">'+escapeHtml(T.amount)+'</th></tr>';
   rows.forEach(function(r){
     const n=parseFloat(r[PAY.amount]); if(!isNaN(n))total+=n;
-    html+='<tr><td>'+escapeHtml(payConcept(r))+'</td><td>'+escapeHtml(fmtDate(r[PAY.date]))
-        +'</td><td class="mia-n">'+escapeHtml(fmtEUR(r[PAY.amount]))+'</td></tr>';
+    const d=escapeHtml(fmtDate(r[PAY.date]));
+    html+='<tr><td class="mia-c">'+escapeHtml(payConcept(r))+'<span class="mia-dsub">'+d+'</span></td>'
+        +'<td class="mia-d">'+d+'</td>'
+        +'<td class="mia-n">'+escapeHtml(fmtEUR(r[PAY.amount]))+'</td></tr>';
   });
-  html+='<tr><td><b>'+escapeHtml(T.total)+'</b></td><td></td><td class="mia-n"><b>'+escapeHtml(fmtEUR(total))+'</b></td></tr>';
+  html+='<tr><td class="mia-c"><b>'+escapeHtml(T.total)+'</b></td><td class="mia-d"></td>'
+      +'<td class="mia-n"><b>'+escapeHtml(fmtEUR(total))+'</b></td></tr>';
   const t=E('table','mia-pay'); t.innerHTML=html;
   const w=E('div','mia-payw'); w.appendChild(t);
   box.appendChild(w);
+  const hint=E('div','mia-payhint',T.payScroll);
+  box.appendChild(hint);
+  /* La pista solo aparece si el carril de verdad se puede arrastrar. */
+  setTimeout(function(){
+    try{ if(w.scrollWidth>w.clientWidth+1)w.classList.add('mia-scrolls'); }catch(e){}
+  },0);
   return box;
 }
 function kvRow(kv,k,v){ kv.appendChild(E('span','mia-k',k)); kv.appendChild(E('span','mia-v',v)); }
@@ -959,6 +1065,12 @@ async function renderState(r,ctx){
   if(ctx&&ctx.chips){
     const ch=chipsBlock(ctx.chips,ctx.filters,ctx.onChange);
     if(ch)box.appendChild(ch);
+  }
+  /* Lo que no se pudo aplicar se dice también en la ficha: source y limpieza
+     no tienen filtro, y un nombre que no está en el mapa tampoco. */
+  if(ctx&&ctx.no){
+    const na=noApplyBlock(ctx.no);
+    if(na)box.appendChild(na);
   }
   const card=E('div','mcard');
   const head=E('div','mcard-h');
@@ -1036,6 +1148,16 @@ async function renderState(r,ctx){
   }
 }
 
+/* Se han enseñado MAX_ROWS y hay más: se dice, se da el enlace que abre el
+   resto en Entradas y se avisa de lo que ese enlace NO puede llevar. */
+function moreBlock(box,plan,b){
+  box.appendChild(note(T.more));
+  if(b&&b.manager&&findUser(b.manager).id)box.appendChild(note(T.noMgrLink));
+  const btns=E('div','mia-btns');
+  btns.appendChild(btn(T.openEnt,link('entradas',plan.params)));
+  box.appendChild(btns);
+}
+
 /* Fila de resultado: nombre + datos (abre la ficha) y un botón a la derecha */
 function resultRow(r,extraLabel,extraHref){
   const row=E('div','mia-vrow');
@@ -1072,15 +1194,23 @@ function bookingsPlan(b){
     if(isDate(b.check_in_from)){ p.desde=b.check_in_from; chips.check_in_from=b.check_in_from; }
     if(isDate(b.check_in_to)){ p.hasta=b.check_in_to; chips.check_in_to=b.check_in_to; }
   }
+  /* Manager: se aplica en la CONSULTA, nunca en el enlace. entradas-equipo
+     lee mgr de la URL y acto seguido applyUserPrefs (línea 1021) lo pisa con
+     la preferencia guardada del usuario, así que el enlace mentiría. El chip
+     se queda porque la ficha y la lista sí filtran por manager. */
   if(b.manager){
     const u=findUser(b.manager);
-    if(u.id){ p.mgr=u.id; chips.manager=b.manager; }
+    if(u.id)chips.manager=b.manager;
     else no.push('manager: '+b.manager+(u.many?' (varios)':''));
   }
   if(b.cleaner)no.push('limpieza: '+b.cleaner);
   if(b.source)no.push('source: '+b.source);
   if(['both','entrada','salida'].indexOf(b.tipo)>=0){ p.tipo=b.tipo; chips.tipo=b.tipo; }
   else if(b.tipo)no.push('tipo: '+b.tipo);
+  /* Sin fechas en la pregunta, el enlace las lleva vacías a propósito: si no,
+     entradas-equipo aplica la ventana guardada del usuario (línea 1031) y una
+     reserva de noviembre no aparece. p.has('desde') le basta para no hacerlo. */
+  if(p.desde===undefined&&p.hasta===undefined){ p.desde=EMPTY; p.hasta=EMPTY; }
   return {params:p,chips:chips,no:no};
 }
 function doBookingsLink(b,extraNo){
@@ -1133,7 +1263,7 @@ async function doBookingsCard(b){
     return;
   }
   if(rows.length===1){
-    await renderState(rows[0],{chips:plan.chips,filters:b,onChange:function(){ doBookingsCard(b); }});
+    await renderState(rows[0],{chips:plan.chips,no:plan.no,filters:b,onChange:function(){ doBookingsCard(b); }});
     return;
   }
 
@@ -1142,7 +1272,7 @@ async function doBookingsCard(b){
   if(chips)box.appendChild(chips);
   box.appendChild(note(T.many));
   box.appendChild(resultList(rows,T.openEnt,function(r){ return link('entradas',entradasParamsFor(r)); }));
-  if(rows.length>=MAX_ROWS)box.appendChild(note(T.more));
+  if(rows.length>=MAX_ROWS)moreBlock(box,plan,b);
   const na=noApplyBlock(plan.no);
   if(na)box.appendChild(na);
   say(box);
@@ -1156,7 +1286,7 @@ async function doBookingsStay(b){
   catch(e){ doBookingsLink(b); return; }
   if(rows===null){ doBookingsLink(b); return; }
   if(rows.length===1){
-    await renderState(rows[0],{chips:plan.chips,filters:b,onChange:function(){ doBookings(b); }});
+    await renderState(rows[0],{chips:plan.chips,no:plan.no,filters:b,onChange:function(){ doBookings(b); }});
     return;
   }
 
@@ -1166,7 +1296,7 @@ async function doBookingsStay(b){
   box.appendChild(note(rows.length?T.many:T.noBooking));
   if(rows.length){
     box.appendChild(resultList(rows,T.openEnt,function(r){ return link('entradas',entradasParamsFor(r)); }));
-    if(rows.length>=MAX_ROWS)box.appendChild(note(T.more));
+    if(rows.length>=MAX_ROWS)moreBlock(box,plan,b);
   }
   const na=noApplyBlock(plan.no);
   if(na)box.appendChild(na);
@@ -1181,7 +1311,13 @@ async function doBookingsStay(b){
 }
 async function doBookings(b,card){
   if(isDate(b.stay_on)){ await doBookingsStay(b); return; }
-  if(card){ await doBookingsCard(b); return; }
+  /* Con nombre, con código o con manager se consulta y se enseña la ficha o la
+     lista: son las tres preguntas cuya respuesta el enlace no puede dar bien
+     (el manager lo pisa la preferencia de la página, y sin fechas la ventana
+     guardada esconde la reserva). */
+  const named=(b.code&&String(b.code).trim())||(b.guest&&String(b.guest).trim());
+  const mgr=b.manager?findUser(b.manager).id:'';
+  if(card||named||mgr){ await doBookingsCard(b); return; }
   doBookingsLink(b);
 }
 
@@ -1228,7 +1364,7 @@ async function doNotes(n){
     const c=String(g(r,'confirmCode')||'').trim();
     return c?link('notas',{TaBookings2021_FS_confirmation_code:c}):'';
   }));
-  if(rows.length>=MAX_ROWS)box.appendChild(note(T.more));
+  if(rows.length>=MAX_ROWS)moreBlock(box,bookingsPlan({guest:guest}),{guest:guest});
   say(box);
 }
 
@@ -1237,19 +1373,24 @@ function tasksPlan(t){
   const p={}, chips={}, no=[];
   if(t.villa){ p.vi=t.villa; chips.villa=t.villa; }
   if(t.status){
-    const est=TASK_EST[fold(t.status)];
+    const est=own(TASK_EST,fold(t.status));
     if(est){ p.est=est; chips.status=t.status; }
     else no.push('estado: '+t.status);   /* "en curso" no existe como filtro de URL */
   }
   if(t.type){
-    const bt=TASK_BT[fold(t.type)];
+    const bt=own(TASK_BT,fold(t.type));
     if(bt){ p.bt=bt; chips.type=t.type; }
     else no.push('tipo: '+t.type);       /* tt es un id de catálogo: no se inventa */
   }
+  /* u SIEMPRE va en la URL, aunque vaya vacío: tareas.html preselecciona al
+     usuario que ha entrado (línea 871) y solo lo cambia si la URL trae u
+     (línea 1585). Sin u=, "limpiezas pendientes" enseñaba solo las mías. */
   if(t.user){
     const u=findUser(t.user);
     if(u.id){ p.u=u.id; chips.user=t.user; }
-    else no.push('usuario: '+t.user+(u.many?' (varios)':''));
+    else { p.u=EMPTY; no.push('usuario: '+t.user+(u.many?' (varios)':'')); }
+  }else{
+    p.u=EMPTY;
   }
   if(isDate(t.from)){ p.fd=t.from; chips.from=t.from; }
   if(isDate(t.to)){ p.fh=t.to; chips.to=t.to; }
