@@ -17,9 +17,10 @@
 //     y al quitar la fila la página es exactamente la de antes.
 //   · Toda clase de Mia lleva el prefijo mia- o vive dentro de
 //     .mia-row/.mia-panel: villa.html tiene un .h-btn global.
-//   · Nunca se pinta ni se registra el código de la caja de llaves:
-//     todo campo *Keybox*, *password* o *wifi* se borra nada más
-//     recibir la respuesta.
+//   · Nunca se pinta ni se registra un secreto: todo campo de caja de llaves,
+//     contraseña, wifi, alarma, notas del keyholder, caja fuerte, tarjeta,
+//     token o documento de identidad se borra de cada fila nada más recibir
+//     la respuesta. El id del keyholder sí pasa: es una persona, no un código.
 //   · Todo valor que venga del Worker o de Caspio entra en el DOM por
 //     textContent o por escapeHtml(). Nunca por innerHTML sin escapar.
 //   · Un chip nunca dice un filtro que no haya llegado a la URL: los
@@ -41,6 +42,11 @@ window.__MIA_LOADED = true;
 /* ════════════════ CONFIGURACIÓN ════════════════ */
 const MIA_WORKER_URL='https://mia-intranet-search.gerard-0d3.workers.dev';
 const MIA_ALLOWED_ROLES=['admin','manager','staff','sales'];
+/* Quién ve las líneas de pago. Copia exacta de auth.js:121
+   'cobros-inquilinos': ['admin','manager'] — la página donde se ven los cobros.
+   Si cambia allí, cambia aquí. Quien no está en la lista recibe la ficha sin
+   pagos y sin ninguna mención a los pagos. */
+const MIA_PAY_ROLES=['admin','manager'];
 const MIA_DEBUG = false;               // true solo para depurar en local
 
 const PROXY          = 'https://caspio-proxy.jordi-89b.workers.dev';
@@ -105,7 +111,10 @@ const PAGES = {
    20 welcomepack, 30 cierre. tt es el id de un tipo de tarea del catálogo,
    que Mia no conoce: no se emite nunca. */
 const TASK_EST = { pendiente:'pend', terminada:'done' };
-const TASK_BT  = { limpieza:'10', welcomepack:'20', 'welcome pack':'20', cierre:'30' };
+/* welcomepack NO está: bt=20 no filtra las tareas de welcome pack como la
+   gente espera, así que Mia no lo emite y lo dice en "No pude aplicar". El
+   resto de la pregunta (estado, usuario, fechas, villa) sí se aplica. */
+const TASK_BT  = { limpieza:'10', cierre:'30' };
 
 /* Textos (producción en español) */
 const T = {
@@ -244,13 +253,17 @@ function link(page,params){
 function curPage(){ return location.pathname.split('/').pop(); }
 
 /* ════════════════ SESIÓN ════════════════ */
+/* El rol llega con mayúsculas y espacios en algunas páginas */
+function myRole(){
+  try{ return Auth&&Auth.role?String(Auth.role()||'').trim().toLowerCase():''; }
+  catch(e){ return ''; }
+}
+function canSeePayments(){ return MIA_PAY_ROLES.indexOf(myRole())>=0; }
 function hasSession(){
   try{
     if(typeof Auth==='undefined'||!Auth||!Auth.token)return false;
     if(!Auth.token())return false;
-    /* El rol llega con mayúsculas y espacios en algunas páginas */
-    const role=Auth.role?String(Auth.role()||'').trim().toLowerCase():'';
-    return MIA_ALLOWED_ROLES.indexOf(role)>=0;
+    return MIA_ALLOWED_ROLES.indexOf(myRole())>=0;
   }catch(e){ return false; }
 }
 function miaOff(){ try{ return sessionStorage.getItem(K_OFF)==='1'; }catch(e){ return false; } }
@@ -296,12 +309,12 @@ const CSS = `
 .mia-aa{box-sizing:border-box;font-family:'Atkinson Hyperlegible','Open Sans',sans-serif;background:var(--gray-1,#f4f5f7);border:1.5px solid var(--gray-2,#e8eaed);color:#5c6273;width:44px;height:44px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:background .15s,color .15s}
 .mia-aa.on{background:var(--gray-5,#2d3142);border-color:var(--gray-5,#2d3142);color:#fff}
 
-.mia-panel{display:none;background:#fff;border-bottom:2px solid var(--gray-2,#e8eaed);padding:12px 16px 14px;font-size:16px;line-height:1.5;--mia-muted:#5c6273;color:var(--gray-5,#2d3142)}
+.mia-panel{display:none;background:#fff;border-bottom:2px solid var(--gray-2,#e8eaed);padding:12px 16px 14px;font-family:'Open Sans',sans-serif;font-size:16px;line-height:1.5;--mia-muted:#5c6273;color:var(--gray-5,#2d3142)}
 .mia-panel.show{display:block}
 .mia-panel .mia-in{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
 .mia-panel .mia-top{display:flex;align-items:center;gap:8px}
 .mia-panel .mia-top .mia-mk{width:30px;height:30px;flex-shrink:0}
-.mia-panel .mia-top .mia-q{flex:1;font-size:15px;color:var(--mia-muted)}
+.mia-panel .mia-top .mia-q{flex:1;min-width:0;overflow-wrap:anywhere;word-break:break-word;font-size:15px;color:var(--mia-muted)}
 .mia-panel .mia-top .mia-q b{color:var(--gray-5,#2d3142);font-weight:600}
 .mia-panel .mia-close{width:44px;height:44px;border:1.5px solid var(--gray-2,#e8eaed);border-radius:50%;background:#fff;color:var(--mia-muted);font-size:16px;cursor:pointer;flex-shrink:0;padding:0}
 .mia-panel .mchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -313,7 +326,7 @@ const CSS = `
 .mia-panel .mchip{box-sizing:border-box;display:inline-flex;align-items:center;gap:2px;font-size:14px;font-weight:600;color:var(--red,#C8102E);background:var(--red-light,#fce8eb);border:1.5px solid rgba(200,16,46,.25);border-radius:22px;padding:0 0 0 12px;height:44px}
 .mia-panel .mchip .mia-x{box-sizing:border-box;width:44px;height:44px;border:none;background:none;padding:0;margin:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .mia-panel .mchip .mia-x i{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(200,16,46,.12);color:#9e0c24;font-size:13px;font-weight:900;line-height:1;font-style:normal}
-.mia-panel .mia-note{font-size:15px;color:var(--mia-muted);max-width:62ch}
+.mia-panel .mia-note{min-width:0;overflow-wrap:anywhere;word-break:break-word;font-size:15px;color:var(--mia-muted);max-width:62ch}
 .mia-panel .mcard{background:#fff;border:1px solid var(--gray-2,#e8eaed);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
 .mia-panel .mcard-h{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--red,#C8102E);color:#fff}
 .mia-panel .mcard-h .mia-t{font-family:Montserrat,sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;flex:1;line-height:1.2}
@@ -322,16 +335,33 @@ const CSS = `
 .mia-panel .mia-kv{display:grid;grid-template-columns:100px 1fr;gap:8px 12px;font-size:16px;line-height:1.5}
 .mia-panel .mia-kv .mia-k{font-size:14px;font-weight:600;color:var(--mia-muted);padding-top:2px}
 .mia-panel .mia-kv .mia-v{color:var(--gray-5,#2d3142)}
-.mia-panel .mia-sec{font-size:15px;font-weight:600;color:var(--gray-5,#2d3142);padding-bottom:6px;border-bottom:1px solid var(--gray-2,#e8eaed);margin-bottom:8px}
+.mia-panel .mia-sec{font-family:Montserrat,sans-serif;font-size:15px;font-weight:700;color:var(--gray-5,#2d3142);padding-bottom:6px;border-bottom:1px solid var(--gray-2,#e8eaed);margin-bottom:8px}
 .mia-panel .mia-states{display:flex;flex-wrap:wrap;gap:6px}
 .mia-panel .mia-st{display:inline-flex;align-items:center;gap:5px;font-size:14px;font-weight:600;border-radius:22px;padding:6px 12px;min-height:36px;border:1.5px solid var(--gray-2,#e8eaed);background:#fff;color:var(--gray-5,#2d3142)}
 .mia-panel .mia-st.ok{border-color:rgba(20,101,47,.35);background:var(--green-light,#e6f7ee);color:#14652f}
 .mia-panel .mia-st.pend{border-color:rgba(138,69,0,.35);background:var(--orange-light,#fff4e0);color:#8a4500}
 .mia-panel .mia-st.bad{border-color:rgba(158,12,36,.35);background:var(--red-light,#fce8eb);color:#9e0c24}
-.mia-panel .mia-pay{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+/* La tabla de pagos vive en su propio carril: con Aa y a 320 px no cabe, y
+   antes empujaba el panel entero a lo ancho. */
+.mia-panel .mia-payw{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.mia-panel .mia-pay{width:100%;min-width:min(100%,260px);border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
 .mia-panel .mia-pay th{font-size:14px;font-weight:600;color:var(--mia-muted);text-align:left;padding:9px 10px 9px 0;border-bottom:1px solid var(--gray-2,#e8eaed)}
 .mia-panel .mia-pay td{padding:9px 10px 9px 0;border-bottom:1px solid var(--gray-1,#f4f5f7);vertical-align:top}
 .mia-panel .mia-pay td.mia-n,.mia-panel .mia-pay th.mia-n{text-align:right;white-space:nowrap;padding-left:12px;padding-right:0}
+/* Anillo de foco propio en todos los mandos de Mia: no se hereda ni se
+   depende del CSS de la página, que en varias no tiene ninguno. */
+.mia-row .mia-go:focus-visible,
+.mia-row .mia-aa:focus-visible,
+.mia-panel .mia-close:focus-visible,
+.mia-panel .mia-btn:focus-visible,
+.mia-panel .mchip .mia-x:focus-visible,
+.mia-panel .mia-vrow .mia-vmain:focus-visible{outline:2px solid #9e0c24;outline-offset:2px}
+body.dark .mia-row .mia-go:focus-visible,
+body.dark .mia-row .mia-aa:focus-visible,
+body.dark .mia-panel .mia-close:focus-visible,
+body.dark .mia-panel .mia-btn:focus-visible,
+body.dark .mia-panel .mchip .mia-x:focus-visible,
+body.dark .mia-panel .mia-vrow .mia-vmain:focus-visible{outline-color:#ff9fae}
 .mia-panel .mia-btns{display:flex;flex-wrap:wrap;gap:8px}
 .mia-panel .mia-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 16px;border-radius:8px;border:1.5px solid var(--gray-2,#e8eaed);background:#fff;color:var(--gray-5,#2d3142);font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;letter-spacing:.2px;cursor:pointer;text-decoration:none;text-transform:uppercase}
 .mia-panel .mia-btn.mia-primary{background:var(--red,#C8102E);border-color:var(--red,#C8102E);color:#fff}
@@ -391,28 +421,30 @@ body.dark .mia-panel .mia-vrow{background:#252535;border-color:rgba(255,255,255,
 body.dark .mia-panel .mia-pay td{border-bottom-color:rgba(255,255,255,.10)}
 body.dark .mia-panel .mia-pay th{border-bottom-color:rgba(255,255,255,.18)}
 
-/* ── Aa: texto más legible. Opt-in, apagado por defecto. ── */
-body.easy{--gray-4:#5c6273;--gray-3:#a9afbb;font-family:'Atkinson Hyperlegible','Open Sans',sans-serif;font-size:16px}
-body.easy .h-title{font-size:15px}
-body.easy .h-count,body.easy .user-pill,body.easy .wp-nav-user{font-size:13px}
-body.easy .f-label,body.easy .pill-label,body.easy .date-box .lbl,body.easy .ilbl,body.easy .c-toggle,body.easy .tipo-badge,body.easy .ph-line .ph-tag,body.easy .villa-name,body.easy .bdg,body.easy .spill{text-transform:none;letter-spacing:0}
-body.easy .f-label,body.easy .pill-label,body.easy .date-box .lbl,body.easy .ilbl{font-size:13px;font-weight:600;font-family:inherit}
-body.easy .pill-opt,body.easy .btn-mas,body.easy .chip-filter,body.easy .bdg,body.easy .lnk,body.easy .act-chip,body.easy .ph-line,body.easy .villa-sub,body.easy .res-id,body.easy .spill,body.easy .c-toggle{font-size:13px}
-body.easy .pill-opt{padding:6px 12px}
-body.easy .staff-row,body.easy .irow,body.easy .ppill{font-size:15px}
-body.easy .ival{font-weight:400}
-body.easy .villa-name{font-size:16px;font-weight:800}
-body.easy .date-box .val{font-size:17px}
-body.easy .gname{font-size:17px}
-body.easy .ph-line{font-family:inherit;font-weight:600}
-body.easy .card{box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid var(--gray-2,#e8eaed)}
-body.easy .c-toggle{min-height:44px}
-body.easy .act-chip{min-height:36px;padding:6px 12px}
+/* ── Aa: texto más legible. Opt-in, apagado por defecto.
+   SOLO afecta a lo de Mia. Ni una regla toca un elemento de la página: quien
+   no usa a Mia no ve cambiar nada, y quien la usa tampoco ve moverse su
+   cabecera ni sus filtros. ── */
+body.easy .mia-row,
+body.easy .mia-panel{font-family:'Atkinson Hyperlegible','Open Sans',sans-serif}
 body.easy .mia-field input{font-size:17px}
-body.easy .mia-panel,body.easy .mia-panel .mia-kv,body.easy .mia-panel .mia-st,body.easy .mia-panel .mia-pay,body.easy .mia-panel .mchip,body.easy .mia-panel .mia-note{font-family:'Atkinson Hyperlegible','Open Sans',sans-serif}
 body.easy .mia-panel{font-size:17px}
-/* Con Aa nada de Mia va en mayúsculas forzadas: ni sus botones ni el título
-   de la ficha, que es un nombre de villa. */
+body.easy .mia-panel .mia-note,
+body.easy .mia-panel .mia-q,
+body.easy .mia-panel .mia-kv,
+body.easy .mia-panel .mia-kv .mia-k,
+body.easy .mia-panel .mia-sec,
+body.easy .mia-panel .mia-st,
+body.easy .mia-panel .mia-pay,
+body.easy .mia-panel .mchip,
+body.easy .mia-panel .mia-vrow,
+body.easy .mia-panel .mia-foot{font-family:'Atkinson Hyperlegible','Open Sans',sans-serif}
+body.easy .mia-panel .mia-kv .mia-k,
+body.easy .mia-panel .mchips .mia-lb,
+body.easy .mia-panel .mia-foot,
+body.easy .mia-panel .mia-pay th{font-size:15px}
+body.easy .mia-panel .mia-st,
+body.easy .mia-panel .mchip{font-size:15px}
 body.easy .mia-panel .mia-btn,
 body.easy .mia-panel .mcard-h .mia-t,
 body.easy .mia-go{text-transform:none;letter-spacing:0}
@@ -518,7 +550,10 @@ function hideRow(keepPanel){
   document.body.classList.remove('easy');
   if(ROW&&ROW.parentNode)ROW.parentNode.removeChild(ROW);
   ROW=null; INPUT=null;
-  if(!keepPanel){
+  /* El panel solo se queda si tiene algo que enseñar (el aviso de caída).
+     Un #miaPanel vacío no se deja en la página. */
+  const keep=keepPanel&&PANEL&&PANEL.classList.contains('show')&&BODY&&BODY.childNodes.length>0;
+  if(!keep){
     if(PANEL&&PANEL.parentNode)PANEL.parentNode.removeChild(PANEL);
     PANEL=null; BODY=null;
     unbindEsc();
@@ -708,11 +743,22 @@ function userPairs(){
 function findUser(name){
   const raw=String(name==null?'':name).trim();
   if(!raw)return {id:'',many:false};
-  if(isUserId(raw))return {id:raw.toUpperCase(),many:false};
+  const pairs0=userPairs();
+  if(isUserId(raw)){
+    /* Con el mapa cargado, un token de ocho caracteres solo es un id si el
+       mapa lo conoce: "LIMPIEZ4" tiene la forma de un id pero es una palabra.
+       Sin mapa no hay con qué comprobarlo y manda la forma. */
+    if(!pairs0.length)return {id:raw.toUpperCase(),many:false};
+    const up=raw.toUpperCase();
+    for(let i=0;i<pairs0.length;i++){
+      if(String(pairs0[i][0]).toUpperCase()===up)return {id:pairs0[i][0],many:false};
+    }
+    /* No está en el mapa: se sigue buscando como si fuera un nombre. */
+  }
   const q=fold(raw);
   const qw=nameWords(q);
   if(!qw.length)return {id:'',many:false};
-  const pairs=userPairs();
+  const pairs=pairs0;
   const ids=[], exact=[];
   for(let j=0;j<pairs.length;j++){
     const k=pairs[j][0], v=fold(pairs[j][1]);
@@ -729,8 +775,15 @@ function nameToId(name){ return findUser(name).id; }
 
 /* ════════════════ CASPIO (lectura con el token del usuario) ════════════════ */
 /* Toda respuesta pasa por aquí: los campos sensibles se borran nada más
-   parsear, antes de que nada los pueda pintar o registrar. */
-const SENSITIVE=/keybox|password|wifi/i;
+   parsear, antes de que nada los pueda pintar o registrar.
+   La lista sale de los nombres de campo del volcado del 2026-09-01: cajas de
+   llaves y sus fotos, contraseñas y datos de wifi, códigos de alarma, notas y
+   comentarios del keyholder, la caja fuerte, los datos de tarjeta, el token y
+   los documentos de identidad. KeyHolder_person, KeyHolder_zone y Key_Holder
+   NO entran: son el id de ocho caracteres de la persona, no un código. Las
+   fotos de la llave del agua y los importes de tarjeta tampoco: no son
+   secretos y la ficha los necesita. */
+const SENSITIVE=/keybox|password|wifi|alarm|key_com|notas_keyholder|keyholdernotes|safe_box|card_|token_id|dni|passport/i;
 function stripSensitive(rows){
   for(let i=0;i<rows.length;i++){
     const r=rows[i]; if(!r||typeof r!=='object')continue;
@@ -756,16 +809,21 @@ let USERSP=null;
 async function loadUsers(){
   if(USERSP)return USERSP;
   USERSP=(async function(){
-    const m=new Map();
+    let m=null;
     try{
       const rows=await proxyGet('action=data&table=TaUsers&limit=200');
+      m=new Map();
       rows.forEach(function(u){
         const id=String(u[U.id]||'').trim(), nm=String(u[U.name]||'').trim();
         if(id&&nm)m.set(id,nm);
       });
     }catch(e){ dbg('TaUsers ko'); }
-    USERS=m;
-    return m;
+    if(m){ USERS=m; return m; }
+    /* Un fallo no se guarda: la siguiente pregunta lo vuelve a intentar una
+       vez. Dentro de la misma pregunta solo se llama aquí una vez, así que no
+       hay bucle de reintentos. */
+    USERSP=null;
+    return new Map();
   })();
   return USERSP;
 }
@@ -873,7 +931,8 @@ function payTable(rows){
   });
   html+='<tr><td><b>'+escapeHtml(T.total)+'</b></td><td></td><td class="mia-n"><b>'+escapeHtml(fmtEUR(total))+'</b></td></tr>';
   const t=E('table','mia-pay'); t.innerHTML=html;
-  box.appendChild(t);
+  const w=E('div','mia-payw'); w.appendChild(t);
+  box.appendChild(w);
   return box;
 }
 function kvRow(kv,k,v){ kv.appendChild(E('span','mia-k',k)); kv.appendChild(E('span','mia-v',v)); }
@@ -891,9 +950,16 @@ function entradasParamsFor(r){
   return p;
 }
 
-async function renderState(r){
+async function renderState(r,ctx){
   const code=String(g(r,'confirmCode')||'');
   const villa=String(g(r,'villaName')||'—');
+  const box=E('div');
+  /* Los mismos chips que en la lista: si la pregunta llevaba tipo, villa o
+     fechas, la ficha también lo dice y se pueden quitar. */
+  if(ctx&&ctx.chips){
+    const ch=chipsBlock(ctx.chips,ctx.filters,ctx.onChange);
+    if(ch)box.appendChild(ch);
+  }
   const card=E('div','mcard');
   const head=E('div','mcard-h');
   head.appendChild(E('span','mia-t',villa));
@@ -938,10 +1004,10 @@ async function renderState(r){
   secSt.appendChild(sts);
   body.appendChild(secSt);
 
-  /* Pagos */
-  const payBox=E('div');
-  payBox.appendChild(note(T.loading));
-  body.appendChild(payBox);
+  /* Pagos: solo para quien puede abrir cobros-inquilinos. Para el resto no
+     hay hueco, ni aviso, ni consulta: la ficha no menciona los pagos. */
+  const payBox=canSeePayments()?E('div'):null;
+  if(payBox){ payBox.appendChild(note(T.loading)); body.appendChild(payBox); }
 
   /* Botones */
   const btns=E('div','mia-btns');
@@ -951,8 +1017,10 @@ async function renderState(r){
   if(isId(vid))btns.appendChild(btn(T.openVilla,link('villa',{villa_id:vid})));
   body.appendChild(btns);
 
-  say(card);
+  box.appendChild(card);
+  say(box);
 
+  if(!payBox)return;
   if(code){
     try{
       const rows=await proxyGet('action=view&view='+encodeURIComponent(VIEW_PAYMENTS)
@@ -1064,7 +1132,10 @@ async function doBookingsCard(b){
     say(box);
     return;
   }
-  if(rows.length===1){ await renderState(rows[0]); return; }
+  if(rows.length===1){
+    await renderState(rows[0],{chips:plan.chips,filters:b,onChange:function(){ doBookingsCard(b); }});
+    return;
+  }
 
   const box=E('div');
   const chips=chipsBlock(plan.chips,b,function(){ doBookingsCard(b); });
@@ -1084,7 +1155,10 @@ async function doBookingsStay(b){
   try{ rows=await fetchBookings(b,MAX_ROWS,F.checkIn+' DESC'); }
   catch(e){ doBookingsLink(b); return; }
   if(rows===null){ doBookingsLink(b); return; }
-  if(rows.length===1){ await renderState(rows[0]); return; }
+  if(rows.length===1){
+    await renderState(rows[0],{chips:plan.chips,filters:b,onChange:function(){ doBookings(b); }});
+    return;
+  }
 
   const box=E('div');
   const chips=chipsBlock(plan.chips,b,function(){ doBookings(b); });
@@ -1276,9 +1350,13 @@ function doUnknown(data){
 /* Worker caído o apagado: un aviso y Mia se retira hasta la próxima sesión.
    El panel con el aviso se queda hasta que el usuario lo cierre; la fila
    desaparece y la página queda como si Mia no hubiera estado. */
-function fail(){
+/* off=true solo cuando el Worker dice enabled:false, que es la palanca de
+   apagado. Un 500, un 404, un JSON roto o un fallo de red retiran a Mia de
+   ESTA página —fila, panel, botón Aa y el texto grande— pero no marcan la
+   sesión: la siguiente página vuelve a intentarlo una vez. */
+function fail(off){
   if(!downShown){ downShown=true; say(note(T.down)); }
-  setMiaOff();
+  if(off)setMiaOff();
   hideRow(true);
 }
 function kind(k){ const e=new Error(k); e.miaKind=k; return e; }
@@ -1319,10 +1397,10 @@ async function onAsk(){
     if(k==='429'){ say(note(T.busyWait)); return; }
     if(k==='400'){ say(note(T.badQ)); return; }
     if(k==='timeout'){ say(note(T.busy)); return; }
-    fail(); return;   /* red o 5xx */
+    fail(false); return;   /* red o 5xx: se reintenta en la próxima página */
   }
-  if(!data||typeof data!=='object'){ fail(); return; }
-  if(data.enabled===false){ fail(); return; }   /* apagada: se avisa una vez y se retira */
+  if(!data||typeof data!=='object'){ fail(false); return; }
+  if(data.enabled===false){ fail(true); return; }   /* apagada a propósito: hasta la próxima sesión */
   if(data.error==='modelo'||data.error==='ocupado'){ say(note(T.busy)); return; }
   const target=String(data.target||'unknown');
   try{
