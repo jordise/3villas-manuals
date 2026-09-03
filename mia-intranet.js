@@ -1385,7 +1385,7 @@ async function doNotes(n,extraNo){
     say(box);
     return;
   }
-  if(!guest){ say(note(T.noBooking)); return; }
+  if(!guest){ sayWithNo(note(T.noBooking),extraNo); return; }
   let rows;
   try{ rows=await fetchBookings({guest:guest},MAX_ROWS,F.checkIn+' DESC'); }
   catch(e){ say(note('No he podido leer la reserva.')); return; }
