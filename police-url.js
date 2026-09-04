@@ -46,6 +46,8 @@
      'count-unknown'    ni el Arrival Form ni Hostaway dan un numero de personas
      'no-organization'  la villa no tiene Link_Registrodepolicia
      'external-complex' la villa registra en el formulario propio del complejo
+     'external-link-invalid'  el link propio guardado no es una direccion web
+                        valida y se ha descartado
    ═══════════════════════════════════════════════════════════════════════════ */
 (function (global) {
   'use strict';
@@ -68,19 +70,40 @@
     return isNaN(n) ? 0 : n;
   }
 
-  /* Fecha -> YYYYMMDD. Acepta 'YYYY-MM-DD', ISO completo y Date. */
+  /* Fecha -> YYYYMMDD, SIEMPRE ocho digitos o cadena vacia. Acepta
+     'YYYY-MM-DD', ISO completo y Date.
+     El resultado se concatena en la URL, asi que nunca puede contener otra
+     cosa que digitos: un valor como '2026-09-05&number=1#' en el campo de
+     fecha anadiria un parametro propio y cortaria el resto de la URL (el
+     nombre y el telefono del huesped no llegarian a la policia). La revision
+     de seguridad del 04/09/2026 lo demostro. Por eso cada salida pasa por
+     ocho() antes de devolverse. */
+  function ocho(x) { return /^\d{8}$/.test(x) ? x : ''; }
   function ymd(v) {
     if (!v) return '';
     var s = String(v).replace(/[T ].*/, '');
     var p = s.split('-');
-    if (p.length === 3 && p[0].length === 4) {
-      return p[0] + String(p[1]).padStart(2, '0') + String(p[2]).padStart(2, '0');
+    if (p.length === 3) {
+      var out = ocho(p[0] + String(p[1]).padStart(2, '0') + String(p[2]).padStart(2, '0'));
+      if (out) return out;
     }
     var d = new Date(v);
     if (isNaN(d)) return '';
-    return d.getFullYear() +
+    return ocho(d.getFullYear() +
       String(d.getMonth() + 1).padStart(2, '0') +
-      String(d.getDate()).padStart(2, '0');
+      String(d.getDate()).padStart(2, '0'));
+  }
+
+  /* Un link guardado en la base de datos solo se acepta como direccion web.
+     Se rechazan los esquemas que ejecutan codigo en el navegador del huesped
+     (javascript:, data:, vbscript:). Un valor sin esquema se deja pasar: se
+     resuelve contra la propia intranet y no puede ejecutar nada. */
+  function linkSeguro(v) {
+    var s = String(v || '').trim();
+    if (!s) return '';
+    var limpio = s.replace(/[\s\u0000-\u001f\u00a0\u200b-\u200f\u2028\u2029]/g, '').toLowerCase();
+    if (/^(javascript|data|vbscript|file|blob):/.test(limpio)) return '';
+    return s;
   }
 
   function todayYMD() {
@@ -171,7 +194,9 @@
        ahi. La confirmacion llega por email y el equipo marca el paso a mano
        (clase 9 del analisis de soporte). */
     var nm = names(get);
-    var lint = String(get('Lint_Policia_castellsol') || '').trim();
+    var lintCrudo = String(get('Lint_Policia_castellsol') || '').trim();
+    var lint = linkSeguro(lintCrudo);
+    if (lintCrudo && !lint) warnings.push('external-link-invalid');
     if (lint && opts.ignoreExternal) {
       /* Paginas del equipo: se sigue mostrando el link de policheckin como
          hasta ahora (no se quita nada), pero se avisa de que esta villa
@@ -209,9 +234,9 @@
     var url = BASE +
       '/organization/' + encodeURIComponent(org) +
       '/reservation/'  + encodeURIComponent(code) +
-      '?checkInDate='  + ymd(get('Checkin')) +
-      '&checkOutDate=' + ymd(get('Checkout')) +
-      '&contractDate=' + contract +
+      '?checkInDate='  + encodeURIComponent(ymd(get('Checkin'))) +
+      '&checkOutDate=' + encodeURIComponent(ymd(get('Checkout'))) +
+      '&contractDate=' + encodeURIComponent(contract) +
       '&number='       + gc.count +
       '&firstName='    + encodeURIComponent(nm.first) +
       '&lastName1='    + encodeURIComponent(nm.last) +
@@ -235,6 +260,10 @@
     'no-organization':
       'Esta villa no tiene Link_Registrodepolicia. El link usa la organizacion ' +
       'por defecto, que puede no ser la de esta villa. Revisa la ficha de la villa.',
+    'external-link-invalid':
+      'Esta villa tiene un link de registro propio guardado, pero no es una ' +
+      'direccion web valida y se ha descartado por seguridad. Revisa el campo ' +
+      'Lint_Policia_castellsol en la ficha de la villa.',
     'external-complex':
       'Esta villa registra en el formulario propio del complejo. La confirmacion ' +
       'llega por email y el paso se marca a mano. No uses el link de policheckin.'

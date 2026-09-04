@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v8 | Historial completo al final de este archivo -->
+<!-- VERSIÓN ACTUAL: v9 | Historial completo al final de este archivo -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -180,7 +180,7 @@ body{font-family:Montserrat,sans-serif;background:#f0f2f5;color:var(--gray-5);mi
   border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
-<script src="police-url.js"></script>
+<script src="police-url.js?v=1"></script>
 <script src="auth.js"></script>
 </head>
 <body>
@@ -856,7 +856,21 @@ function togSec(head){
   arr.classList.toggle('open');
 }
 
-function toInputDate(v){ if(!v) return ''; try{ return new Date(v).toISOString().slice(0,10); } catch(e){ return ''; } }
+/* v9: se corta la cadena en vez de pasar por toISOString(). El viaje de ida y
+   vuelta a UTC restaba un dia en Madrid ('2026-09-10T00:00:00' salia como
+   2026-09-09), asi que esta pagina mostraba una fecha de entrada distinta de la
+   que el check-in del huesped envia de verdad.
+   Habia DOS toInputDate en este fichero: esta global y otra local que la tapaba.
+   Se deja solo una. */
+function toInputDate(v){
+  if(!v) return '';
+  var s=String(v);
+  var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return m[1]+'-'+m[2]+'-'+m[3];
+  try{ var d=new Date(v); if(isNaN(d)) return '';
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }catch(e){ return ''; }
+}
 
 function updateDatesHeader(){
   var ci=$('f_Checkin')&&$('f_Checkin').value ? $('f_Checkin').value : (g('TaBookings2021_Checkin')||'');
@@ -890,16 +904,27 @@ function updatePoliceDiag(){
   var today=new Date(); today.setHours(0,0,0,0);
   var checkinD=checkinDate?new Date(checkinDate):null;
   var dateError=checkinD&&checkinD<today;
+  /* v9: el link se construye AQUI, antes de la tabla, y la tabla lee sus
+     valores del link. Antes la tabla describia las reglas viejas y el link de
+     abajo usaba las nuevas, asi que la pagina que existe para explicar el link
+     se contradecia a si misma. Ahora no pueden separarse. */
+  var _polB=(code&&typeof PoliceUrl!=='undefined'&&PoliceUrl.build)
+    ? PoliceUrl.build(polGetTest,{code:code,contractDate:'today',ignoreExternal:true,allowFallbackOrg:false})
+    : {url:'',count:null,warnings:code?['builder-missing']:[]};
+  function _polParam(n){
+    var m=(_polB.url||'').match(new RegExp('[?&]'+n+'=([^&]*)'));
+    return m?decodeURIComponent(m[1]):'';
+  }
   var polFields=[
-    {param:'organization', caspio:'TaVillas.Link_Registrodepolicia', val:g('TaVillas_Link_Registrodepolicia'), desc:'UUID de la villa en el sistema policial. Viene de TaVillas.', critical:true},
+    {param:'organization', caspio:'TaVillas.Link_Registrodepolicia', val:decodeURIComponent(((_polB.url||'').match(/organization\/([^/]*)/)||[])[1]||''), desc:'UUID de la villa en el sistema policial. Viene de TaVillas. Si esta vacio, no se genera link.', critical:true},
     {param:'reservation', caspio:'TaBookings2021.FS_confirmation_code', val:code, desc:'Código de confirmación de la reserva.', critical:true},
-    {param:'checkInDate', caspio:'TaBookings2021.Checkin', val:checkinDate?fmtPol(checkinDate):'', desc:'Fecha check-in YYYYMMDD.', critical:true, warn:dateError?'⚠️ Fecha PASADA — el link puede fallar':null, editSec:'secReserva', editField:'f_Checkin'},
-    {param:'checkOutDate', caspio:'TaBookings2021.Checkout', val:checkoutDate?fmtPol(checkoutDate):'', desc:'Fecha check-out YYYYMMDD.', critical:true, editSec:'secReserva', editField:'f_Checkout'},
-    {param:'contractDate', caspio:'(automático = hoy)', val:todayPol(), desc:'Fecha del contrato. Se genera automáticamente.', critical:false},
-    {param:'number', caspio:'TaBookings2021.Adults + Children', val:String((parseInt(g('TaBookings2021_Adults'))||1)+(parseInt(g('TaBookings2021_Children'))||0)), desc:'Total de ocupantes (adultos + niños).', critical:true},
-    {param:'firstName', caspio:'Fiscal_guest_name / Guest_Name', val:($('f_Guest_Name')||{value:''}).value||g('TaBookings2021_Guest_Name'), desc:'Nombre del titular.', critical:false, editSec:'s-arrival', editField:'f_Guest_Name'},
-    {param:'lastName1', caspio:'Fiscal_guest_surename / Guest_Surename', val:($('f_Guest_Surename')||{value:''}).value||g('TaBookings2021_Guest_Surename'), desc:'Apellido del titular.', critical:false, editSec:'s-arrival', editField:'f_Guest_Surename'},
-    {param:'phone', caspio:'Guest_phonenumber', val:(($('f_Guest_phonenumber_ha')||{value:''}).value||g('TaBookings2021_Guest_phonenumber')).replace(/\D/g,''), desc:'Teléfono sin caracteres especiales.', critical:false, editSec:'s-arrival', editField:'f_Guest_phonenumber_ha'},
+    {param:'checkInDate', caspio:'TaBookings2021.Checkin', val:_polParam('checkInDate'), desc:'Fecha check-in YYYYMMDD.', critical:true, warn:dateError?'⚠️ Fecha PASADA — el link puede fallar':null, editSec:'secReserva', editField:'f_Checkin'},
+    {param:'checkOutDate', caspio:'TaBookings2021.Checkout', val:_polParam('checkOutDate'), desc:'Fecha check-out YYYYMMDD.', critical:true, editSec:'secReserva', editField:'f_Checkout'},
+    {param:'contractDate', caspio:'(automático = hoy)', val:_polParam('contractDate'), desc:'Fecha del contrato. En esta pagina y en el check-in del huesped es la de hoy; en Notas Equipo Reservas es la de creacion de la reserva.', critical:false},
+    {param:'number', caspio:'Guest_adults/children_nr_form, si no Adults + Children', val:_polParam('number'), desc:'Total de ocupantes. Primero el Arrival Form (si adultos es 1 o mas), si no Hostaway. Si no hay dato en ninguno se envia 0 y NO se inventa un 1: un 1 inventado cierra el formulario de policia tras el primer huesped.', critical:true},
+    {param:'firstName', caspio:'Fiscal_guest_name / Guest_Name', val:_polParam('firstName'), desc:'Nombre del titular.', critical:false, editSec:'s-arrival', editField:'f_Guest_Name'},
+    {param:'lastName1', caspio:'Fiscal_guest_surename / Guest_Surename', val:_polParam('lastName1'), desc:'Apellido del titular.', critical:false, editSec:'s-arrival', editField:'f_Guest_Surename'},
+    {param:'phone', caspio:'Segundo_Telefono, si no Guest_phonenumber', val:_polParam('phone'), desc:'Telefono sin caracteres especiales. El prefijo + se envia como 00.', critical:false, editSec:'s-arrival', editField:'f_Guest_phonenumber_ha'},
   ];
   var diagHtml='';
   if(dateError) diagHtml+='<div class="date-error">⛔ ERROR: La fecha de check-in es anterior a hoy. El link policial puede fallar.</div>';
@@ -921,10 +946,7 @@ function updatePoliceDiag(){
   });
   diagHtml+='</div>';
   var diagEl=$('d_police_diag'); if(diagEl) diagEl.innerHTML=diagHtml;
-  // Link completo — v9: lo construye police-url.js (ver nota mas abajo).
-  var _polB=(typeof PoliceUrl!=='undefined'&&PoliceUrl.build)
-    ? PoliceUrl.build(polGetTest,{code:code,contractDate:'today',ignoreExternal:true})
-    : {url:'',warnings:['builder-missing']};
+  // Link completo — v9: ya construido arriba en _polB, junto con la tabla.
   var lkEl=$('d_police_link');
   if(lkEl&&_polB.url){lkEl.textContent=_polB.url;lkEl.style.display='block';}
   var _pwEl=$('d_police_warn');
@@ -1033,8 +1055,15 @@ function updatePortalPreview(){
    escrito en los campos del formulario, para poder probar valores sin guardar
    nada; despues cae al dato real de la reserva. */
 function polGetTest(k){
+  /* v9: se incluyen tambien los campos fiscales y el segundo telefono. Sin
+     ellos, un Fiscal_guest_name o un Segundo_Telefono guardados ganaban al
+     valor que el probador acababa de escribir, y la pagina dejaba de servir
+     para probar. */
   var live={Guest_Name:'f_Guest_Name',Guest_Full_Name:'f_Guest_Name',
             Guest_Surename:'f_Guest_Surename',Guest_phonenumber:'f_Guest_phonenumber_ha',
+            Fiscal_guest_name:'f_Fiscal_guest_name',
+            Fiscal_guest_surename:'f_Fiscal_guest_surename',
+            Segundo_Telefono:'f_Segundo_Telefono',
             Checkin:'f_Checkin',Checkout:'f_Checkout'};
   if(live[k]){var el=document.getElementById(live[k]);if(el&&el.value!=='')return el.value;}
   if(k==='Link_Registrodepolicia'||k==='Lint_Policia_castellsol'){
@@ -1042,7 +1071,8 @@ function polGetTest(k){
   }
   var v=g('TaBookings2021_'+k);if(v!=='')return v;
   v=g('TaVillas_'+k);if(v!=='')return v;
-  return g(k);
+  v=g(k);if(v!=='')return v;
+  return '';
 }
 function fmtPol(v){if(!v)return'';var d=new Date(v);var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return y+m+dd;}
 function todayPol(){var d=new Date();var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return y+m+dd;}
@@ -1155,7 +1185,6 @@ function renderBooking(){
   setVal('f_Guest_phonenumber', g('TaBookings2021_Guest_phonenumber'));
   setDisplay('d_Segundo_Telefono', g('TaBookings2021_Segundo_Telefono'));
   // input[type=date] necesita formato YYYY-MM-DD
-  function toInputDate(v){ if(!v) return ''; try{ return new Date(v).toISOString().slice(0,10); } catch(e){ return ''; } }
   setVal('f_Checkin', toInputDate(g('TaBookings2021_Checkin')));
   setVal('f_Checkout', toInputDate(g('TaBookings2021_Checkout')));
   setDisplay('d_Checkin_pol', fmtDate(g('TaBookings2021_Checkin')));
@@ -1174,8 +1203,8 @@ function renderBooking(){
   // habian corregido: number= se inventaba un 1 cuando la reserva no traia
   // adultos, y el telefono se limpiaba con /\D/g, que borra el '+' sin
   // convertirlo en '00' y hace perder el prefijo internacional.
-  var _polA=(typeof PoliceUrl!=='undefined'&&PoliceUrl.build)
-    ? PoliceUrl.build(polGetTest,{code:code,contractDate:'today',ignoreExternal:true})
+  var _polA=(code&&typeof PoliceUrl!=='undefined'&&PoliceUrl.build)
+    ? PoliceUrl.build(polGetTest,{code:code,contractDate:'today',ignoreExternal:true,allowFallbackOrg:false})
     : {url:''};
   if(_polA.url) setDisplay('d_police_link', _polA.url);
 
@@ -1338,6 +1367,6 @@ window.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 
-<!-- HISTORIAL: v9 - Los seis constructores del link de policia que habia repartidos por la intranet (checkin-pasos, notas-equipo-reservas, notas-villamanager y checkin-testear-reserva x2) se sustituyen por UNO SOLO: el nuevo fichero police-url.js. Motivo: cada pagina tenia su propia copia del mismo codigo y los arreglos llegaban solo a una. El fix del telefono con caracteres Unicode invisibles se hizo en checkin-pasos v89 y en notas-equipo-reservas v67, pero notas-villamanager y checkin-testear-reserva seguian sin el; y el fix de number= se hizo DOS VECES (v78 y v87) solo en la pagina del huesped. FALLO PRINCIPAL QUE SE CORRIGE (reportado por Cristian en el grupo de soporte el 04/09/2026, y ya antes el 13/07, 26/07, 04/08, 05/08 y 16/08): cuando una reserva no trae numero de personas ni del Arrival Form ni de Hostaway, checkin-pasos enviaba number=1 como "suelo de seguridad". Ese 1 no es un dato, es una suposicion, y el formulario de policia lo trata como el numero definitivo: el huesped mete al titular, el formulario se marca 100% completado con el tick verde y no deja anadir a nadie mas. Con la MISMA reserva, el link de notas-equipo-reservas enviaba number=0 y ahi si dejaba seguir anadiendo huespedes; por eso el equipo usaba el link largo como solucion provisional. AHORA: cuando no se sabe el numero no se inventa — se envia number=0 (el comportamiento del link que si funciona) y las paginas del equipo muestran un aviso rojo para que alguien corrija Adultos/Ninos en la reserva. Tambien se unifica: el telefono se limpia igual en las cuatro paginas (se quita todo lo que no sea digito o '+', y el '+' pasa a '00', asi el prefijo internacional nunca se pierde — antes checkin-testear-reserva usaba /\D/g, que borraba el '+' sin sustituirlo); adultos=0 en el Arrival Form deja de tratarse como dato real en todas las paginas; y las villas con formulario propio del complejo (Lint_Policia_castellsol, p.ej. Castell Sol) se senalan con un aviso en las paginas del equipo, que siguen mostrando el link de policheckin igual que hasta ahora. NO se cambia contractDate: checkin-pasos sigue enviando la fecha de hoy y las paginas del equipo la fecha de creacion de la reserva, porque no sabemos cual espera la API. NO se cambia la organizacion por defecto de checkin-pasos (20e22b77-...), solo se avisa cuando se usa. Pruebas: police-url.test.js, 33 casos, todos en verde. | v8 - Añadidos Deposit_waver_cobrado y Gasto_tarjeta_dep_seguri_cobrado en sección Depósito (0=pendiente, 1=pagado); se cargan y guardan igual que Security_deposit_cobrado | v7 - Todo plegado; sección Reserva colapsable; Police fechas→display+editar; diagnóstico con campo Caspio+botón editar; scrollToField | v6 - Historial limpio sin texto visible | v5 - Fix error textContent null (bhVilla→bhVillaSelect); historial limpio | v4 - Checkin/Checkout editables | v3 - Hostaway editable; PIN sección; selector villa | v2 - Portal select; diagnóstico policial; upselling | v1 - Página inicial -->
+<!-- HISTORIAL: v9 - Los seis constructores del link de policia que habia repartidos por la intranet (checkin-pasos, notas-equipo-reservas, notas-villamanager y checkin-testear-reserva x2) se sustituyen por UNO SOLO: el nuevo fichero police-url.js. Motivo: cada pagina tenia su propia copia del mismo codigo y los arreglos llegaban solo a una. El fix del telefono con caracteres Unicode invisibles se hizo en checkin-pasos v89 y en notas-equipo-reservas v67, pero notas-villamanager y checkin-testear-reserva seguian sin el; y el fix de number= se hizo DOS VECES (v78 y v87) solo en la pagina del huesped. FALLO PRINCIPAL QUE SE CORRIGE (reportado por Cristian en el grupo de soporte el 04/09/2026, y ya antes el 13/07, 26/07, 04/08, 05/08 y 16/08): cuando una reserva no trae numero de personas ni del Arrival Form ni de Hostaway, checkin-pasos enviaba number=1 como "suelo de seguridad". Ese 1 no es un dato, es una suposicion, y el formulario de policia lo trata como el numero definitivo: el huesped mete al titular, el formulario se marca 100% completado con el tick verde y no deja anadir a nadie mas. Con la MISMA reserva, el link de notas-equipo-reservas enviaba number=0 y ahi si dejaba seguir anadiendo huespedes; por eso el equipo usaba el link largo como solucion provisional. AHORA: cuando no se sabe el numero no se inventa — se envia number=0 (el comportamiento del link que si funciona) y las paginas del equipo muestran un aviso rojo para que alguien corrija Adultos/Ninos en la reserva. Tambien se unifica: el telefono se limpia igual en las cuatro paginas (se quita todo lo que no sea digito o '+', y el '+' pasa a '00', asi el prefijo internacional nunca se pierde — antes checkin-testear-reserva usaba /\D/g, que borraba el '+' sin sustituirlo); adultos=0 en el Arrival Form deja de tratarse como dato real en todas las paginas; y las villas con formulario propio del complejo (Lint_Policia_castellsol, p.ej. Castell Sol) se senalan con un aviso en las paginas del equipo, que siguen mostrando el link de policheckin igual que hasta ahora. NO se cambia contractDate: checkin-pasos sigue enviando la fecha de hoy y las paginas del equipo la fecha de creacion de la reserva, porque no sabemos cual espera la API. NO se cambia la organizacion por defecto de checkin-pasos (20e22b77-...), solo se avisa cuando se usa. Pruebas: police-url.test.js, 33 casos, todos en verde. REVISION ADVERSARIAL 04/09/2026 (cinco agentes) y correcciones aplicadas ANTES de subir nada: (1) una fecha solo entra en la URL si son ocho digitos — un valor como '2026-09-05&number=1#' en el campo Checkin anadia su propio parametro y cortaba el resto de la URL, asi que el nombre y el telefono del huesped no llegaban a la policia; (2) las paginas del equipo ya NO caen a la organizacion por defecto: si la villa no tiene Link_Registrodepolicia no se genera link y se avisa, porque un link plausible que registra al huesped bajo OTRA villa es peor que un link roto (el link del huesped si conserva la organizacion por defecto: no tiene alternativa); (3) el link propio guardado en la villa se rechaza si su esquema ejecuta codigo (javascript:, data:, vbscript:), y se escapa entero antes de entrar en el HTML de las paginas del equipo; (4) el marcador 'VERSION ACTUAL' de la linea 3 tambien se sube — el auto-recargado lee ESE marcador, no la constante PAGE_VERSION, asi que sin este cambio la recarga automatica no se disparaba nunca; (5) police-url.js se carga como police-url.js?v=1: los ficheros .js se cachean 4 horas y las paginas 10 minutos, asi que un 'no encontrado' guardado en un servidor de borde podia dejar el boton muerto durante horas; (6) los accesores de campos saltan las columnas vacias, igual que hacian las cadenas || originales, para que una columna vacia sin prefijo no tape la misma columna llena con prefijo. Pruebas: police-url.test.js (33 casos) y police-url.integration.test.js (60 casos, que extraen el codigo REAL de los accesores de cada pagina en vez de una copia), en verde en Madrid, Nueva York, Auckland y UTC. Ademas en esta pagina: la tabla de diagnostico ya NO calcula sus propios valores — los lee del link que se construye encima, asi que la tabla y el link no pueden volver a contradecirse; vuelve el candado de siempre (sin codigo de reserva no se muestra link); los campos fiscales y el segundo telefono entran en la lista de campos editables, para que lo que escribe el probador gane al dato guardado; y habia DOS funciones toInputDate, una global y otra local que la tapaba, las dos con un viaje de ida y vuelta a UTC que restaba un dia en Madrid — queda una sola, corregida. | v8 - Añadidos Deposit_waver_cobrado y Gasto_tarjeta_dep_seguri_cobrado en sección Depósito (0=pendiente, 1=pagado); se cargan y guardan igual que Security_deposit_cobrado | v7 - Todo plegado; sección Reserva colapsable; Police fechas→display+editar; diagnóstico con campo Caspio+botón editar; scrollToField | v6 - Historial limpio sin texto visible | v5 - Fix error textContent null (bhVilla→bhVillaSelect); historial limpio | v4 - Checkin/Checkout editables | v3 - Hostaway editable; PIN sección; selector villa | v2 - Portal select; diagnóstico policial; upselling | v1 - Página inicial -->
 </body>
 </html>
