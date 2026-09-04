@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Notas Equipo Reservas v31 — 3Villas</title>
+  <title>Notas Equipo Reservas v32 — 3Villas</title>
   <!-- notas-equipo-reservas.html v29 — 23/05/2026 -->
   <!--
     FIX v28:
@@ -130,6 +130,7 @@
     }
     @keyframes spin-3v { to { transform: rotate(360deg); } }
   </style>
+  <script src="police-url.js"></script>
   <script src="auth.js"></script>
 </head>
 <body>
@@ -862,29 +863,64 @@ function populateForm(){
 }
 
 function toYMD(s){if(!s)return'';var d=String(s).replace(/[T ].*/,'').split('-');if(d.length===3)return d[0]+d[1]+d[2];return String(s).replace(/-/g,'');}
+/* Accesor de campos para police-url.js. fB() solo prueba el nombre desnudo y
+   el prefijo TaBookings2021_; los dos campos que vienen de la villa llegan a
+   esta vista con el prefijo TaVillas_, asi que se prueban aparte. Mismo orden
+   de busqueda que tenia el codigo anterior. */
+function polGet(k){
+  if(k==='Link_Registrodepolicia'||k==='Lint_Policia_castellsol'){
+    var v=fB('TaVillas_'+k); if(v!=='')return v;
+    if(typeof fV==='function'){ v=fV(k); if(v!=='')return v; }
+  }
+  return fB(k);
+}
 function buildPoliceUrl(){
-  var org=fB('TaVillas_Link_Registrodepolicia')||fB('Link_Registrodepolicia')||'';
+  /* El link ya no se construye aqui. Se construye en police-url.js, el
+     constructor unico que comparten checkin-pasos, notas-equipo-reservas,
+     notas-villamanager y checkin-testear-reserva. Antes cada pagina tenia su
+     propia copia del mismo codigo y los arreglos llegaban solo a una (el fix
+     del telefono con caracteres invisibles se hizo aqui en v67 pero
+     notas-villamanager y checkin-testear-reserva se quedaron sin el; el fix de
+     number= se hizo dos veces solo en la pagina del huesped). Ver la cabecera
+     de police-url.js. */
   var wrap=g('policeUrlWrap');if(!wrap)return;
   wrap.style.display='block';
-  var reserv=confCode||'';
-  var checkin=toYMD(fB('Checkin')||fB('TaBookings2021_Checkin')||'');
-  var checkout=toYMD(fB('Checkout')||fB('TaBookings2021_Checkout')||'');
-  var created=toYMD(fB('Cretated_At')||fB('TaBookings2021_Cretated_At')||fB('Created_At')||'');
-  var aform=String(fB('Guest_adults_nr_form')||'').trim();
-  var cform=String(fB('Guest_children_nr_form')||'').trim();
-  var total=aform?((parseInt(aform)||0)+(parseInt(cform)||0)):((parseInt(fB('Adults')||0))+(parseInt(fB('Children')||0)));
-  var fiscNm=String(fB('Fiscal_guest_name')||'').trim();
-  var firstName=(fiscNm&&fiscNm!==' ')?fiscNm:String(fB('Guest_Full_Name')||'');
-  var lastName=(fiscNm&&fiscNm!==' ')?String(fB('Fiscal_guest_surename')||''):String(fB('Guest_Surename')||'');
-  var ph2=String(fB('Segundo_Telefono')||'').trim();
-  var ph=ph2?ph2:String(fB('Guest_phonenumber')||'');
-  ph=ph.replace(/\+/g,'00').replace(/\s/g,'');
-  var base='https://policheckin01.azurewebsites.net/api/v5/customer/ee6f5c47d6bd4c7e9a4b75a457e58a96';
-  var url=base+'/organization/'+encodeURIComponent(org)+'/reservation/'+encodeURIComponent(reserv)+
-    '?checkInDate='+checkin+'&checkOutDate='+checkout+'&contractDate='+created+
-    '&number='+total+'&firstName='+encodeURIComponent(firstName)+
-    '&lastName1='+encodeURIComponent(lastName)+'&phone='+encodeURIComponent(ph);
-  var el=g('policeUrl');if(el){el.href=url;el.textContent=url;}
+  var res=(typeof PoliceUrl!=='undefined'&&PoliceUrl.build)
+    ? PoliceUrl.build(polGet,{code:confCode||'',contractDate:'created',ignoreExternal:true})
+    : {url:'',count:null,warnings:['builder-missing']};
+  var el=g('policeUrl');if(el){el.href=res.url;el.textContent=res.url||'(no se pudo construir el link)';}
+  polWarn(res);
+}
+
+/* Avisos del link de policia para el equipo. El huesped no ve nada de esto.
+   Se pintan debajo del link, sin tocar el HTML de la pagina. */
+function polWarn(res){
+  var wrap=g('policeUrlWrap');if(!wrap)return;
+  var box=document.getElementById('policeUrlWarn');
+  if(!box){
+    box=document.createElement('div');
+    box.id='policeUrlWarn';
+    box.style.cssText='margin-top:8px;font-family:Montserrat,sans-serif;font-size:11px;line-height:1.45';
+    wrap.appendChild(box);
+  }
+  var w=res.warnings||[];
+  if(!w.length){ box.innerHTML=''; box.style.display='none'; return; }
+  box.style.display='block';
+  var html='';
+  for(var i=0;i<w.length;i++){
+    var txt=(typeof PoliceUrl!=='undefined'&&PoliceUrl.warningText)?PoliceUrl.warningText(w[i]):w[i];
+    var red=(w[i]==='count-unknown'||w[i]==='builder-missing');
+    html+='<div style="padding:7px 10px;margin-top:5px;border-radius:6px;border:1px solid '+
+      (red?'#d33':'#e0a800')+';background:'+(red?'#fdecec':'#fff8e1')+';color:#333">'+
+      '<b>'+(red?'\u26a0 Atencion':'\u2139 Aviso')+':</b> '+txt+'</div>';
+  }
+  if(res.externalUrl){
+    html+='<div style="padding:7px 10px;margin-top:5px;border-radius:6px;border:1px solid #e0a800;background:#fff8e1;color:#333">'+
+      'Formulario del complejo: <a href="'+String(res.externalUrl).replace(/"/g,'&quot;')+
+      '" target="_blank" rel="noopener" style="color:#0b5">'+
+      String(res.externalUrl).replace(/</g,'&lt;')+'</a></div>';
+  }
+  box.innerHTML=html;
 }
 
 /* ══ GUARDAR ══
@@ -1001,4 +1037,4 @@ document.addEventListener('DOMContentLoaded',function(){
 </script>
 </body>
 </html>
-<!-- HISTORIAL: v31 - Spinner corazón 3Villas embebido en CSS inline (sin archivo externo) | v30 - Eliminado CSS inline .spinner/.spin — ahora spinner.css y spinner-sm.css tienen prioridad | v29 - versión anterior -->
+<!-- HISTORIAL: v32 - Los seis constructores del link de policia que habia repartidos por la intranet (checkin-pasos, notas-equipo-reservas, notas-villamanager y checkin-testear-reserva x2) se sustituyen por UNO SOLO: el nuevo fichero police-url.js. Motivo: cada pagina tenia su propia copia del mismo codigo y los arreglos llegaban solo a una. El fix del telefono con caracteres Unicode invisibles se hizo en checkin-pasos v89 y en notas-equipo-reservas v67, pero notas-villamanager y checkin-testear-reserva seguian sin el; y el fix de number= se hizo DOS VECES (v78 y v87) solo en la pagina del huesped. FALLO PRINCIPAL QUE SE CORRIGE (reportado por Cristian en el grupo de soporte el 04/09/2026, y ya antes el 13/07, 26/07, 04/08, 05/08 y 16/08): cuando una reserva no trae numero de personas ni del Arrival Form ni de Hostaway, checkin-pasos enviaba number=1 como "suelo de seguridad". Ese 1 no es un dato, es una suposicion, y el formulario de policia lo trata como el numero definitivo: el huesped mete al titular, el formulario se marca 100% completado con el tick verde y no deja anadir a nadie mas. Con la MISMA reserva, el link de notas-equipo-reservas enviaba number=0 y ahi si dejaba seguir anadiendo huespedes; por eso el equipo usaba el link largo como solucion provisional. AHORA: cuando no se sabe el numero no se inventa — se envia number=0 (el comportamiento del link que si funciona) y las paginas del equipo muestran un aviso rojo para que alguien corrija Adultos/Ninos en la reserva. Tambien se unifica: el telefono se limpia igual en las cuatro paginas (se quita todo lo que no sea digito o '+', y el '+' pasa a '00', asi el prefijo internacional nunca se pierde — antes checkin-testear-reserva usaba /\D/g, que borraba el '+' sin sustituirlo); adultos=0 en el Arrival Form deja de tratarse como dato real en todas las paginas; y las villas con formulario propio del complejo (Lint_Policia_castellsol, p.ej. Castell Sol) se senalan con un aviso en las paginas del equipo, que siguen mostrando el link de policheckin igual que hasta ahora. NO se cambia contractDate: checkin-pasos sigue enviando la fecha de hoy y las paginas del equipo la fecha de creacion de la reserva, porque no sabemos cual espera la API. NO se cambia la organizacion por defecto de checkin-pasos (20e22b77-...), solo se avisa cuando se usa. Pruebas: police-url.test.js, 33 casos, todos en verde. | v31 - Spinner corazón 3Villas embebido en CSS inline (sin archivo externo) | v30 - Eliminado CSS inline .spinner/.spin — ahora spinner.css y spinner-sm.css tienen prioridad | v29 - versión anterior -->
