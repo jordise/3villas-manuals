@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v32 | Historial completo al final -->
+<!-- VERSIÓN ACTUAL: v33 | Historial completo al final -->
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -274,6 +274,7 @@
           <div class="chk-circle" id="circArrDone"></div>
           <span class="chk-label">Arrival Form rellenado</span>
         </div>
+        <div id="mkArrDone" style="display:none;background:var(--gray-1);border-radius:8px;padding:6px 10px;margin-top:6px"></div>
       </div>
     </div>
 
@@ -298,6 +299,7 @@
           <div class="chk-circle" id="circPolDone"></div>
           <span class="chk-label">Registro de Policía rellenado</span>
         </div>
+        <div id="mkPolDone" style="display:none;background:var(--gray-1);border-radius:8px;padding:6px 10px;margin-top:6px"></div>
       </div>
     </div>
 
@@ -393,6 +395,7 @@
                       <option value="1">Pagado</option>
                       <option value="0">Pendiente</option>
                     </select>
+                    <div id="mkEco" style="display:none;background:var(--gray-1);border-radius:8px;padding:6px 10px;margin-top:6px"></div>
                   </div>
                   <div class="field">
                     <label class="lbl">Comentarios Ecotasa</label>
@@ -425,6 +428,7 @@
           <div class="chk-circle" id="circDepTerm"></div>
           <span class="chk-label">Depósito de Seguridad — Terminado</span>
         </div>
+        <div id="mkDepTerm" style="display:none;background:#fff;border-radius:8px;padding:6px 10px;margin-top:6px"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
           <div class="field"><label class="lbl">Depósito EUR</label><input type="text" id="fDepEUR" oninput="chkImporte(this)" placeholder="0,00"></div>
           <div class="field"><label class="lbl">Waiver EUR</label><input type="text" id="fWavEUR" oninput="chkImporte(this)" placeholder="0,00"></div>
@@ -617,6 +621,71 @@ function ecoVal(){
   return null;
 }
 
+/* ══ v33: RASTRO DE MARCAS MANUALES ══
+   Mismo bloque que notas-equipo-reservas v70. Peticion de Toni Segui Badia
+   (WhatsApp, 04/09/2026): que quede registrado quien marca una casilla a mano.
+   El valor anterior se lee de la TABLA TaBookings2021, no de la vista
+   Vi_villas_and_bookings2021 (el campo es nuevo y la vista no lo trae). Si esa
+   lectura falla, marcasTexto se queda en null y guardar() NO escribe el campo:
+   nunca se sobreescribe un historial que no se ha podido leer. */
+var marcasTexto=null;
+var MARCAS_MAX=3800;
+var MARCA_DEFS=[['arr','Arrival form','mkArrDone'],['pol','Policia','mkPolDone'],['dep','Deposito','mkDepTerm'],['eco','Ecotasa','mkEco']];
+var marcaPrev={arr:null,pol:null,dep:null,eco:null};
+
+function loadMarcas(){
+  var w="FS_confirmation_code='"+confCode+"'";
+  return fetch(Auth.url(WORKER+'?action=data&table=TaBookings2021&where='+encodeURIComponent(w)+'&limit=1'))
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(j){
+      if(!j)return;
+      var rows=j.Result||j.result||[];
+      if(!rows.length||!('Marcas_manuales' in rows[0]))return;
+      marcasTexto=String(rows[0].Marcas_manuales||'');
+    })
+    .catch(function(){});
+}
+
+function marcaEsc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function marcaSello(etiqueta,puesto){
+  var d=new Date(),p=function(n){return(n<10?'0':'')+n;};
+  var who=(typeof Auth!=='undefined'&&Auth.name&&Auth.name())||'equipo';
+  return '['+etiqueta+' '+(puesto?'marcado':'desmarcado')+' '+p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes())+' - '+who+']';
+}
+
+function marcasNuevas(){
+  var ahora={
+    arr:g('cbArrDone')?g('cbArrDone').checked:null,
+    pol:g('cbPolDone')?g('cbPolDone').checked:null,
+    dep:g('cbDepTerm')?g('cbDepTerm').checked:null,
+    eco:g('fEcotasaCobrada')?(g('fEcotasaCobrada').value==='1'):null
+  };
+  var out=[];
+  for(var i=0;i<MARCA_DEFS.length;i++){
+    var k=MARCA_DEFS[i][0];
+    if(marcaPrev[k]===null||ahora[k]===null)continue;
+    if(ahora[k]!==marcaPrev[k])out.push(marcaSello(MARCA_DEFS[i][1],ahora[k]));
+  }
+  return out;
+}
+
+function renderMarcas(){
+  var lineas=String(marcasTexto||'').split('\n');
+  for(var i=0;i<MARCA_DEFS.length;i++){
+    var el=g(MARCA_DEFS[i][2]);
+    if(!el)continue;
+    var pref='['+MARCA_DEFS[i][1]+' ';
+    var mias=[];
+    for(var j=0;j<lineas.length;j++){if(lineas[j].indexOf(pref)===0)mias.push(lineas[j]);}
+    if(!mias.length){el.style.display='none';el.innerHTML='';continue;}
+    var html='<div style="font-family:Montserrat,sans-serif;font-size:8px;font-weight:800;text-transform:uppercase;color:var(--gray-4);margin-bottom:3px">Marcado a mano</div>';
+    for(var k2=0;k2<mias.length;k2++)html+='<div style="font-size:11px;color:var(--gray-4);font-family:monospace;line-height:1.5">'+marcaEsc(mias[k2])+'</div>';
+    el.innerHTML=html;
+    el.style.display='block';
+  }
+}
+
 /* ══ CARGA DE DATOS ══ */
 function setSelectVal(id,val){
   var sel=g(id);if(!sel||val===''||val===null||val===undefined)return;
@@ -707,6 +776,7 @@ function loadBooking(){
       if(!rows.length) throw new Error('Reserva no encontrada: '+confCode);
       bookingData=rows[0];
       villaData=bookingData;
+      return loadMarcas();   /* v33 */
     });
   /* populateForm() se llama en Promise.all.then() */
 }
@@ -769,6 +839,7 @@ function populateForm(){
   /* Arrival Form */
   var aV=isTruthy(fV('Checkin_arrivalform')),aD=isTruthy(fB('Arrivalform_done'));
   setVr('vrArrival',aV,'Arrival Form');setCb('cbArrDone','rowArrDone',aD);setColState('colArrival','stArrival',aV,aD);
+  marcaPrev.arr=aD;   /* v33 */
 
   /* Resumen Arrival Form */
   (function(){
@@ -817,6 +888,7 @@ function populateForm(){
   /* Policía */
   var pV=isTruthy(fV('Checkin_registro_policia')),pD=isTruthy(fB('Registro_policia_done'));
   setVr('vrPolicia',pV,'Registro de Policía');setCb('cbPolDone','rowPolDone',pD);setColState('colPolicia','stPolicia',pV,pD);
+  marcaPrev.pol=pD;   /* v33 */
 
   /* ── FIX v28: Ecotasa_cobrada es INTEGER. Se usa fEcotasaCobrada (select).
      NO se usa cbEcotasaCobrada (no existe en el HTML). ── */
@@ -824,6 +896,7 @@ function populateForm(){
   var eCob=String(fB('Ecotasa_cobrada')||'');
   setVr('vrEcotasa',eV,'Ecotasa');
   setSelectVal('fEcotasaCobrada',eCob);
+  marcaPrev.eco=(eCob==='1');   /* v33 */
   setColState('colEcotasa','stEcotasa',eV,eCob==='1');
   var ecoManual=fB('Ecotasa_entrada_manualmente')||'';
   if(g('fEcotasaManual'))g('fEcotasaManual').value=ecoManual;
@@ -835,6 +908,7 @@ function populateForm(){
   var dV=isTruthy(fV('Checkin_deposito')),dD=isTruthy(fB('Security_deposit_terminado'));
   setVr('vrDeposito',dV,'Depósito de Seguridad');
   setCb('cbDepTerm','rowDepTerm',dD);
+  marcaPrev.dep=dD;   /* v33 */
   setColState('colDeposito','stDeposito',dV,dD);
   g('fDepEUR').value=String(fB('Security_deposit_EUR')||'');
   g('fWavEUR').value=String(fB('Deposit_waver_EUR')||'');
@@ -860,6 +934,7 @@ function populateForm(){
 
   /* Link policía */
   buildPoliceUrl();
+  renderMarcas();   /* v33 */
 }
 
 function toYMD(s){if(!s)return'';var d=String(s).replace(/[T ].*/,'').split('-');if(d.length===3)return d[0]+d[1]+d[2];return String(s).replace(/-/g,'');}
@@ -983,6 +1058,18 @@ window.guardar=function(){
   };
   /* v29 FIX: PMSmultiunitID es Text(255) — guardar SIEMPRE como string, nunca parseInt */
   if(newMUID)record['PMSmultiunitID']=String(newMUID);
+  /* v33: rastro de marcas manuales (peticion de Toni). El campo solo viaja en
+     el record cuando se ha podido leer el valor anterior Y alguna de las cuatro
+     casillas ha cambiado en esta sesion. */
+  var _mn=marcasNuevas();
+  if(_mn.length&&marcasTexto!==null){
+    var _ls=[];
+    var _viejas=String(marcasTexto).split('\n');
+    for(var _li=0;_li<_viejas.length;_li++){if(_viejas[_li].trim())_ls.push(_viejas[_li]);}
+    _ls=_ls.concat(_mn);
+    while(_ls.join('\n').length>MARCAS_MAX&&_ls.length>1)_ls.shift();
+    record.Marcas_manuales=_ls.join('\n');
+  }
   var where="FS_confirmation_code='"+confCode+"'";
   fetch(Auth.url(WORKER+'?action=save&table=TaBookings2021&where='+encodeURIComponent(where)+'&method=PUT'),
     {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)})
@@ -1053,4 +1140,4 @@ document.addEventListener('DOMContentLoaded',function(){
 </script>
 </body>
 </html>
-<!-- HISTORIAL: v32 - Los seis constructores del link de policia que habia repartidos por la intranet (checkin-pasos, notas-equipo-reservas, notas-villamanager y checkin-testear-reserva x2) se sustituyen por UNO SOLO: el nuevo fichero police-url.js. Motivo: cada pagina tenia su propia copia del mismo codigo y los arreglos llegaban solo a una. El fix del telefono con caracteres Unicode invisibles se hizo en checkin-pasos v89 y en notas-equipo-reservas v67, pero notas-villamanager y checkin-testear-reserva seguian sin el; y el fix de number= se hizo DOS VECES (v78 y v87) solo en la pagina del huesped. FALLO PRINCIPAL QUE SE CORRIGE (reportado por Cristian en el grupo de soporte el 04/09/2026, y ya antes el 13/07, 26/07, 04/08, 05/08 y 16/08): cuando una reserva no trae numero de personas ni del Arrival Form ni de Hostaway, checkin-pasos enviaba number=1 como "suelo de seguridad". Ese 1 no es un dato, es una suposicion, y el formulario de policia lo trata como el numero definitivo: el huesped mete al titular, el formulario se marca 100% completado con el tick verde y no deja anadir a nadie mas. Con la MISMA reserva, el link de notas-equipo-reservas enviaba number=0 y ahi si dejaba seguir anadiendo huespedes; por eso el equipo usaba el link largo como solucion provisional. AHORA: cuando no se sabe el numero no se inventa — se envia number=0 (el comportamiento del link que si funciona) y las paginas del equipo muestran un aviso rojo para que alguien corrija Adultos/Ninos en la reserva. Tambien se unifica: el telefono se limpia igual en las cuatro paginas (se quita todo lo que no sea digito o '+', y el '+' pasa a '00', asi el prefijo internacional nunca se pierde — antes checkin-testear-reserva usaba /\D/g, que borraba el '+' sin sustituirlo); adultos=0 en el Arrival Form deja de tratarse como dato real en todas las paginas; y las villas con formulario propio del complejo (Lint_Policia_castellsol, p.ej. Castell Sol) se senalan con un aviso en las paginas del equipo, que siguen mostrando el link de policheckin igual que hasta ahora. NO se cambia contractDate: checkin-pasos sigue enviando la fecha de hoy y las paginas del equipo la fecha de creacion de la reserva, porque no sabemos cual espera la API. NO se cambia la organizacion por defecto de checkin-pasos (20e22b77-...), solo se avisa cuando se usa. Pruebas: police-url.test.js, 33 casos, todos en verde. REVISION ADVERSARIAL 04/09/2026 (cinco agentes) y correcciones aplicadas ANTES de subir nada: (1) una fecha solo entra en la URL si son ocho digitos — un valor como '2026-09-05&number=1#' en el campo Checkin anadia su propio parametro y cortaba el resto de la URL, asi que el nombre y el telefono del huesped no llegaban a la policia; (2) las paginas del equipo ya NO caen a la organizacion por defecto: si la villa no tiene Link_Registrodepolicia no se genera link y se avisa, porque un link plausible que registra al huesped bajo OTRA villa es peor que un link roto (el link del huesped si conserva la organizacion por defecto: no tiene alternativa); (3) el link propio guardado en la villa se rechaza si su esquema ejecuta codigo (javascript:, data:, vbscript:), y se escapa entero antes de entrar en el HTML de las paginas del equipo; (4) el marcador 'VERSION ACTUAL' de la linea 3 tambien se sube — el auto-recargado lee ESE marcador, no la constante PAGE_VERSION, asi que sin este cambio la recarga automatica no se disparaba nunca; (5) police-url.js se carga como police-url.js?v=1: los ficheros .js se cachean 4 horas y las paginas 10 minutos, asi que un 'no encontrado' guardado en un servidor de borde podia dejar el boton muerto durante horas; (6) los accesores de campos saltan las columnas vacias, igual que hacian las cadenas || originales, para que una columna vacia sin prefijo no tape la misma columna llena con prefijo. Pruebas: police-url.test.js (33 casos) y police-url.integration.test.js (60 casos, que extraen el codigo REAL de los accesores de cada pagina en vez de una copia), en verde en Madrid, Nueva York, Auckland y UTC. | v31 - Spinner corazón 3Villas embebido en CSS inline (sin archivo externo) | v30 - Eliminado CSS inline .spinner/.spin — ahora spinner.css y spinner-sm.css tienen prioridad | v29 - versión anterior -->
+<!-- HISTORIAL: v33 - Pareja de notas-equipo-reservas v70. Peticion de Toni Segui Badia (WhatsApp, 04/09/2026): que quede registrado quien marca una casilla a mano. Las cuatro casillas de check-in (Arrival form, Policia, Deposito, Ecotasa) dejan un sello cuando una persona las cambia desde esta pagina: [Policia marcado 04/09/2026 12:30 - Nombre Apellido]. Se guarda en el campo nuevo Marcas_manuales de TaBookings2021 y se muestra en gris debajo de cada casilla. Solo se escribe cuando la casilla CAMBIA en esta sesion; se registran los dos sentidos; el historial anterior se conserva con un tope de 3800 caracteres. El valor anterior se lee de la TABLA, no de la vista, y si esa lectura falla no se escribe nada. El bot de policia y los triggers de Caspio no dejan sello: una casilla marcada sin sello no la ha tocado una persona desde esta pagina. Requiere el campo Marcas_manuales (TEXT) en TaBookings2021. | v32 - Los seis constructores del link de policia que habia repartidos por la intranet (checkin-pasos, notas-equipo-reservas, notas-villamanager y checkin-testear-reserva x2) se sustituyen por UNO SOLO: el nuevo fichero police-url.js. Motivo: cada pagina tenia su propia copia del mismo codigo y los arreglos llegaban solo a una. El fix del telefono con caracteres Unicode invisibles se hizo en checkin-pasos v89 y en notas-equipo-reservas v67, pero notas-villamanager y checkin-testear-reserva seguian sin el; y el fix de number= se hizo DOS VECES (v78 y v87) solo en la pagina del huesped. FALLO PRINCIPAL QUE SE CORRIGE (reportado por Cristian en el grupo de soporte el 04/09/2026, y ya antes el 13/07, 26/07, 04/08, 05/08 y 16/08): cuando una reserva no trae numero de personas ni del Arrival Form ni de Hostaway, checkin-pasos enviaba number=1 como "suelo de seguridad". Ese 1 no es un dato, es una suposicion, y el formulario de policia lo trata como el numero definitivo: el huesped mete al titular, el formulario se marca 100% completado con el tick verde y no deja anadir a nadie mas. Con la MISMA reserva, el link de notas-equipo-reservas enviaba number=0 y ahi si dejaba seguir anadiendo huespedes; por eso el equipo usaba el link largo como solucion provisional. AHORA: cuando no se sabe el numero no se inventa — se envia number=0 (el comportamiento del link que si funciona) y las paginas del equipo muestran un aviso rojo para que alguien corrija Adultos/Ninos en la reserva. Tambien se unifica: el telefono se limpia igual en las cuatro paginas (se quita todo lo que no sea digito o '+', y el '+' pasa a '00', asi el prefijo internacional nunca se pierde — antes checkin-testear-reserva usaba /\D/g, que borraba el '+' sin sustituirlo); adultos=0 en el Arrival Form deja de tratarse como dato real en todas las paginas; y las villas con formulario propio del complejo (Lint_Policia_castellsol, p.ej. Castell Sol) se senalan con un aviso en las paginas del equipo, que siguen mostrando el link de policheckin igual que hasta ahora. NO se cambia contractDate: checkin-pasos sigue enviando la fecha de hoy y las paginas del equipo la fecha de creacion de la reserva, porque no sabemos cual espera la API. NO se cambia la organizacion por defecto de checkin-pasos (20e22b77-...), solo se avisa cuando se usa. Pruebas: police-url.test.js, 33 casos, todos en verde. REVISION ADVERSARIAL 04/09/2026 (cinco agentes) y correcciones aplicadas ANTES de subir nada: (1) una fecha solo entra en la URL si son ocho digitos — un valor como '2026-09-05&number=1#' en el campo Checkin anadia su propio parametro y cortaba el resto de la URL, asi que el nombre y el telefono del huesped no llegaban a la policia; (2) las paginas del equipo ya NO caen a la organizacion por defecto: si la villa no tiene Link_Registrodepolicia no se genera link y se avisa, porque un link plausible que registra al huesped bajo OTRA villa es peor que un link roto (el link del huesped si conserva la organizacion por defecto: no tiene alternativa); (3) el link propio guardado en la villa se rechaza si su esquema ejecuta codigo (javascript:, data:, vbscript:), y se escapa entero antes de entrar en el HTML de las paginas del equipo; (4) el marcador 'VERSION ACTUAL' de la linea 3 tambien se sube — el auto-recargado lee ESE marcador, no la constante PAGE_VERSION, asi que sin este cambio la recarga automatica no se disparaba nunca; (5) police-url.js se carga como police-url.js?v=1: los ficheros .js se cachean 4 horas y las paginas 10 minutos, asi que un 'no encontrado' guardado en un servidor de borde podia dejar el boton muerto durante horas; (6) los accesores de campos saltan las columnas vacias, igual que hacian las cadenas || originales, para que una columna vacia sin prefijo no tape la misma columna llena con prefijo. Pruebas: police-url.test.js (33 casos) y police-url.integration.test.js (60 casos, que extraen el codigo REAL de los accesores de cada pagina en vez de una copia), en verde en Madrid, Nueva York, Auckland y UTC. | v31 - Spinner corazón 3Villas embebido en CSS inline (sin archivo externo) | v30 - Eliminado CSS inline .spinner/.spin — ahora spinner.css y spinner-sm.css tienen prioridad | v29 - versión anterior -->
