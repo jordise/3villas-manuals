@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v68 | Historial completo al final de este archivo -->
+<!-- VERSIÓN ACTUAL: v70 | Historial completo al final de este archivo -->
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Notas Equipo Reservas v67 — 3Villas</title>
+  <title>Notas Equipo Reservas v69 — 3Villas</title>
   <script>
   /* ================= AUTO-DETECCIÓN DE VERSIÓN (v67, retrofit) =================
      Comprueba en 2º plano si el servidor tiene una versión más
@@ -16,7 +16,7 @@
      bucle). No bloquea la carga ni rompe nada si falla. Mismo
      mecanismo ya probado en checkin-pasos.html (v76) y reuniones.html (v14). */
   (function(){
-    var PAGE_VERSION = 68; /* debe coincidir con la versión de este archivo */
+    var PAGE_VERSION = 70; /* debe coincidir con la versión de este archivo */
     try{
       if(location.protocol.indexOf('http') !== 0) return; /* file:// u otros: no aplicar */
       fetch(location.pathname, {cache:'reload'}) /* red directa + actualiza la caché HTTP */
@@ -239,6 +239,7 @@
     .mu-pill.done span:first-child{color:#1a7a32}
     .mu-pill.done span:last-child{color:#5a9a6a}
   </style>
+  <script src="police-url.js?v=2"></script>
   <script src="auth.js"></script>
   <script src="nav.js"></script>
   <script src="nav-component.js"></script>
@@ -428,6 +429,7 @@
           <div class="chk-circle" id="circArrDone"></div>
           <span class="chk-label">Arrival Form rellenado</span>
         </div>
+        <div id="mkArrDone" style="display:none;background:var(--gray-1);border-radius:8px;padding:6px 10px;margin-top:6px"></div>
       </div>
     </div>
 
@@ -456,6 +458,7 @@
           <div class="chk-circle" id="circPolDone"></div>
           <span class="chk-label">Registro de Policía rellenado</span>
         </div>
+        <div id="mkPolDone" style="display:none;background:var(--gray-1);border-radius:8px;padding:6px 10px;margin-top:6px"></div>
       </div>
     </div>
 
@@ -551,6 +554,7 @@
                       <option value="0">Pendiente</option>
                       <option value="1">Pagado</option>
                     </select>
+                    <div id="mkEco" style="display:none;background:var(--gray-1);border-radius:8px;padding:6px 10px;margin-top:6px"></div>
                   </div>
                   <div class="field">
                     <label class="lbl">Comentarios Ecotasa</label>
@@ -610,6 +614,7 @@
                   <div class="chk-circle" id="circDepTerm"></div>
                   <span class="chk-label">Depósito de Seguridad — Terminado</span>
                 </div>
+                <div id="mkDepTerm" style="display:none;background:#fff;border-radius:8px;padding:6px 10px;margin-top:6px"></div>
               </div>
             </div>
 
@@ -1103,6 +1108,79 @@ function ecoVal(){
   return null;
 }
 
+/* ══ v70: RASTRO DE MARCAS MANUALES ══
+   Peticion de Toni Segui Badia (WhatsApp, 04/09/2026): "podria existir la
+   posibilidad de que si un miembro de equipo marca una opcion manualmente que
+   quede registrado quien ha sido?". Mismo patron que el sello [PAGADO ...] de
+   v68, ampliado a las cuatro casillas de check-in.
+
+   Se lee de la TABLA TaBookings2021, no de la vista Vi_villas_and_bookings2021:
+   Marcas_manuales es un campo nuevo y la vista no lo incluye. Si esa lectura
+   falla, marcasTexto se queda en null y guardar() NO escribe el campo — nunca
+   se sobreescribe un historial que no se ha podido leer.
+
+   Solo se escribe una linea cuando una casilla cambia EN ESTA SESION. El bot de
+   policia y los triggers de Caspio escriben directos en la tabla, asi que no
+   dejan sello: una casilla marcada sin sello no la ha tocado una persona desde
+   esta pagina. */
+var marcasTexto=null;
+var MARCAS_MAX=3800;
+var MARCA_DEFS=[['arr','Arrival form','mkArrDone'],['pol','Policia','mkPolDone'],['dep','Deposito','mkDepTerm'],['eco','Ecotasa','mkEco']];
+var marcaPrev={arr:null,pol:null,dep:null,eco:null};
+
+function loadMarcas(){
+  var w="FS_confirmation_code='"+confCode+"'";
+  return fetch(Auth.url(WORKER+'?action=data&table=TaBookings2021&where='+encodeURIComponent(w)+'&limit=1'))
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(j){
+      if(!j)return;
+      var rows=j.Result||j.result||[];
+      if(!rows.length||!('Marcas_manuales' in rows[0]))return;
+      marcasTexto=String(rows[0].Marcas_manuales||'');
+    })
+    .catch(function(){});
+}
+
+function marcaEsc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function marcaSello(etiqueta,puesto){
+  var d=new Date(),p=function(n){return(n<10?'0':'')+n;};
+  var who=(typeof Auth!=='undefined'&&Auth.name&&Auth.name())||'equipo';
+  return '['+etiqueta+' '+(puesto?'marcado':'desmarcado')+' '+p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes())+' - '+who+']';
+}
+
+function marcasNuevas(){
+  var ahora={
+    arr:g('cbArrDone')?g('cbArrDone').checked:null,
+    pol:g('cbPolDone')?g('cbPolDone').checked:null,
+    dep:g('cbDepTerm')?g('cbDepTerm').checked:null,
+    eco:g('fEcotasaCobrada')?(g('fEcotasaCobrada').value==='1'):null
+  };
+  var out=[];
+  for(var i=0;i<MARCA_DEFS.length;i++){
+    var k=MARCA_DEFS[i][0];
+    if(marcaPrev[k]===null||ahora[k]===null)continue;
+    if(ahora[k]!==marcaPrev[k])out.push(marcaSello(MARCA_DEFS[i][1],ahora[k]));
+  }
+  return out;
+}
+
+function renderMarcas(){
+  var lineas=String(marcasTexto||'').split('\n');
+  for(var i=0;i<MARCA_DEFS.length;i++){
+    var el=g(MARCA_DEFS[i][2]);
+    if(!el)continue;
+    var pref='['+MARCA_DEFS[i][1]+' ';
+    var mias=[];
+    for(var j=0;j<lineas.length;j++){if(lineas[j].indexOf(pref)===0)mias.push(lineas[j]);}
+    if(!mias.length){el.style.display='none';el.innerHTML='';continue;}
+    var html='<div style="font-family:Montserrat,sans-serif;font-size:8px;font-weight:800;text-transform:uppercase;color:var(--gray-4);margin-bottom:3px">Marcado a mano</div>';
+    for(var k2=0;k2<mias.length;k2++)html+='<div style="font-size:11px;color:var(--gray-4);font-family:monospace;line-height:1.5">'+marcaEsc(mias[k2])+'</div>';
+    el.innerHTML=html;
+    el.style.display='block';
+  }
+}
+
 /* ══ CARGA DE DATOS ══ */
 function setSelectVal(id,val){
   var sel=g(id);if(!sel||val===''||val===null||val===undefined)return;
@@ -1181,6 +1259,7 @@ function loadBooking(){
       if(!rows.length) throw new Error('Reserva no encontrada: '+confCode);
       bookingData=rows[0];
       villaData=bookingData;
+      return loadMarcas();   /* v70 */
     });
 }
 
@@ -1243,6 +1322,7 @@ function populateForm(){
   /* Arrival Form */
   var aV=isTruthy(fV('Checkin_arrivalform')),aD=isTruthy(fB('Arrivalform_done'));
   setVr('vrArrival',aV,'Arrival Form');setCb('cbArrDone','rowArrDone',aD);setColState('colArrival','stArrival',aV,aD);
+  marcaPrev.arr=aD;   /* v70 */
 
   /* Resumen Arrival Form */
   (function(){
@@ -1298,12 +1378,14 @@ function populateForm(){
   /* Policía */
   var pV=isTruthy(fV('Checkin_registro_policia')),pD=isTruthy(fB('Registro_policia_done'));
   setVr('vrPolicia',pV,'Registro de Policía');setCb('cbPolDone','rowPolDone',pD);setColState('colPolicia','stPolicia',pV,pD);
+  marcaPrev.pol=pD;   /* v70 */
 
   /* Ecotasa */
   var eV=isTruthy(fV('Checkin_ecotasa'));
   var eCob=String(fB('Ecotasa_cobrada')||'');
   setVr('vrEcotasa',eV,'Ecotasa');
   setSelectVal('fEcotasaCobrada', eCob==='1'?'1':'0');
+  marcaPrev.eco=(eCob==='1');   /* v70 */
   setColState('colEcotasa','stEcotasa',eV,eCob==='1');
   var ecoManual=fB('Ecotasa_entrada_manualmente')||'';
   if(g('fEcotasaManual'))g('fEcotasaManual').value=ecoManual;
@@ -1315,6 +1397,7 @@ function populateForm(){
   var dV=isTruthy(fV('Checkin_deposito')),dD=isTruthy(fB('Security_deposit_terminado'));
   setVr('vrDeposito',dV,'Depósito de Seguridad');
   setCb('cbDepTerm','rowDepTerm',dD);
+  marcaPrev.dep=dD;   /* v70 */
   setColState('colDeposito','stDeposito',dV,dD);
   g('fDepEUR').value=String(fB('Security_deposit_EUR')||'');
   g('fWavEUR').value=String(fB('Deposit_waver_EUR')||'');
@@ -1341,33 +1424,84 @@ function populateForm(){
 
   /* Link policía */
   buildPoliceUrl();
+  renderMarcas();   /* v70 */
 }
 
 function toYMD(s){if(!s)return'';var d=String(s).replace(/[T ].*/,'').split('-');if(d.length===3)return d[0]+d[1]+d[2];return String(s).replace(/-/g,'');}
+/* Accesor de campos para police-url.js. fB() solo prueba el nombre desnudo y
+   el prefijo TaBookings2021_; los dos campos que vienen de la villa llegan a
+   esta vista con el prefijo TaVillas_, asi que se prueban aparte. Mismo orden
+   de busqueda que tenia el codigo anterior. */
+function polGet(k){
+  if(k==='Link_Registrodepolicia'||k==='Lint_Policia_castellsol'){
+    var v=fB('TaVillas_'+k); if(v!=='')return v;
+    if(typeof fV==='function'){ v=fV(k); if(v!=='')return v; }
+  }
+  /* fB() devuelve la columna sin prefijo aunque venga vacia, y ahi se para. El
+     codigo anterior escribia fB('Checkin')||fB('TaBookings2021_Checkin'), que
+     si seguia buscando. Se repite ese comportamiento: una columna vacia no
+     puede tapar la misma columna llena bajo otro prefijo. */
+  var b=fB(k); if(b!=='')return b;
+  if(typeof bookingData!=='undefined'&&bookingData){
+    var p1=bookingData['TaBookings2021_'+k]; if(p1!==undefined&&p1!==null&&p1!=='')return p1;
+    var p2=bookingData['TaVillas_'+k];       if(p2!==undefined&&p2!==null&&p2!=='')return p2;
+  }
+  return '';
+}
 function buildPoliceUrl(){
-  var org=fB('TaVillas_Link_Registrodepolicia')||fB('Link_Registrodepolicia')||'';
+  /* v69: el link ya no se construye aqui. Se construye en police-url.js, el
+     constructor unico que comparten checkin-pasos, notas-equipo-reservas,
+     notas-villamanager y checkin-testear-reserva. Antes cada pagina tenia su
+     propia copia del mismo codigo y los arreglos llegaban solo a una (el fix
+     del telefono con caracteres invisibles se hizo aqui en v67 pero
+     notas-villamanager y checkin-testear-reserva se quedaron sin el; el fix de
+     number= se hizo dos veces solo en la pagina del huesped). Ver la cabecera
+     de police-url.js. */
   var wrap=g('policeUrlWrap');if(!wrap)return;
   wrap.style.display='block';
-  var reserv=confCode||'';
-  var checkin=toYMD(fB('Checkin')||fB('TaBookings2021_Checkin')||'');
-  var checkout=toYMD(fB('Checkout')||fB('TaBookings2021_Checkout')||'');
-  var created=toYMD(fB('Cretated_At')||fB('TaBookings2021_Cretated_At')||fB('Created_At')||'');
-  var aform=String(fB('Guest_adults_nr_form')||'').trim();
-  var cform=String(fB('Guest_children_nr_form')||'').trim();
-  var total=aform?((parseInt(aform)||0)+(parseInt(cform)||0)):((parseInt(fB('Adults')||0))+(parseInt(fB('Children')||0)));
-  var fiscNm=String(fB('Fiscal_guest_name')||'').trim();
-  var firstName=(fiscNm&&fiscNm!==' ')?fiscNm:String(fB('Guest_Full_Name')||'');
-  var lastName=(fiscNm&&fiscNm!==' ')?String(fB('Fiscal_guest_surename')||''):String(fB('Guest_Surename')||'');
-  var ph2=String(fB('Segundo_Telefono')||'').trim();
-  var ph=ph2?ph2:String(fB('Guest_phonenumber')||'');
-  ph=ph.replace(/[^\d+]/g,''); // v67 fix: quita cualquier caracter que no sea dígito o '+', incluidas marcas Unicode invisibles (LRE/PDF U+202A/U+202C, etc.) que a veces vienen pegadas en el número desde WhatsApp/otros
-  ph=ph.replace(/\+/g,'00');
-  var base='https://policheckin01.azurewebsites.net/api/v5/customer/ee6f5c47d6bd4c7e9a4b75a457e58a96';
-  var url=base+'/organization/'+encodeURIComponent(org)+'/reservation/'+encodeURIComponent(reserv)+
-    '?checkInDate='+checkin+'&checkOutDate='+checkout+'&contractDate='+created+
-    '&number='+total+'&firstName='+encodeURIComponent(firstName)+
-    '&lastName1='+encodeURIComponent(lastName)+'&phone='+encodeURIComponent(ph);
-  var el=g('policeUrl');if(el){el.href=url;el.textContent=url;}
+  var res=(typeof PoliceUrl!=='undefined'&&PoliceUrl.build)
+    ? PoliceUrl.build(polGet,{code:confCode||'',contractDate:'created',ignoreExternal:true,allowFallbackOrg:false})
+    : {url:'',count:null,warnings:['builder-missing']};
+  var el=g('policeUrl');if(el){el.href=res.url;el.textContent=res.url||'(no se pudo construir el link)';}
+  polWarn(res);
+}
+
+/* Avisos del link de policia para el equipo. El huesped no ve nada de esto.
+   Se pintan debajo del link, sin tocar el HTML de la pagina. */
+function polEsc(v){
+  return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function polWarn(res){
+  var wrap=g('policeUrlWrap');if(!wrap)return;
+  var box=document.getElementById('policeUrlWarn');
+  if(!box){
+    box=document.createElement('div');
+    box.id='policeUrlWarn';
+    box.style.cssText='margin-top:8px;font-family:Montserrat,sans-serif;font-size:11px;line-height:1.45';
+    wrap.appendChild(box);
+  }
+  var w=res.warnings||[];
+  if(!w.length){ box.innerHTML=''; box.style.display='none'; return; }
+  box.style.display='block';
+  var html='';
+  for(var i=0;i<w.length;i++){
+    var txt=(typeof PoliceUrl!=='undefined'&&PoliceUrl.warningText)?PoliceUrl.warningText(w[i]):w[i];
+    var red=(w[i]==='count-unknown'||w[i]==='builder-missing');
+    html+='<div style="padding:7px 10px;margin-top:5px;border-radius:6px;border:1px solid '+
+      (red?'#d33':'#e0a800')+';background:'+(red?'#fdecec':'#fff8e1')+';color:#333">'+
+      '<b>'+(red?'\u26a0 Atencion':'\u2139 Aviso')+':</b> '+txt+'</div>';
+  }
+  if(res.externalUrl){
+    /* El link viene de la base de datos, asi que se escapa entero antes de
+       entrar en el HTML. police-url.js ya ha rechazado los esquemas que
+       ejecutan codigo; esto cierra el atributo. */
+    var esc=polEsc(res.externalUrl);
+    html+='<div style="padding:7px 10px;margin-top:5px;border-radius:6px;border:1px solid #e0a800;background:#fff8e1;color:#333">'+
+      'Formulario del complejo: <a href="'+esc+'" target="_blank" rel="noopener noreferrer" style="color:#0b5">'+
+      esc+'</a></div>';
+  }
+  box.innerHTML=html;
 }
 
 /* ══ GUARDAR ══ */
@@ -1421,6 +1555,18 @@ window.guardar=function(){
       var _fld=_mi===1?'PMSmultiunitID':'PMSmultiunitID'+_mi;
       record[_fld]=_sel.value||null;
     }
+  }
+  /* v70: rastro de marcas manuales (peticion de Toni). El campo solo viaja en
+     el record cuando se ha podido leer el valor anterior Y alguna de las cuatro
+     casillas ha cambiado en esta sesion. Si nada cambia, el campo no se toca. */
+  var _mn=marcasNuevas();
+  if(_mn.length&&marcasTexto!==null){
+    var _ls=[];
+    var _viejas=String(marcasTexto).split('\n');
+    for(var _li=0;_li<_viejas.length;_li++){if(_viejas[_li].trim())_ls.push(_viejas[_li]);}
+    _ls=_ls.concat(_mn);
+    while(_ls.join('\n').length>MARCAS_MAX&&_ls.length>1)_ls.shift();
+    record.Marcas_manuales=_ls.join('\n');
   }
   var where="FS_confirmation_code='"+confCode+"'";
   fetch(Auth.url(WORKER+'?action=save&table=TaBookings2021&where='+encodeURIComponent(where)+'&method=PUT'),
@@ -1749,4 +1895,4 @@ function renderMuRows(){
 </script>
 </body>
 </html>
-<!-- HISTORIAL: v68 - Petición Marta (31/8, vía Gary): pareja de checkin-pasos v91 (early check-in pagado → el código de la casa sale a la hora acordada). Dos cambios, ambos en la sección Cobros Extras. (1) NUEVO por línea de upselling (1-3): botones "Transferencia" y "Efectivo" bajo la etiqueta "Cobrado fuera de Stripe" en la cabecera de cada línea, visibles solo si la línea tiene importe y NO está cobrada. Al pulsar uno: confirm() con concepto+importe+método; se añade al concepto un sello [PAGADO metodo dia/mes - usuario] (usuario = Auth.name() de la sesión — lección de la reserva 56120018, donde una marca manual sin rastro dejó una tasa y una fianza como cobradas sin serlo) y la línea queda en window.__upPendCobrado con badge "✓ Cobrado (guardar para confirmar)". El guardado real sigue el patrón único del archivo (sin llamadas nuevas a la API): guardar() añade Upselling{n}_cobrado=1 SOLO para las líneas marcadas en esta sesión; nunca escribe 0 (un cobro marcado por el trigger de Stripe no se puede desmarcar desde aquí) y las líneas no tocadas no llevan el campo en el record. Salir sin guardar deshace la marca. (2) Nota bajo el selector de Early Check-in explicando la condición del lado del huésped: el código sale a la hora acordada SOLO si además existe una línea de cobro extra COBRADA cuyo concepto contenga "early check-in" (lógica en checkin-pasos v91, regla "solo adelantar"). updateUpBadge() ampliado con el estado intermedio y el control de visibilidad de los botones; nueva función global window.marcarCobradoFuera(n,metodo). Ningún otro campo, sección ni llamada tocados. PAGE_VERSION 67->68 (auto-reload). | v67 - Petición Jordi (revisar el link de policía: el teléfono se pasaba con caracteres extraños en el parámetro). Causa: los campos Guest_phonenumber/Segundo_Telefono a veces traen marcas Unicode invisibles de dirección de texto (LRE U+202A / PDF U+202C, típicas de copiar un número desde WhatsApp/iOS) pegadas junto al número; buildPoliceUrl() solo limpiaba '+' y espacios, así que esas marcas invisibles sobrevivían y aparecían codificadas (%E2%80%AA / %E2%80%AC) en la URL final. FIX: en buildPoliceUrl(), antes de convertir '+'→'00', se añade ph=ph.replace(/[^\d+]/g,'') que elimina cualquier carácter que no sea dígito o '+' (marcas invisibles, espacios, guiones, paréntesis, etc.), dejando el parámetro &phone= limpio. Revisados también los demás campos de teléfono del archivo (fPhone1/fPhone2, modal Chat2Desk phHost/phArr): ninguno se inserta en una URL, solo se muestran como texto o se copian al portapapeles, así que no se han tocado (fuera del alcance pedido). RETROFIT OBLIGATORIO (auto-detección de versión, ausente en el archivo): añadido el mecanismo estándar \"Opción B\" en el <head> (mismo patrón que reuniones.html v14/checkin-pasos.html v76): fetch de la propia página con cache:'reload', comparación con la constante PAGE_VERSION=67 embebida, recarga única por versión vía sessionStorage '3v_vchk_<ruta>_v<XX>', más las meta Cache-Control/Pragma no-cache (ausentes hasta ahora). Favicon y spinner ya cumplían el estándar, sin cambios ahí. Ningún otro campo, función o sección tocado. | v66 - Petición Jordi: en la tabla "🔍 Hostaway vs Arrival Form" (sección Arrival Form), añadir un lápiz ✏️ junto a los campos editables de la columna Formulario que al pulsarlo permita editar el valor ahí mismo con un botón 💾 de guardar. Implementado para los 4 campos que ya eran editables en la página: Adultos (fAdultosCorregir), Niños (fNinosCorregir, nuevo en v65), Teléfono (fPhone2) y Email (fSegundoEmail); Nombre/Apellido/Noches se quedan de solo lectura (no tienen campo editable en ningún sitio de la página). Funcionamiento: el lápiz convierte la celda en un input (con Enter como atajo); el botón 💾 copia el valor tecleado al campo "maestro" correspondiente (el mismo que ya se guardaba desde Login/Teléfono/Ecotasa/Arrival) y actualiza la celda con el nuevo valor + lápiz de nuevo, mostrando un toast de confirmación. IMPORTANTE: no se ha añadido ninguna llamada nueva a la API — el guardado real en Caspio sigue ocurriendo únicamente al pulsar el botón "Guardar" general de la página (mismo patrón de guardado único ya usado en todo el archivo); el 💾 de la tabla solo sincroniza el valor con el campo maestro para que ese Guardar general lo incluya. Cambios: (1) rows[] en el IIFE "Resumen Arrival Form" ahora lleva un 4º elemento con el id del campo maestro (null = fila no editable); (2) el .map() de la tabla añade el lápiz y un id af_valCell_N a la celda Formulario cuando hay campo maestro; (3) nuevas funciones globales afEsc/window.afEditField/window.afSaveField junto a copyPasoLink/togCard (mismo motivo: onclick inline generado dinámicamente necesita scope global). No se ha tocado guardar(), populateForm() fuera de este bloque, ni ningún otro campo o sección. | v65 - Petición Jordi: el equipo de reservas ya podía editar Email (fSegundoEmail, sección Login), Teléfono (fPhone2, tarjeta Teléfono) y Adultos (fAdultosCorregir, sección Ecotasa) pero no Niños. Añadido en la sección Arrival Form (colArrival) un nuevo campo editable "Niños corregir" (input fNinosCorregir → Guest_children_nr_form), con el mismo patrón visual y de guardado que "Adultos corregir", más una nota de advertencia en rojo indicando que solo debe introducirse o modificarse si es absolutamente necesario (afecta al total de personas usado en el registro de policía, ver buildPoliceUrl). Cambios: (1) nuevo bloque HTML en colArrival justo antes del aviso "SOLO EN CASO DE EMERGENCIA"; (2) pre-relleno en populateForm() dentro del IIFE "Resumen Arrival Form", con el mismo fallback Guest_children_nr_form→Children que ya usa Adultos corregir; (3) nuevo campo Guest_children_nr_form en el objeto record de guardar(), junto a Guest_adults_nr_form. Alcance mínimo acordado con Jordi: no se han movido ni duplicado los otros 3 campos (email/teléfono/adultos), que se mantienen en sus secciones actuales. | v64 - FIX: los 4 botones "📋 Copiar" del link de cada paso (añadidos en v61) no copiaban nada. Causa: copyPasoLink(n) estaba definida como función normal dentro del IIFE (function(){...})() que envuelve todo el script, pero los botones la llaman desde onclick="copyPasoLink(n)" (atributo inline), que se ejecuta en el ámbito global del documento — ahí la función no existía. Solución: se expone como window.copyPasoLink=function(n){...}, igual que ya se hace con window.togCard y el resto de funciones llamadas desde onclick inline en este archivo. Sin cambios de comportamiento ni de textos, solo el scope de la función. | v63 - Dos correcciones pedidas por Jordi. (1) Apartado "Cobros extras": el link (variable lk) apuntaba por error a paso=3 (depósito) en vez de paso=4 (tasas/pago final, donde realmente están los cobros extras Upselling); corregido a https://www.3villas.com/intranet/checkin-pasos.html?paso=4&reserva=CODIGO. (2) Textos de los 4 bloques "Link paso N para el cliente" (añadidos en v61) renombrados para indicar qué paso es cada uno: "Link al Formulario de llegada (paso 1)" (Arrival), "Link al registro de policía (paso 2)" (Policía), "Link al depósito de seguridad (paso 3)" (Depósito), "Link a la ecotasa (paso 4)" (Ecotasa). Solo texto de los <span class="paso-link-lbl">; el resto del HTML/CSS y la función copyPasoLink(n) no cambian. | v62 - Apartado "Cobros extras": cambiado el link (variable lk, usado en #linkCobros) de la antigua DataPage de Caspio (https://c1abn932.caspio.com/dp/353f70008194047f5b8b4cdc8970?FS_confirmation_code=CODIGO) al nuevo enlace del check-in online, directo al paso 3 (depósito): https://www.3villas.com/intranet/checkin-pasos.html?paso=3&reserva=CODIGO (mismo patrón ?paso=N&reserva= ya usado en el resto del archivo desde v61, y mismo cambio de URL ya aplicado en v59 al enlace de la villa en el mensaje de WhatsApp). Solo esa variable; el resto de la función (Upselling1-3, badges, link de policía) no se toca. | v61 - Añadido en cada una de las 4 secciones de check-in (Arrival Form, Registro de Policía, Depósito de Seguridad, Ecotasa) un bloque "🔗 Link paso N para el cliente" con botón "📋 Copiar", al principio del col-body de cada sección, para poder enviarle a un huésped el enlace directo a ese paso concreto de su check-in (https://www.3villas.com/intranet/checkin-pasos.html?paso=N&reserva=CODIGO, N=1 Arrival, 2 Policía, 3 Depósito, 4 Ecotasa — mismo parámetro ?paso= que checkin-pasos.html v46+). Nueva función JS copyPasoLink(n) (junto a toast()) que arma la URL con el confCode ya cargado de la reserva y la copia al portapapeles (mismo patrón navigator.clipboard.writeText + toast que el resto del archivo, p.ej. el botón "Copiar enlace" de policía). Nuevas clases CSS .paso-link-row/.paso-link-lbl/.paso-link-btn (mismo estilo que el botón "Copiar enlace" ya existente de la sección Policía, reutilizado como clase compartida). No se ha tocado el enlace de policía (policeUrl, otro sistema distinto: Caspio DataPage de registro de viajeros) ni ninguna otra lógica de las 4 secciones. | v60 - Apartado Login (colLogin): documentada la nueva casuistica de los emails alias/relay de Booking (Worker v47). (1) NUEVO bloque azul 'Reservas de Booking con email tipo xxxx@guest.booking.com' explicando al equipo que: Booking da un alias y no el email real; a esos huespedes NO se les envia OTP y van directos a la pantalla del codigo alternativo (igual que las reservas sin email); si dicen que 'no les llega el codigo por email' hay que pasarles el codigo alternativo; y si se consigue su email personal, se pone como Segundo_email y pasan al flujo OTP normal (el alternativo deja de valer). (2) Lista de emails validos del bloque morado: anadida la excepcion de que los alias @guest.booking.com no cuentan como email. (3) Caja ambar del codigo alternativo: titulo y texto ampliados para incluir el caso 'solo alias de Booking', y el aviso de seguridad pasa de 'no tiene email' a 'no tiene ningun email efectivo (los alias @guest.booking.com no cuentan)'. Solo textos/HTML estatico de documentacion; sin cambios de JS ni de logica. REQUIERE el Worker v47 desplegado para que lo descrito sea cierto. | v59 - (1) Cambiada la URL del enlace de la villa (variable link, usada en el mensaje de WhatsApp): de https://c1abn932.caspio.com/dp/353f7000a501823a9e10433dbcd7?TaBookings2021_FS_confirmation_code= a https://www.3villas.com/intranet/checkin-pasos.html?reserva= (URL completa, incluyendo el nombre del parámetro; mismo cambio ya aplicado en entradas-primer-contacto-whatsapp v11 y entradas-equipo v109). Solo había una aparición en este archivo. (2) RETROFIT OBLIGATORIO al tocar el archivo (favicon y spinner no eran los estándar): añadido el favicon estándar embebido en el <head> (antes solo tenía apple-touch-icon relativo, sin <link rel="icon">). (3) RETROFIT spinner: #loadOverlay usaba un <div class="spinner"></div> pintado por CSS background — sustituido por <img class="spinner" src="data:image/png;base64,..."> con el MISMO base64 que ya usaba la regla CSS .spinner, igual que el resto de páginas del intranet (nunca div+CSS). La regla CSS .spinner no se ha tocado. | v58 - Apartado Checkin Online: añadido botón "🔑 Login" entre Chat2Desk y Arrival que despliega una sección (colLogin) explicando quién y cómo se loguea el huésped en el check-in online (email de Hostaway/Guest_email, email del Arrival Form/Segundo_email, o cualquier @3villas.com → OTP por email; OTP caduca 5min y es de un solo uso; sesión ~1 mes). Permite editar el Segundo_email (se guarda con el botón Guardar general, sin llamada extra). Muestra el código alternativo 5+CODE+7 ya montado y copiable para reservas SIN email, con aviso de que solo funciona si la reserva no tiene email. (Nota: el comentario VERSIÓN ACTUAL estaba desfasado en v49 en GitHub; el archivo real era v57 según title/historial — corregido a v58.) | v57 - Chat2Desk nombre agenda: fecha DD/MM con barra | v56 - Pills MU más grandes, texto sin truncar, se adaptan al contenido | v55 - Añadido botón "Entradas" entre Volver y Guardar → entradas-equipo.html | v54 - Multiunits: nombre prioritario sobre código en pills y en columna "apartamento actual" | v53 - Multiunits: pills en card-head fuera del despliegue; verde=asignado blanco=vacío; tabla visible directamente al desplegar | v52 - Multiunits: botones más pequeños; detalle visible directamente sin doble despliegue; aviso sincronización más grande y llamativo | v51 - Multiunits: 5 botones estilo ci-btn (verde=asignado, blanco=vacío); panel expandible con grid actual/cambiar-a para los 5 slots; guardar los 5 campos PMSmultiunitID..5; eliminado Tipo Pensión | v50 - Chat2Desk nombre agenda: fecha cambiada de MMDD a DDMM (día+mes) | v49 - Quitado target="_blank" del botón cobros Stripe para que abra en misma pestaña y el botón Volver funcione | v48 - Quitado icono ✅ del bloque "Se solicita Depósito de Seguridad" | v47 - Early checkin movido de Notas a Cobros Extras (antes Línea 1); botón Guardar sin icono; colores st-done/st-pend alineados con lv-ok/lv-no | v46 - Nav blanco con logo+menú igual que entradas-equipo; scripts nav.js y nav-component.js; hVilla y hMeta en nav-center | v45 - Fix botón cobros Stripe: <a> con href actualizado dinámicamente tras definir confCode | v44 - Botón cobros Stripe centrado entre título y flecha | v43 - Fix botón cobros Stripe: misma estructura que checkin online (div flex, button independiente) | v42 - Fix botón cobros Stripe: card-head ignora click en botón; button con z-index | v41 - Botón "Comprobar cobros Stripe" en cabecera cobros extras → cobros-inquilinos.html?code=confCode | v40 - Spinner corazón 3Villas embebido en CSS inline (sin archivo externo) | v39 - Eliminado CSS inline .spinner/.spin — ahora spinner.css y spinner-sm.css tienen prioridad | v38 - FIX CRÍTICO: apóstrofes sin escape en textos FR/IT/EN rompían el JS completo (página stuck en spinner) | v37 - FIX botón C2D (guard bookingData + try/catch), textos reales por idioma (ES/EN/FR/IT), italiano prefijo 39 | v36 - Botón Chat2Desk antes de los botones CI: modal con teléfonos copiables, nombre agenda copiable (VillaCorto/Unit MMDD), texto WA por idioma copiable, botón Ir a Chat2Desk | v35 - Botones CI con mismos colores/estilo que _lvBdg entradas-equipo (lv-ok/lv-no/lv-na), tipografía body Montserrat igual que btn-back2 | v34 - Quitar ✅ header CI, bloque naranja waiver, quitar IBAN/BIC del desplegable, fSeWaver hardcoded Sí/No, FIX Cannot set properties of null fIBAN/fBIC | v33 - Quitar checkbox header CI, IBAN/BIC en resumen opción 3, desplegable "Más información" en depósito, checkbox terminado dentro del bloque peligro, importes en bloque naranja colapsable, fSeWaver solo Sí/No sin Pendiente, opciones cliente colapsadas, alias ID3=Transferencia ID4=No Waiver (airbnb) | v32 - Resumen actual depósito de seguridad: mensaje por opción (0=sin decidir, 1=Waiver, 2=Tarjeta+estado pago+devolución, 3=Transferencia+devolución, 4=Airbnb sin waiver). Campo Security_deposit_devuelto para estado devolución en opciones 2 y 3. Checkbox terminado actualiza el resumen en tiempo real | v31 - CI mini buttons, FIX ecotasa integer (Ecotasa_cobrada INTEGER), FIX multiunits filtrado por villa (ListingID_pms = VillaID_FSnumber) -->
+<!-- HISTORIAL: v70 - Peticion de Toni Segui Badia (WhatsApp, 04/09/2026): "podria existir la posibilidad de que si un miembro de equipo marca una opcion manualmente que quede registrado quien ha sido?". Motivo real, en sus palabras: las fianzas por transferencia las suele marcar el, pero a veces las marca reservas para que el cliente pueda entrar, y hoy no hay forma de saber quien ha marcado que. Es el mismo problema de la reserva 56120018 que motivo el sello [PAGADO ...] de v68, y el mismo que ha aparecido con el registro de policia: la reserva 60980439 tenia Registro_policia_done marcado y polichekin sin ningun dato. NUEVO: las cuatro casillas de check-in (Arrival form, Policia, Deposito, Ecotasa) dejan un sello cuando una persona las cambia desde esta pagina: [Policia marcado 04/09/2026 12:30 - Nombre Apellido]. El sello se guarda en el campo nuevo Marcas_manuales de TaBookings2021 y se muestra en gris debajo de cada casilla. Reglas: (1) solo se escribe cuando la casilla CAMBIA en esta sesion — abrir y guardar sin tocar nada no anade nada; (2) se registran los dos sentidos, marcado y desmarcado; (3) el historial anterior se conserva y se anade al final, con un tope de 3800 caracteres que va soltando las lineas mas viejas; (4) el valor anterior se lee de la TABLA TaBookings2021, no de la vista Vi_villas_and_bookings2021, porque el campo es nuevo y la vista no lo trae — y si esa lectura falla no se escribe nada, para no borrar un historial que no se ha podido leer. IMPORTANTE para leer los sellos: el bot de policia y los triggers de Caspio escriben directos en la tabla y no dejan sello, asi que una casilla marcada SIN sello no la ha tocado una persona desde esta pagina. Requiere el campo Marcas_manuales (TEXT) en TaBookings2021. PAGE_VERSION 69->70 (auto-reload). | v69 - Los seis constructores del link de policia que habia repartidos por la intranet (checkin-pasos, notas-equipo-reservas, notas-villamanager y checkin-testear-reserva x2) se sustituyen por UNO SOLO: el nuevo fichero police-url.js. Motivo: cada pagina tenia su propia copia del mismo codigo y los arreglos llegaban solo a una. El fix del telefono con caracteres Unicode invisibles se hizo en checkin-pasos v89 y en notas-equipo-reservas v67, pero notas-villamanager y checkin-testear-reserva seguian sin el; y el fix de number= se hizo DOS VECES (v78 y v87) solo en la pagina del huesped. FALLO PRINCIPAL QUE SE CORRIGE (reportado por Cristian en el grupo de soporte el 04/09/2026, y ya antes el 13/07, 26/07, 04/08, 05/08 y 16/08): cuando una reserva no trae numero de personas ni del Arrival Form ni de Hostaway, checkin-pasos enviaba number=1 como "suelo de seguridad". Ese 1 no es un dato, es una suposicion, y el formulario de policia lo trata como el numero definitivo: el huesped mete al titular, el formulario se marca 100% completado con el tick verde y no deja anadir a nadie mas. Con la MISMA reserva, el link de notas-equipo-reservas enviaba number=0 y ahi si dejaba seguir anadiendo huespedes; por eso el equipo usaba el link largo como solucion provisional. AHORA: cuando no se sabe el numero no se inventa — se envia number=0 (el comportamiento del link que si funciona) y las paginas del equipo muestran un aviso rojo para que alguien corrija Adultos/Ninos en la reserva. Tambien se unifica: el telefono se limpia igual en las cuatro paginas (se quita todo lo que no sea digito o '+', y el '+' pasa a '00', asi el prefijo internacional nunca se pierde — antes checkin-testear-reserva usaba /\D/g, que borraba el '+' sin sustituirlo); adultos=0 en el Arrival Form deja de tratarse como dato real en todas las paginas; y las villas con formulario propio del complejo (Lint_Policia_castellsol, p.ej. Castell Sol) se senalan con un aviso en las paginas del equipo, que siguen mostrando el link de policheckin igual que hasta ahora. NO se cambia contractDate: checkin-pasos sigue enviando la fecha de hoy y las paginas del equipo la fecha de creacion de la reserva, porque no sabemos cual espera la API. NO se cambia la organizacion por defecto de checkin-pasos (20e22b77-...), solo se avisa cuando se usa. Pruebas: police-url.test.js, 33 casos, todos en verde. REVISION ADVERSARIAL 04/09/2026 (cinco agentes) y correcciones aplicadas ANTES de subir nada: (1) una fecha solo entra en la URL si son ocho digitos — un valor como '2026-09-05&number=1#' en el campo Checkin anadia su propio parametro y cortaba el resto de la URL, asi que el nombre y el telefono del huesped no llegaban a la policia; (2) las paginas del equipo ya NO caen a la organizacion por defecto: si la villa no tiene Link_Registrodepolicia no se genera link y se avisa, porque un link plausible que registra al huesped bajo OTRA villa es peor que un link roto (el link del huesped si conserva la organizacion por defecto: no tiene alternativa); (3) el link propio guardado en la villa se rechaza si su esquema ejecuta codigo (javascript:, data:, vbscript:), y se escapa entero antes de entrar en el HTML de las paginas del equipo; (4) el marcador 'VERSION ACTUAL' de la linea 3 tambien se sube — el auto-recargado lee ESE marcador, no la constante PAGE_VERSION, asi que sin este cambio la recarga automatica no se disparaba nunca; (5) police-url.js se carga como police-url.js?v=1: los ficheros .js se cachean 4 horas y las paginas 10 minutos, asi que un 'no encontrado' guardado en un servidor de borde podia dejar el boton muerto durante horas; (6) los accesores de campos saltan las columnas vacias, igual que hacian las cadenas || originales, para que una columna vacia sin prefijo no tape la misma columna llena con prefijo. Pruebas: police-url.test.js (33 casos) y police-url.integration.test.js (60 casos, que extraen el codigo REAL de los accesores de cada pagina en vez de una copia), en verde en Madrid, Nueva York, Auckland y UTC. PAGE_VERSION 68->69 (auto-reload). | v68 - Petición Marta (31/8, vía Gary): pareja de checkin-pasos v91 (early check-in pagado → el código de la casa sale a la hora acordada). Dos cambios, ambos en la sección Cobros Extras. (1) NUEVO por línea de upselling (1-3): botones "Transferencia" y "Efectivo" bajo la etiqueta "Cobrado fuera de Stripe" en la cabecera de cada línea, visibles solo si la línea tiene importe y NO está cobrada. Al pulsar uno: confirm() con concepto+importe+método; se añade al concepto un sello [PAGADO metodo dia/mes - usuario] (usuario = Auth.name() de la sesión — lección de la reserva 56120018, donde una marca manual sin rastro dejó una tasa y una fianza como cobradas sin serlo) y la línea queda en window.__upPendCobrado con badge "✓ Cobrado (guardar para confirmar)". El guardado real sigue el patrón único del archivo (sin llamadas nuevas a la API): guardar() añade Upselling{n}_cobrado=1 SOLO para las líneas marcadas en esta sesión; nunca escribe 0 (un cobro marcado por el trigger de Stripe no se puede desmarcar desde aquí) y las líneas no tocadas no llevan el campo en el record. Salir sin guardar deshace la marca. (2) Nota bajo el selector de Early Check-in explicando la condición del lado del huésped: el código sale a la hora acordada SOLO si además existe una línea de cobro extra COBRADA cuyo concepto contenga "early check-in" (lógica en checkin-pasos v91, regla "solo adelantar"). updateUpBadge() ampliado con el estado intermedio y el control de visibilidad de los botones; nueva función global window.marcarCobradoFuera(n,metodo). Ningún otro campo, sección ni llamada tocados. PAGE_VERSION 67->68 (auto-reload). | v67 - Petición Jordi (revisar el link de policía: el teléfono se pasaba con caracteres extraños en el parámetro). Causa: los campos Guest_phonenumber/Segundo_Telefono a veces traen marcas Unicode invisibles de dirección de texto (LRE U+202A / PDF U+202C, típicas de copiar un número desde WhatsApp/iOS) pegadas junto al número; buildPoliceUrl() solo limpiaba '+' y espacios, así que esas marcas invisibles sobrevivían y aparecían codificadas (%E2%80%AA / %E2%80%AC) en la URL final. FIX: en buildPoliceUrl(), antes de convertir '+'→'00', se añade ph=ph.replace(/[^\d+]/g,'') que elimina cualquier carácter que no sea dígito o '+' (marcas invisibles, espacios, guiones, paréntesis, etc.), dejando el parámetro &phone= limpio. Revisados también los demás campos de teléfono del archivo (fPhone1/fPhone2, modal Chat2Desk phHost/phArr): ninguno se inserta en una URL, solo se muestran como texto o se copian al portapapeles, así que no se han tocado (fuera del alcance pedido). RETROFIT OBLIGATORIO (auto-detección de versión, ausente en el archivo): añadido el mecanismo estándar \"Opción B\" en el <head> (mismo patrón que reuniones.html v14/checkin-pasos.html v76): fetch de la propia página con cache:'reload', comparación con la constante PAGE_VERSION=67 embebida, recarga única por versión vía sessionStorage '3v_vchk_<ruta>_v<XX>', más las meta Cache-Control/Pragma no-cache (ausentes hasta ahora). Favicon y spinner ya cumplían el estándar, sin cambios ahí. Ningún otro campo, función o sección tocado. | v66 - Petición Jordi: en la tabla "🔍 Hostaway vs Arrival Form" (sección Arrival Form), añadir un lápiz ✏️ junto a los campos editables de la columna Formulario que al pulsarlo permita editar el valor ahí mismo con un botón 💾 de guardar. Implementado para los 4 campos que ya eran editables en la página: Adultos (fAdultosCorregir), Niños (fNinosCorregir, nuevo en v65), Teléfono (fPhone2) y Email (fSegundoEmail); Nombre/Apellido/Noches se quedan de solo lectura (no tienen campo editable en ningún sitio de la página). Funcionamiento: el lápiz convierte la celda en un input (con Enter como atajo); el botón 💾 copia el valor tecleado al campo "maestro" correspondiente (el mismo que ya se guardaba desde Login/Teléfono/Ecotasa/Arrival) y actualiza la celda con el nuevo valor + lápiz de nuevo, mostrando un toast de confirmación. IMPORTANTE: no se ha añadido ninguna llamada nueva a la API — el guardado real en Caspio sigue ocurriendo únicamente al pulsar el botón "Guardar" general de la página (mismo patrón de guardado único ya usado en todo el archivo); el 💾 de la tabla solo sincroniza el valor con el campo maestro para que ese Guardar general lo incluya. Cambios: (1) rows[] en el IIFE "Resumen Arrival Form" ahora lleva un 4º elemento con el id del campo maestro (null = fila no editable); (2) el .map() de la tabla añade el lápiz y un id af_valCell_N a la celda Formulario cuando hay campo maestro; (3) nuevas funciones globales afEsc/window.afEditField/window.afSaveField junto a copyPasoLink/togCard (mismo motivo: onclick inline generado dinámicamente necesita scope global). No se ha tocado guardar(), populateForm() fuera de este bloque, ni ningún otro campo o sección. | v65 - Petición Jordi: el equipo de reservas ya podía editar Email (fSegundoEmail, sección Login), Teléfono (fPhone2, tarjeta Teléfono) y Adultos (fAdultosCorregir, sección Ecotasa) pero no Niños. Añadido en la sección Arrival Form (colArrival) un nuevo campo editable "Niños corregir" (input fNinosCorregir → Guest_children_nr_form), con el mismo patrón visual y de guardado que "Adultos corregir", más una nota de advertencia en rojo indicando que solo debe introducirse o modificarse si es absolutamente necesario (afecta al total de personas usado en el registro de policía, ver buildPoliceUrl). Cambios: (1) nuevo bloque HTML en colArrival justo antes del aviso "SOLO EN CASO DE EMERGENCIA"; (2) pre-relleno en populateForm() dentro del IIFE "Resumen Arrival Form", con el mismo fallback Guest_children_nr_form→Children que ya usa Adultos corregir; (3) nuevo campo Guest_children_nr_form en el objeto record de guardar(), junto a Guest_adults_nr_form. Alcance mínimo acordado con Jordi: no se han movido ni duplicado los otros 3 campos (email/teléfono/adultos), que se mantienen en sus secciones actuales. | v64 - FIX: los 4 botones "📋 Copiar" del link de cada paso (añadidos en v61) no copiaban nada. Causa: copyPasoLink(n) estaba definida como función normal dentro del IIFE (function(){...})() que envuelve todo el script, pero los botones la llaman desde onclick="copyPasoLink(n)" (atributo inline), que se ejecuta en el ámbito global del documento — ahí la función no existía. Solución: se expone como window.copyPasoLink=function(n){...}, igual que ya se hace con window.togCard y el resto de funciones llamadas desde onclick inline en este archivo. Sin cambios de comportamiento ni de textos, solo el scope de la función. | v63 - Dos correcciones pedidas por Jordi. (1) Apartado "Cobros extras": el link (variable lk) apuntaba por error a paso=3 (depósito) en vez de paso=4 (tasas/pago final, donde realmente están los cobros extras Upselling); corregido a https://www.3villas.com/intranet/checkin-pasos.html?paso=4&reserva=CODIGO. (2) Textos de los 4 bloques "Link paso N para el cliente" (añadidos en v61) renombrados para indicar qué paso es cada uno: "Link al Formulario de llegada (paso 1)" (Arrival), "Link al registro de policía (paso 2)" (Policía), "Link al depósito de seguridad (paso 3)" (Depósito), "Link a la ecotasa (paso 4)" (Ecotasa). Solo texto de los <span class="paso-link-lbl">; el resto del HTML/CSS y la función copyPasoLink(n) no cambian. | v62 - Apartado "Cobros extras": cambiado el link (variable lk, usado en #linkCobros) de la antigua DataPage de Caspio (https://c1abn932.caspio.com/dp/353f70008194047f5b8b4cdc8970?FS_confirmation_code=CODIGO) al nuevo enlace del check-in online, directo al paso 3 (depósito): https://www.3villas.com/intranet/checkin-pasos.html?paso=3&reserva=CODIGO (mismo patrón ?paso=N&reserva= ya usado en el resto del archivo desde v61, y mismo cambio de URL ya aplicado en v59 al enlace de la villa en el mensaje de WhatsApp). Solo esa variable; el resto de la función (Upselling1-3, badges, link de policía) no se toca. | v61 - Añadido en cada una de las 4 secciones de check-in (Arrival Form, Registro de Policía, Depósito de Seguridad, Ecotasa) un bloque "🔗 Link paso N para el cliente" con botón "📋 Copiar", al principio del col-body de cada sección, para poder enviarle a un huésped el enlace directo a ese paso concreto de su check-in (https://www.3villas.com/intranet/checkin-pasos.html?paso=N&reserva=CODIGO, N=1 Arrival, 2 Policía, 3 Depósito, 4 Ecotasa — mismo parámetro ?paso= que checkin-pasos.html v46+). Nueva función JS copyPasoLink(n) (junto a toast()) que arma la URL con el confCode ya cargado de la reserva y la copia al portapapeles (mismo patrón navigator.clipboard.writeText + toast que el resto del archivo, p.ej. el botón "Copiar enlace" de policía). Nuevas clases CSS .paso-link-row/.paso-link-lbl/.paso-link-btn (mismo estilo que el botón "Copiar enlace" ya existente de la sección Policía, reutilizado como clase compartida). No se ha tocado el enlace de policía (policeUrl, otro sistema distinto: Caspio DataPage de registro de viajeros) ni ninguna otra lógica de las 4 secciones. | v60 - Apartado Login (colLogin): documentada la nueva casuistica de los emails alias/relay de Booking (Worker v47). (1) NUEVO bloque azul 'Reservas de Booking con email tipo xxxx@guest.booking.com' explicando al equipo que: Booking da un alias y no el email real; a esos huespedes NO se les envia OTP y van directos a la pantalla del codigo alternativo (igual que las reservas sin email); si dicen que 'no les llega el codigo por email' hay que pasarles el codigo alternativo; y si se consigue su email personal, se pone como Segundo_email y pasan al flujo OTP normal (el alternativo deja de valer). (2) Lista de emails validos del bloque morado: anadida la excepcion de que los alias @guest.booking.com no cuentan como email. (3) Caja ambar del codigo alternativo: titulo y texto ampliados para incluir el caso 'solo alias de Booking', y el aviso de seguridad pasa de 'no tiene email' a 'no tiene ningun email efectivo (los alias @guest.booking.com no cuentan)'. Solo textos/HTML estatico de documentacion; sin cambios de JS ni de logica. REQUIERE el Worker v47 desplegado para que lo descrito sea cierto. | v59 - (1) Cambiada la URL del enlace de la villa (variable link, usada en el mensaje de WhatsApp): de https://c1abn932.caspio.com/dp/353f7000a501823a9e10433dbcd7?TaBookings2021_FS_confirmation_code= a https://www.3villas.com/intranet/checkin-pasos.html?reserva= (URL completa, incluyendo el nombre del parámetro; mismo cambio ya aplicado en entradas-primer-contacto-whatsapp v11 y entradas-equipo v109). Solo había una aparición en este archivo. (2) RETROFIT OBLIGATORIO al tocar el archivo (favicon y spinner no eran los estándar): añadido el favicon estándar embebido en el <head> (antes solo tenía apple-touch-icon relativo, sin <link rel="icon">). (3) RETROFIT spinner: #loadOverlay usaba un <div class="spinner"></div> pintado por CSS background — sustituido por <img class="spinner" src="data:image/png;base64,..."> con el MISMO base64 que ya usaba la regla CSS .spinner, igual que el resto de páginas del intranet (nunca div+CSS). La regla CSS .spinner no se ha tocado. | v58 - Apartado Checkin Online: añadido botón "🔑 Login" entre Chat2Desk y Arrival que despliega una sección (colLogin) explicando quién y cómo se loguea el huésped en el check-in online (email de Hostaway/Guest_email, email del Arrival Form/Segundo_email, o cualquier @3villas.com → OTP por email; OTP caduca 5min y es de un solo uso; sesión ~1 mes). Permite editar el Segundo_email (se guarda con el botón Guardar general, sin llamada extra). Muestra el código alternativo 5+CODE+7 ya montado y copiable para reservas SIN email, con aviso de que solo funciona si la reserva no tiene email. (Nota: el comentario VERSIÓN ACTUAL estaba desfasado en v49 en GitHub; el archivo real era v57 según title/historial — corregido a v58.) | v57 - Chat2Desk nombre agenda: fecha DD/MM con barra | v56 - Pills MU más grandes, texto sin truncar, se adaptan al contenido | v55 - Añadido botón "Entradas" entre Volver y Guardar → entradas-equipo.html | v54 - Multiunits: nombre prioritario sobre código en pills y en columna "apartamento actual" | v53 - Multiunits: pills en card-head fuera del despliegue; verde=asignado blanco=vacío; tabla visible directamente al desplegar | v52 - Multiunits: botones más pequeños; detalle visible directamente sin doble despliegue; aviso sincronización más grande y llamativo | v51 - Multiunits: 5 botones estilo ci-btn (verde=asignado, blanco=vacío); panel expandible con grid actual/cambiar-a para los 5 slots; guardar los 5 campos PMSmultiunitID..5; eliminado Tipo Pensión | v50 - Chat2Desk nombre agenda: fecha cambiada de MMDD a DDMM (día+mes) | v49 - Quitado target="_blank" del botón cobros Stripe para que abra en misma pestaña y el botón Volver funcione | v48 - Quitado icono ✅ del bloque "Se solicita Depósito de Seguridad" | v47 - Early checkin movido de Notas a Cobros Extras (antes Línea 1); botón Guardar sin icono; colores st-done/st-pend alineados con lv-ok/lv-no | v46 - Nav blanco con logo+menú igual que entradas-equipo; scripts nav.js y nav-component.js; hVilla y hMeta en nav-center | v45 - Fix botón cobros Stripe: <a> con href actualizado dinámicamente tras definir confCode | v44 - Botón cobros Stripe centrado entre título y flecha | v43 - Fix botón cobros Stripe: misma estructura que checkin online (div flex, button independiente) | v42 - Fix botón cobros Stripe: card-head ignora click en botón; button con z-index | v41 - Botón "Comprobar cobros Stripe" en cabecera cobros extras → cobros-inquilinos.html?code=confCode | v40 - Spinner corazón 3Villas embebido en CSS inline (sin archivo externo) | v39 - Eliminado CSS inline .spinner/.spin — ahora spinner.css y spinner-sm.css tienen prioridad | v38 - FIX CRÍTICO: apóstrofes sin escape en textos FR/IT/EN rompían el JS completo (página stuck en spinner) | v37 - FIX botón C2D (guard bookingData + try/catch), textos reales por idioma (ES/EN/FR/IT), italiano prefijo 39 | v36 - Botón Chat2Desk antes de los botones CI: modal con teléfonos copiables, nombre agenda copiable (VillaCorto/Unit MMDD), texto WA por idioma copiable, botón Ir a Chat2Desk | v35 - Botones CI con mismos colores/estilo que _lvBdg entradas-equipo (lv-ok/lv-no/lv-na), tipografía body Montserrat igual que btn-back2 | v34 - Quitar ✅ header CI, bloque naranja waiver, quitar IBAN/BIC del desplegable, fSeWaver hardcoded Sí/No, FIX Cannot set properties of null fIBAN/fBIC | v33 - Quitar checkbox header CI, IBAN/BIC en resumen opción 3, desplegable "Más información" en depósito, checkbox terminado dentro del bloque peligro, importes en bloque naranja colapsable, fSeWaver solo Sí/No sin Pendiente, opciones cliente colapsadas, alias ID3=Transferencia ID4=No Waiver (airbnb) | v32 - Resumen actual depósito de seguridad: mensaje por opción (0=sin decidir, 1=Waiver, 2=Tarjeta+estado pago+devolución, 3=Transferencia+devolución, 4=Airbnb sin waiver). Campo Security_deposit_devuelto para estado devolución en opciones 2 y 3. Checkbox terminado actualiza el resumen en tiempo real | v31 - CI mini buttons, FIX ecotasa integer (Ecotasa_cobrada INTEGER), FIX multiunits filtrado por villa (ListingID_pms = VillaID_FSnumber) -->
