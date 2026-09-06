@@ -40,7 +40,7 @@
   }
 </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Entradas Equipo v141 — 3Villas</title>
+  <title>Entradas Equipo v142 — 3Villas</title>
   <link rel="icon" type="image/png" href="https://www.3villas.com/intranet/icon-corazon-rojo-fondo-transparente.png">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
@@ -1370,7 +1370,7 @@ async function doSearch(){
   if($('listView')){$('listView').style.display='none';$('listView').innerHTML='';}
   if($('stInit'))$('stInit').style.display='none';if($('stLoad'))$('stLoad').style.display='block';if($('stErr'))$('stErr').style.display='none';if($('statsBar'))$('statsBar').style.display='none';if($('hCount'))$('hCount').textContent='';if($('hCountLabel'))$('hCountLabel').textContent='';
   const where=buildWhere();
-  const url=`${CFG.workerUrl}?action=view&view=${encodeURIComponent(CFG.viewName)}&where=${encodeURIComponent(where)}&orderBy=${encodeURIComponent(F.villaName)}&limit=500`;
+  const url=`${CFG.workerUrl}?action=view&view=${encodeURIComponent(CFG.viewName)}&where=${encodeURIComponent(where)}&orderBy=${encodeURIComponent(F.villaName)}&limit=1000`; /* v142: 500 cortaba las villas de la V en ventanas de 30 dias (Eloise, Villa T3, 2026-09-06) */
   try{
     const res=await fetch(Auth.url(url));if(mySearchId!==_searchId)return;
     const json=await res.json();if(json.error)throw new Error(json.error);
