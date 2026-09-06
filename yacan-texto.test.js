@@ -77,7 +77,12 @@ console.log('checkin-pasos.html');
   ok('sin reserva cargada: no rompe y no cambia', c2.k('keybox_lbl') === 'keybox_lbl' && c2.y() === false);
   ok('applyLangP0 pasa por _p0Key', /tP0\(_p0Key\(el\.getAttribute\('data-i18n-p0'\)\)\)/.test(fnSource(f, 'applyLangP0')));
   ok('ningún tP0(\'keybox_countdown\') directo queda', !/tP0\('keybox_countdown'\)/.test(s));
-  ok('versión v93 en cabecera, título e historial', /VERSIÓN ACTUAL: v93 \|/.test(s) && /<title>Check-in Pasos v93/.test(s) && /<!-- HISTORIAL: v93 - /.test(s));
+  /* v94 (06/09/2026): la version ya no se fija a v93; se exige que cabecera, titulo e
+     historial lleven LA MISMA version y que sea v93 o posterior (el texto Yacan entro en v93). */
+  var _pv = (s.match(/VERSIÓN ACTUAL: v(\d+) \|/) || [])[1];
+  ok('versión (v93 o posterior) igual en cabecera, título e historial',
+     _pv && parseInt(_pv, 10) >= 93 && new RegExp('<title>Check-in Pasos v' + _pv + ' ').test(s) && new RegExp('<!-- HISTORIAL: v' + _pv + ' - ').test(s),
+     'cabecera v' + _pv);
 })();
 
 console.log('generar.html');

@@ -147,5 +147,37 @@ console.log('\n7. Las cuatro paginas: fichero compartido cargado y sin construct
      !pv || (m && m[1] === pv[1]), m ? ('marcador v' + m[1] + ' vs PAGE_VERSION ' + (pv && pv[1])) : 'sin marcador');
 });
 
+console.log('\n8. checkin-pasos v94: el link se reconstruye al entrar al paso 2 con lo que el huesped acaba de guardar');
+var pasoGoSrc = fnSource('checkin-pasos.html', 'pasoGo');
+ok('pasoGo(2) llama a refreshPoliceStep()', /n===2[^\n]*refreshPoliceStep\(\)/.test(pasoGoSrc));
+var submitSrc = fnSource('checkin-pasos.html', 'submitForm');
+var iMerge = submitSrc.indexOf('_mergeSavedRecord(record)'), iMark = submitSrc.indexOf('pasoMarkDone(1)');
+ok('submitForm copia lo guardado a _bookingData ANTES de pasoMarkDone(1)', iMerge > 0 && iMark > iMerge, 'merge@' + iMerge + ' mark@' + iMark);
+var refreshSrc = fnSource('checkin-pasos.html', 'refreshPoliceStep');
+ok('refreshPoliceStep reconstruye con renderPol sin re-traducir la pagina (keepLang)', refreshSrc.indexOf('renderPol(_bookingData,{keepLang:true})') > 0);
+ok('renderPol respeta keepLang (no llama a initLangPol)', /if\(!\(_opts&&_opts\.keepLang\)\) initLangPol\(\);/.test(fnSource('checkin-pasos.html', 'renderPol')));
+ok('tras re-renderizar vuelve a aplicar la regla vigente del boton Premium', refreshSrc.indexOf('updatePremiumBtn()') > 0);
+ok('una respuesta tardia del Worker no pisa la reserva si el huesped ya cambio de paso', /seq===_polRefreshSeq&&_currentPaso===2\)\{/.test(refreshSrc));
+ok('refreshPoliceStep relee con el token de check-in', refreshSrc.indexOf('verify-checkin-code') > 0 && /token:_tok/.test(refreshSrc));
+ok('refreshPoliceStep NUNCA envia PIN (un PIN fallido cuenta como intento)', !/\bpin\b\s*:/.test(refreshSrc.replace(/\/\*[\s\S]*?\*\//g, '')));
+ok('refreshPoliceStep sin token no llama a la red', /if\(!_tok\|\|!_codeNow\) return;/.test(refreshSrc));
+ok('refreshPoliceStep solo repinta si el huesped sigue en el paso 2', /_currentPaso!==2\) return;/.test(refreshSrc));
+ok('tras la relectura vuelve a aplicar lo guardado en esta sesion', /_mergeSavedRecord\(_savedArrivalRecord\)/.test(refreshSrc));
+
+/* _mergeSavedRecord ejecutado de verdad sobre una fila con prefijo (vista) */
+var runMerge = new Function('rec', '_bookingData', 'var _savedArrivalRecord=null;\n' + fnSource('checkin-pasos.html', '_mergeSavedRecord') + '\n_mergeSavedRecord(rec); return _bookingData;');
+var effAdults = new Function('r', fnSource('checkin-pasos.html', 'effectiveAdults') + '\nreturn effectiveAdults(r);');
+var antes = Object.assign({}, ROW, { TaBookings2021_FS_confirmation_code: '64135121', TaBookings2021_Guest_adults_nr_form: '', TaBookings2021_Guest_children_nr_form: '' });
+ok('ANTES del formulario (Hostaway sin datos) el link lleva number=0', param(guest(antes).url, 'number') === '0');
+/* submitForm guarda el telefono del formulario en Segundo_Telefono (police-url.js lo lee antes que Guest_phonenumber) */
+var despues = runMerge({ Guest_adults_nr_form: 2, Guest_children_nr_form: 3, Fiscal_guest_name: 'Vera', Fiscal_guest_surename: 'Klein', Segundo_Telefono: '+33 6 99 88 77 66', Arrivalform_done: 1 }, Object.assign({}, antes));
+ok('DESPUES del formulario el mismo objeto da number=5 (2 adultos + 3 ninos)', param(guest(despues).url, 'number') === '5', 'number=' + param(guest(despues).url, 'number'));
+ok('  ...y el nombre y telefono del formulario', param(guest(despues).url, 'firstName') === 'Vera' && param(guest(despues).url, 'phone') === '0033699887766', param(guest(despues).url, 'phone'));
+ok('  ...y effectiveAdults ya ve 2 (guardarPol no rechaza al huesped)', effAdults(despues) === 2, String(effAdults(despues)));
+var hostaway6 = runMerge({ Guest_adults_nr_form: 5, Guest_children_nr_form: 0 }, Object.assign({}, ROW, { TaBookings2021_Adults: '6', TaBookings2021_Children: '0' }));
+ok('Hostaway 6, formulario 5: gana el formulario (caso 49293815)', param(guest(hostaway6).url, 'number') === '5', 'number=' + param(guest(hostaway6).url, 'number'));
+var desnuda = runMerge({ Guest_adults_nr_form: 3 }, { Guest_adults_nr_form: '', Adults: '' });
+ok('fila sin prefijo: se escriben la clave con prefijo y la desnuda', desnuda.TaBookings2021_Guest_adults_nr_form === 3 && desnuda.Guest_adults_nr_form === 3);
+
 console.log('\n' + pass + ' pass, ' + fail + ' fail\n');
 process.exit(fail ? 1 : 0);
