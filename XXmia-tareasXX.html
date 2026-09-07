@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- VERSIÓN ACTUAL: v85 | Historial completo al final  -->
+<!-- VERSIÓN ACTUAL: v86 | Historial completo al final  -->
 <head>
   <meta charset="UTF-8">
   <!-- ══ PWA ══ -->
@@ -25,14 +25,14 @@
   }
 </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tareas v85 — 3Villas</title>
+  <title>Tareas v86 — 3Villas</title>
   <link rel="icon" type="image/png" href="https://www.3villas.com/intranet/icon-corazon-rojo-fondo-transparente.png">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <script>
     // ── AUTO-DETECCIÓN DE VERSIÓN (Opción B) — retrofit v82 ──
     (function(){
-      const PAGE_VERSION='v85';
+      const PAGE_VERSION='v86';
       try{
         if(location.protocol==='file:') return;
         fetch(location.pathname,{cache:'reload'}).then(r=>r.text()).then(html=>{
@@ -257,7 +257,7 @@
   <script src="auth.js"></script>
   <script src="nav.js"></script>
   <script src="nav-component.js"></script>
-  <script src="mia-intranet.js"></script>
+  <script src="XXmia-intranetXX.js"></script>
 <script>
 
 function _ea(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -653,6 +653,8 @@ function toggleDesc(btn){
   var searchTimer   = null;
   var searchId      = 0;
   var proxOpen      = false;
+  var hideAuto      = false; /* v86: auto=0 en la URL — ocultar tareas automáticas (Tasktype 20) */
+  var urlVid        = '';    /* v86: vid=<villaid> en la URL — villa exacta por id */
 
   function selUsersKeys() { return Object.keys(selectedUsers); }
   function schedule(ms)   { clearTimeout(searchTimer); searchTimer = setTimeout(doSearch, ms||0); }
@@ -793,6 +795,9 @@ function toggleDesc(btn){
     if(g('fVilla')){
       g('fVilla').addEventListener('change', function(){ schedule(0); });
       g('fVilla').addEventListener('input',  function(){ schedule(300); });
+      /* v86: al editar el texto de villa se suelta el id exacto (vid) */
+      g('fVilla').addEventListener('change', dropUrlVidIfEdited);
+      g('fVilla').addEventListener('input',  dropUrlVidIfEdited);
     }
     /* v12: oninput en HTML, no listener aquí */
     g('fTasktype').addEventListener('change', function(){ schedule(); });
@@ -1029,8 +1034,15 @@ function toggleDesc(btn){
       /* sin .then(loadData) — lo gestiona Promise.allSettled en el init */
   }
 
+  /* v86: soltar el id exacto de villa (vid) en cuanto el texto escrito deja de
+     coincidir con el nombre resuelto; un change de blur sin edición NO lo suelta */
+  function dropUrlVidIfEdited(){
+    if(val('fVilla').trim()!==String(villaNameMap[urlVid]||('Villa '+urlVid)).trim()) urlVid='';
+  }
+
     /* v12: actualizar filtro multiunit al cambiar villa */
   function onVillaChange(){
+    dropUrlVidIfEdited(); /* v86 */
     schedule(300);
     var vText=val('fVilla').trim().toLowerCase();
     var mg=g('multiunitFilterGroup'),ms=g('fMultiunit');
@@ -1060,9 +1072,11 @@ function toggleDesc(btn){
       var bt=val('fBookingType'), tt=val('fTasktype'), reserva=val('fReserva').trim();
       if(bt)    parts2.push('Tasktype_booking='+bt);
       if(tt)    parts2.push("Tasktype='"+tt.replace(/'/g,"''")+"'");
+      if(hideAuto) parts2.push("(Tasktype IS NULL OR Tasktype<>'20')"); /* v86 auto=0 — quitar esta línea si Caspio rechaza la cláusula */
       if(reserva) parts2.push("idreserva LIKE '%"+reserva+"%'");
       var villaQ=val('fVilla').trim().toLowerCase();
-      if(villaQ){
+      if(urlVid){ parts2.push('villaid='+urlVid); } /* v86: vid — villa exacta por id */
+      else if(villaQ){
         var mids=allVillas.filter(function(v){return v.name.toLowerCase().indexOf(villaQ)!==-1;}).map(function(v){return v.id;}).filter(Boolean);
         if(!mids.length) parts2.push('villaid=-999');
         else if(mids.length===1) parts2.push('villaid='+mids[0]);
@@ -1093,9 +1107,11 @@ function toggleDesc(btn){
     if(desde) parts.push("(Data_to_be_done_fixed IS NULL OR Data_to_be_done_fixed>='"+desde+"T00:00:00')"); /* v35 */
     if(bt)    parts.push('Tasktype_booking='+bt);
     if(tt)    parts.push("Tasktype='"+tt.replace(/'/g,"''")+"'");
+    if(hideAuto) parts.push("(Tasktype IS NULL OR Tasktype<>'20')"); /* v86 auto=0 — quitar esta línea si Caspio rechaza la cláusula */
     if(reserva) parts.push("idreserva LIKE '%"+reserva+"%'");
     var villaQ=val('fVilla').trim().toLowerCase();
-    if(villaQ){
+    if(urlVid){ parts.push('villaid='+urlVid); } /* v86: vid — villa exacta por id */
+    else if(villaQ){
       var mids=allVillas.filter(function(v){return v.name.toLowerCase().indexOf(villaQ)!==-1;}).map(function(v){return v.id;}).filter(Boolean);
       if(!mids.length) parts.push('villaid=-999');
       else if(mids.length===1) parts.push('villaid='+mids[0]);
@@ -1134,6 +1150,8 @@ function toggleDesc(btn){
     var bt=val('fBookingType'), btL={'10':'Limpieza','20':'WelcomePack','30':'Cierre'};
     if(bt) html+=chip(btL[bt]||bt,'booking');
     if(val('fTasktype')) html+=chip('Tipo: '+val('fTasktype'),'tasktype');
+    /* v86: chip de tareas automáticas ocultas (auto=0) */
+    if(hideAuto) html+=chip('Sin automáticas','auto');
     /* Chip prioridad */
     if(filterUrgente)    html+=chip('🏁 Urgente','urgente');
     if(filterImportante) html+=chip('🚩 Importante','importante');
@@ -1142,7 +1160,9 @@ function toggleDesc(btn){
       btn.addEventListener('click',function(){ clearChip(btn.dataset.key); renderChips(); doSearch(); });
     });
   }
-  function chip(label,key){ return '<span class="chip-filter">'+label+' <button data-key="'+key+'">✕</button></span>'; }
+  /* v86: el texto del chip se escapa (vi, re, mu y valores de Caspio llegaban sin escapar a innerHTML) */
+  function chipEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function chip(label,key){ return '<span class="chip-filter">'+chipEsc(label)+' <button data-key="'+key+'">✕</button></span>'; }
   function clearChip(key) {
     // La X limpia el filtro (quita la restricción), no resetea al default
     if(key==='users')   { selectedUsers={}; renderUserList(''); updateUserBtn(); }
@@ -1151,6 +1171,8 @@ function toggleDesc(btn){
     if(key==='taskid') { if(g('fTaskId'))g('fTaskId').value=''; }
     if(key==='reserva') g('fReserva').value='';
     if(key==='villa'){g('fVilla').value='';if(g('fMultiunit'))g('fMultiunit').value='';if(g('multiunitFilterGroup'))g('multiunitFilterGroup').style.display='none';}
+    if(key==='villa')   urlVid='';                  /* v86: soltar el id exacto de villa */
+    if(key==='auto')    hideAuto=false;             /* v86: volver a mostrar las automáticas */
     if(key==='multiunit')  g('fMultiunit').value='';
     if(key==='booking') g('fBookingType').value='';
     if(key==='tasktype') g('fTasktype').value='';
@@ -1219,6 +1241,7 @@ function toggleDesc(btn){
           })();
         tasks.forEach(function(t){ if(t.Tasktype) tasktypeSet[String(t.Tasktype).trim()]=true; });
         var selTT=g('fTasktype'), curTT=selTT.value;
+        if(curTT) tasktypeSet[curTT]=true; /* v86: el tipo filtrado conserva su opción y su chip aunque no devuelva filas */
         selTT.innerHTML='<option value="">— Todos —</option>'+
           Object.keys(tasktypeSet).sort().map(function(v){
             return '<option value="'+v+'"'+(v===curTT?' selected':'')+'>'+v+'</option>';
@@ -1451,6 +1474,10 @@ function toggleDesc(btn){
       /* v36: excluir Tasktype_booking=20 en cliente — evita problemas SQL con IS NULL */
       return String(t.Tasktype_booking||'') !== '20';
     }).filter(function(t){
+      /* v86: auto=0 — ocultar las 3 tareas automáticas (Limpieza/WelcomePack/Cierre, Tasktype 20) */
+      if(!hideAuto) return true;
+      return String(t.Tasktype||'') !== '20';
+    }).filter(function(t){
       // Filtro hasta en cliente: tareas sin fecha siempre pasan
       if(!hastaVal) return true;
       var rawD=t.Data_to_be_done_fixed||'';
@@ -1557,6 +1584,7 @@ function toggleDesc(btn){
       if(hasta && hasta !== DEFAULT_HASTA) p.set('fh', hasta);
       var villa = val('fVilla').trim();
       if(villa) p.set('vi', villa);
+      if(urlVid) p.set('vid', urlVid); /* v86: id exacto de villa, además del nombre en vi */
       var mu = val('fMultiunit').trim();
       if(mu) p.set('mu', mu);
       var reserva = val('fReserva').trim();
@@ -1569,6 +1597,7 @@ function toggleDesc(btn){
       if(bt) p.set('bt', bt);
       if(filterUrgente)    p.set('urg', '1');
       if(filterImportante) p.set('imp', '1');
+      if(hideAuto) p.set('auto', '0'); /* v86 */
       var qs = p.toString();
       history.replaceState({f:qs}, '', location.pathname+(qs?'?'+qs:''));
     } catch(e) { /* replaceState no crítico — ignorar errores */ }
@@ -1576,10 +1605,14 @@ function toggleDesc(btn){
   /* Restaura el estado de filtros desde la URL actual */
   function restoreFiltersFromURL() {
     var p = new URLSearchParams(location.search);
+    /* v86: estado de los parámetros nuevos, también al volver con popstate */
+    hideAuto = false; urlVid = '';
     if(!p.toString()) {
       setEstado('pend', false); /* default */
       return;
     }
+    /* v86: auto=0 oculta las tareas automáticas; cualquier otro valor las muestra */
+    hideAuto = (p.get('auto') === '0');
     /* Estado */
     setEstado(p.get('est') || 'pend', false);
     /* Usuarios */
@@ -1598,13 +1631,32 @@ function toggleDesc(btn){
       var bMas = g('btnMas'), mFil = g('masFiltros');
       if(bMas && !bMas.classList.contains('on')){ bMas.classList.add('on'); if(mFil)mFil.classList.add('open'); }
     }
+    /* v86: vid=<villaid> — villa exacta por id; si vienen vi y vid a la vez, manda vid */
+    if(p.has('vid') && /^\d{1,12}$/.test(p.get('vid'))) {
+      urlVid = p.get('vid');
+      g('fVilla').value = villaNameMap[urlVid] || ('Villa '+urlVid);
+      var bMasV = g('btnMas'), mFilV = g('masFiltros');
+      if(bMasV && !bMasV.classList.contains('on')){ bMasV.classList.add('on'); if(mFilV)mFilV.classList.add('open'); }
+    }
     if(p.has('mu')) {
       if(g('fMultiunit')) g('fMultiunit').value = p.get('mu');
       if(g('multiunitFilterGroup')) g('multiunitFilterGroup').style.display = '';
     }
     if(p.has('re')) { g('fReserva').value = p.get('re'); }
     if(p.has('tid') && g('fTaskId')) g('fTaskId').value = p.get('tid');
-    if(p.has('tt')) g('fTasktype').value = p.get('tt');
+    /* v86 FIX tt: el desplegable se rellena con los tipos de las filas recibidas, así
+       que al restaurar desde la URL la opción puede no existir todavía — se añade antes
+       de asignar el valor (new Option escribe texto, no HTML). Solo se aceptan valores
+       simples: nada que pueda inyectar marcado en los chips o en el desplegable. */
+    if(p.has('tt')) {
+      var ttSel = g('fTasktype'), ttV = p.get('tt');
+      if(ttSel && /^[0-9A-Za-zÁÉÍÓÚÜÑáéíóúüñ .,_\/#-]{1,40}$/.test(ttV)) {
+        var ttHas = false;
+        for(var ttI=0; ttI<ttSel.options.length; ttI++){ if(ttSel.options[ttI].value===ttV) ttHas=true; }
+        if(!ttHas) ttSel.add(new Option(ttV, ttV));
+        ttSel.value = ttV;
+      }
+    }
     if(p.has('bt')) g('fBookingType').value = p.get('bt');
     /* Prioridad */
     if(p.get('urg') === '1') {
@@ -1628,4 +1680,4 @@ function toggleDesc(btn){
 </script>
 </body>
 </html>
-<!-- HISTORIAL: XXmia-tareasXX - Copia de prueba de tareas.html, no enlazada desde la navegacion. Unico cambio: una linea que carga mia-intranet.js (fila de Mia bajo la cabecera y boton Aa), aqui sobre la cabecera tipo wp-nav. Sirve para probar Mia con login real sin tocar la pagina de siempre; borrar este archivo no afecta a nada. | v85 - FIX señalado por Jordi: el filtro de tareas automáticas del desplegable "tareas de esta villa" (v84) usaba el campo equivocado — Tasktype_booking=20 solo excluye la tarea de Wellcomepack, dejando pasar las de Limpieza (Tasktype_booking=10) y Cierre (Tasktype_booking=30), que también son automáticas. Cambiado a Tasktype=20 (comparación en cliente, String(t.Tasktype||'')!=='20'), el mismo campo y criterio que ya se usa en entradas-equipo.html desde su v134/v138 para excluir las 3 automáticas de una vez (Limpieza/Wellcomepack/Cierre comparten Tasktype=20, cada una con su propio Tasktype_booking 10/20/30). Único cambio de esta versión; resto de la lógica del desplegable (orden, caché, filtro Tarea_terminada) sin tocar. | v84 - Mejora pedida por Jordi: mismo botón desplegable "tareas de esta villa" que se añadió en entradas-equipo.html v139, adaptado a la tabla de esta página. Nuevo botón "▾" en la celda de Fecha de cada fila (a la izquierda de la fecha), visible solo si la tarea tiene villaid. Al pulsarlo (con stopPropagation, sin navegar a editar-tarea) despliega una fila adicional debajo (colspan completo) con TODAS las tareas pendientes de esa villa, en el mismo orden que la ficha de entradas-equipo (importante no futura → urgente → normal), sin separar las futuras en un bloque aparte — van dentro del grupo normal ordenadas por fecha, apareciendo al final de forma natural, tal y como se pidió. Respeta el filtro de Tasktype_booking que YA usaba esta página desde la v36 (comparación en cliente, String(t.Tasktype_booking||'')!=='20', no en el WHERE — este archivo ya evitaba desde entonces el mismo problema de NULL en SQL que se corrigió en entradas-equipo.html v138, así que aquí no hacía falta ese fix). NUEVA función global window.toggleVillaTasksDropdown(vid,rowId,btn) (exportada a window por estar toda la lógica de este archivo dentro de un IIFE, igual que openEditTask/toggleMas/etc.): 1 llamada a TaTasks por villa la primera vez que se abre su desplegable (limit=1000, WHERE solo por villaid, filtrado de tipo y de Tarea_terminada en cliente), cacheada en window.__villaDropTasksCache para no repetir la llamada si se abre/cierra varias veces sin recargar la página. Cada tarea del desplegable muestra bandera de prioridad, nombre, usuario asignado y fecha, y al pulsarla llama a openEditTask con la misma firma de 3 parámetros que ya usa esta página. Nuevas reglas CSS .pt-villa-toggle/.pt-villa-drop-inner/.pt-villa-drop-loading/.pt-villa-drop-empty/.pt-villa-drop-row/.pt-villa-vt-row. Sin cambios en la carga inicial de tareas ni en el resto de la lógica de filtros/tabla; el desplegable es una consulta aparte, bajo demanda. | v83 - Migración del Service Worker legacy: el registro pasa de '/3villas-manuals/sw.js' a '/intranet/sw.js' (versión más reciente, con caché versionada y limpieza de cachés antiguas), desregistrando primero cualquier SW activo con scope '/3villas-manuals/' para limpiar dispositivos que aún lo tuvieran instalado. Mismo cambio aplicado a la vez en entradas-equipo.html, editar-tarea.html, nueva-tarea.html y listado-ocupacion.html. Motivo: ese SW legacy está documentado como causa raíz de bugs históricos de guardado y de servir copias cacheadas desactualizadas de archivos compartidos. Sin cambios en ninguna otra lógica de la página. | v82 - Si una tarea tiene marcado el campo Intervencion_guardia_tipo_ID (es decir, es una intervención de guardia o una guardia sin intervención, creada desde guardias-e-intervenciones.html), el botón/enlace "✏️ Editar" ya no abre editar-tarea.html — abre guardias-e-intervenciones.html?editar=TASKID en su lugar, para que se edite con las reglas propias de esas páginas (solo Fecha editable en guardias, bloqueo 24h, checkbox de validez solo admin/manager, etc.). Cambios: (1) buildRow() calcula esInterv=!!(t.Intervencion_guardia_tipo_ID) y lo usa tanto en el botón act-btn-edit como en el enlace directo editUrl de la info-card. (2) openEditTask(rawId,reserva,esInterv) — nuevo 3er parámetro; si es true, redirige a guardias-e-intervenciones.html en vez de editar-tarea.html (el parámetro Idreserva no aplica en ese caso, guardias-e-intervenciones.html ya trae el dato del propio registro). RETROFIT OBLIGATORIO detectado: el archivo no tenía implementado el mecanismo de auto-detección de versión (Opción B) pese a la regla permanente de memoria — añadido en el <head> junto con las meta Cache-Control/Pragma no-cache, que tampoco existían. Favicon ya era estándar. | v81 - FIX filtro villa no refrescaba: (1) loadVillas más robusto — acepta villaid/VillaId/VillaID/villa_id/ID para no devolver id vacío si Caspio cambia capitalización del campo; filas sin ID se ignoran. (2) Listener change adicional vía addEventListener para fVilla con schedule(0) inmediato, más fiable que oninput/onchange en HTML con datalist dentro de overflow:hidden (iOS/Safari). (3) onVillaChange: delay reducido a 300ms (igual que otros filtros); los return prematuros solo afectan al selector de multiunit, schedule siempre corre primero. |  v80 - FIX filtros no refrescaban: (1) Campo villa (fVilla con datalist): añadido onchange="onVillaChange()" además de oninput — en muchos navegadores/móvil seleccionar del datalist dispara change pero no input, por lo que el filtro nunca se ejecutaba. (2) Campos fBuscar, fReserva, fTaskId: añadido listener change además de input por el mismo motivo. Los select (fTasktype, fBookingType, fMultiunit) ya tenían change y estaban correctos. |  v79 - Retrofit: favicon estándar añadido (ruta absoluta); spinners <div class="spinner"> (CSS background base64) sustituidos por <img class="spinner"> con base64 embebido estándar; CSS .spinner{background:url(...)} eliminado (huérfano). |  v78 - Descripción inline: editor Quill por fila sustituido por lista editable (checkbox + edición inline + drag&drop reordenar + auto-mover marcado al fondo/desmarcado arriba + botón eliminar; fila "Añadir" encima de las terminadas). Mismo formato de texto guardado ([x]/[ ]/•); líneas planas legacy se cargan como ítem desmarcado. Checkbox con flex:none. Guardado a Caspio sin cambios (PUT Taskdescription). Eliminado Quill (CDN, CSS .ql-*/.desc-ql-wrap, botones .re-btn-inline, _qFmtRow) | v77 - Fix: renderTable oculta stInit+stErr, CSS state-box sin min-height forzado | v76 - Fix centrado spinner: .spinner display:block margin:auto, .state-box flex centrado | v75 - Spinner corazón 3Villas embebido en CSS inline (sin archivo externo) | v74 - Eliminado CSS inline .spinner/.spin — ahora spinner.css y spinner-sm.css tienen prioridad | v73 - versión anterior -->
+<!-- HISTORIAL: XXmia-tareasXX - Copia de prueba de tareas.html, no enlazada desde la navegacion. Unico cambio: una linea que carga XXmia-intranetXX.js (fila de Mia bajo la cabecera y boton Aa), aqui sobre la cabecera tipo wp-nav. Sirve para probar Mia con login real sin tocar la pagina de siempre; borrar este archivo no afecta a nada. | v86 - Tres parámetros nuevos de URL para que Mia (mia-intranet.js) pueda enlazar listados ya filtrados; sin esos parámetros la página se comporta exactamente igual que la v85. (1) auto=0 oculta las tareas automáticas (Limpieza/WelcomePack/Cierre, las tres con Tasktype=20): filtro en cliente en renderTable con la misma comparación que ya usa la v85 (String(t.Tasktype||'')!=='20', las tareas sin Tasktype pasan) y, además, una cláusula en el WHERE de buildWhere y buildWhereForUser ((Tasktype IS NULL OR Tasktype<>'20'), una sola línea marcada en cada función por si hubiera que quitarla) para que las automáticas no se coman el tope de 1000 filas. Chip 'Sin automáticas' con su X; el parámetro se conserva en la URL. (2) vid=<villaid> filtra por la villa exacta por id (villaid=N en el WHERE) en vez de por coincidencia de nombre; el campo de villa muestra el nombre de esa villa (o 'Villa N' si no está en la lista) y el chip sigue siendo 'Villa: nombre'. Si llegan vi y vid a la vez, manda vid. El id se suelta al quitar el chip de villa o en cuanto el texto escrito deja de coincidir con el nombre resuelto (un change de blur sin edición no lo suelta). (3) FIX tt: al restaurar desde la URL, si ese tipo no está entre las opciones del desplegable (se rellenan con los tipos de las filas recibidas) se añade como opción antes de asignar el valor, y el tipo activo conserva su opción y su chip aunque la búsqueda no devuelva ninguna fila; se aceptan solo valores simples (letras, números y separadores). Sin cambios de CSS y sin cambios en el resto de los filtros. | v85 - FIX señalado por Jordi: el filtro de tareas automáticas del desplegable "tareas de esta villa" (v84) usaba el campo equivocado — Tasktype_booking=20 solo excluye la tarea de Wellcomepack, dejando pasar las de Limpieza (Tasktype_booking=10) y Cierre (Tasktype_booking=30), que también son automáticas. Cambiado a Tasktype=20 (comparación en cliente, String(t.Tasktype||'')!=='20'), el mismo campo y criterio que ya se usa en entradas-equipo.html desde su v134/v138 para excluir las 3 automáticas de una vez (Limpieza/Wellcomepack/Cierre comparten Tasktype=20, cada una con su propio Tasktype_booking 10/20/30). Único cambio de esta versión; resto de la lógica del desplegable (orden, caché, filtro Tarea_terminada) sin tocar. | v84 - Mejora pedida por Jordi: mismo botón desplegable "tareas de esta villa" que se añadió en entradas-equipo.html v139, adaptado a la tabla de esta página. Nuevo botón "▾" en la celda de Fecha de cada fila (a la izquierda de la fecha), visible solo si la tarea tiene villaid. Al pulsarlo (con stopPropagation, sin navegar a editar-tarea) despliega una fila adicional debajo (colspan completo) con TODAS las tareas pendientes de esa villa, en el mismo orden que la ficha de entradas-equipo (importante no futura → urgente → normal), sin separar las futuras en un bloque aparte — van dentro del grupo normal ordenadas por fecha, apareciendo al final de forma natural, tal y como se pidió. Respeta el filtro de Tasktype_booking que YA usaba esta página desde la v36 (comparación en cliente, String(t.Tasktype_booking||'')!=='20', no en el WHERE — este archivo ya evitaba desde entonces el mismo problema de NULL en SQL que se corrigió en entradas-equipo.html v138, así que aquí no hacía falta ese fix). NUEVA función global window.toggleVillaTasksDropdown(vid,rowId,btn) (exportada a window por estar toda la lógica de este archivo dentro de un IIFE, igual que openEditTask/toggleMas/etc.): 1 llamada a TaTasks por villa la primera vez que se abre su desplegable (limit=1000, WHERE solo por villaid, filtrado de tipo y de Tarea_terminada en cliente), cacheada en window.__villaDropTasksCache para no repetir la llamada si se abre/cierra varias veces sin recargar la página. Cada tarea del desplegable muestra bandera de prioridad, nombre, usuario asignado y fecha, y al pulsarla llama a openEditTask con la misma firma de 3 parámetros que ya usa esta página. Nuevas reglas CSS .pt-villa-toggle/.pt-villa-drop-inner/.pt-villa-drop-loading/.pt-villa-drop-empty/.pt-villa-drop-row/.pt-villa-vt-row. Sin cambios en la carga inicial de tareas ni en el resto de la lógica de filtros/tabla; el desplegable es una consulta aparte, bajo demanda. | v83 - Migración del Service Worker legacy: el registro pasa de '/3villas-manuals/sw.js' a '/intranet/sw.js' (versión más reciente, con caché versionada y limpieza de cachés antiguas), desregistrando primero cualquier SW activo con scope '/3villas-manuals/' para limpiar dispositivos que aún lo tuvieran instalado. Mismo cambio aplicado a la vez en entradas-equipo.html, editar-tarea.html, nueva-tarea.html y listado-ocupacion.html. Motivo: ese SW legacy está documentado como causa raíz de bugs históricos de guardado y de servir copias cacheadas desactualizadas de archivos compartidos. Sin cambios en ninguna otra lógica de la página. | v82 - Si una tarea tiene marcado el campo Intervencion_guardia_tipo_ID (es decir, es una intervención de guardia o una guardia sin intervención, creada desde guardias-e-intervenciones.html), el botón/enlace "✏️ Editar" ya no abre editar-tarea.html — abre guardias-e-intervenciones.html?editar=TASKID en su lugar, para que se edite con las reglas propias de esas páginas (solo Fecha editable en guardias, bloqueo 24h, checkbox de validez solo admin/manager, etc.). Cambios: (1) buildRow() calcula esInterv=!!(t.Intervencion_guardia_tipo_ID) y lo usa tanto en el botón act-btn-edit como en el enlace directo editUrl de la info-card. (2) openEditTask(rawId,reserva,esInterv) — nuevo 3er parámetro; si es true, redirige a guardias-e-intervenciones.html en vez de editar-tarea.html (el parámetro Idreserva no aplica en ese caso, guardias-e-intervenciones.html ya trae el dato del propio registro). RETROFIT OBLIGATORIO detectado: el archivo no tenía implementado el mecanismo de auto-detección de versión (Opción B) pese a la regla permanente de memoria — añadido en el <head> junto con las meta Cache-Control/Pragma no-cache, que tampoco existían. Favicon ya era estándar. | v81 - FIX filtro villa no refrescaba: (1) loadVillas más robusto — acepta villaid/VillaId/VillaID/villa_id/ID para no devolver id vacío si Caspio cambia capitalización del campo; filas sin ID se ignoran. (2) Listener change adicional vía addEventListener para fVilla con schedule(0) inmediato, más fiable que oninput/onchange en HTML con datalist dentro de overflow:hidden (iOS/Safari). (3) onVillaChange: delay reducido a 300ms (igual que otros filtros); los return prematuros solo afectan al selector de multiunit, schedule siempre corre primero. |  v80 - FIX filtros no refrescaban: (1) Campo villa (fVilla con datalist): añadido onchange="onVillaChange()" además de oninput — en muchos navegadores/móvil seleccionar del datalist dispara change pero no input, por lo que el filtro nunca se ejecutaba. (2) Campos fBuscar, fReserva, fTaskId: añadido listener change además de input por el mismo motivo. Los select (fTasktype, fBookingType, fMultiunit) ya tenían change y estaban correctos. |  v79 - Retrofit: favicon estándar añadido (ruta absoluta); spinners <div class="spinner"> (CSS background base64) sustituidos por <img class="spinner"> con base64 embebido estándar; CSS .spinner{background:url(...)} eliminado (huérfano). |  v78 - Descripción inline: editor Quill por fila sustituido por lista editable (checkbox + edición inline + drag&drop reordenar + auto-mover marcado al fondo/desmarcado arriba + botón eliminar; fila "Añadir" encima de las terminadas). Mismo formato de texto guardado ([x]/[ ]/•); líneas planas legacy se cargan como ítem desmarcado. Checkbox con flex:none. Guardado a Caspio sin cambios (PUT Taskdescription). Eliminado Quill (CDN, CSS .ql-*/.desc-ql-wrap, botones .re-btn-inline, _qFmtRow) | v77 - Fix: renderTable oculta stInit+stErr, CSS state-box sin min-height forzado | v76 - Fix centrado spinner: .spinner display:block margin:auto, .state-box flex centrado | v75 - Spinner corazón 3Villas embebido en CSS inline (sin archivo externo) | v74 - Eliminado CSS inline .spinner/.spin — ahora spinner.css y spinner-sm.css tienen prioridad | v73 - versión anterior -->
