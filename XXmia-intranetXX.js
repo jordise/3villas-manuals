@@ -60,6 +60,7 @@ const MAX_ROWS       = 5;              // filas por lista (igual que el límite 
 /* Villas por lista de elección. "bini" está en dieciocho nombres, así que un
    tope de diez escondía villas de verdad. Pasado el tope se pide más letras. */
 const MAX_VILLAS     = 20;
+const MAX_SUGGEST    = 5;   /* villas parecidas bajo "¿Querías decir…?" */
 const K_EASY         = '3v_easy';      // localStorage: texto más legible
 const K_OFF          = '3v_mia_off';   // sessionStorage: Mia apagada esta sesión
 
@@ -159,6 +160,7 @@ const T = {
   guessVilla:'Villa supuesta por el nombre parecido. Quita el chip si no es.',
   manyVillas:'He encontrado varias villas. Elige una:',
   moreVillas:'Hay más villas; escribe más letras del nombre.',
+  didYouMean:'¿Querías decir…?',
   more      :'Hay más resultados. Ábrelos todos en Entradas.',
   noMgrLink :'El enlace de Entradas no filtra por manager: ese filtro solo lo aplico yo aquí.',
   unknown   :'No he entendido. Prueba con un nombre, un código de reserva, una villa o unas fechas.',
@@ -430,6 +432,7 @@ body.dark .mia-panel .mia-vrow .mia-vmain:focus-visible{outline-color:#ff9fae}
 .mia-panel .mia-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:auto;min-height:44px;padding:8px 16px;border-radius:8px;border:1.5px solid var(--gray-2,#e8eaed);background:#fff;color:var(--gray-5,#2d3142);font-family:Montserrat,sans-serif;font-size:14px;min-width:0;overflow-wrap:anywhere;font-weight:800;letter-spacing:.2px;cursor:pointer;text-decoration:none;text-transform:uppercase}
 .mia-panel .mia-btn.mia-primary{background:var(--red,#C8102E);border-color:var(--red,#C8102E);color:#fff}
 .mia-panel .mia-list{display:flex;flex-direction:column;gap:8px}
+.mia-panel .mia-suggest{margin-top:10px}
 .mia-panel .mia-vrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:8px 12px;border:1px solid var(--gray-2,#e8eaed);border-radius:10px;background:#fff}
 .mia-panel .mia-vrow .mia-vmain{flex:1 1 55%;min-width:0;overflow-wrap:anywhere;word-break:break-word;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;min-height:44px;padding:0;border:none;background:none;text-align:left;font-family:inherit;font-size:15px;color:var(--gray-5,#2d3142);text-decoration:none;cursor:pointer}
 .mia-panel .mia-vrow .mia-n{font-family:Montserrat,sans-serif;font-weight:800;font-size:16px;min-width:0;overflow-wrap:anywhere;word-break:break-word}
@@ -1000,10 +1003,28 @@ async function loadVillas(){
   })();
   return VILLASP;
 }
-/* Devuelve {hits:[{id,name}], ok:true}, o {hits:[], ok:false} si no se pudo
-   leer la lista. El nombre exacto manda (el de inquilinos o el interno); si no
-   hay ninguno, valen los que contienen lo escrito. No se recorta: quien pinta
-   la lista decide cuántas enseña. */
+/* Distancia de edición entre dos cadenas cortas (Levenshtein). */
+function lev(a,b){
+  if(a===b)return 0;
+  if(!a.length)return b.length;
+  if(!b.length)return a.length;
+  let prev=[]; for(let j=0;j<=b.length;j++)prev.push(j);
+  for(let i=1;i<=a.length;i++){
+    const cur=[i];
+    for(let j=1;j<=b.length;j++){
+      cur.push(Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)));
+    }
+    prev=cur;
+  }
+  return prev[b.length];
+}
+/* Devuelve {hits:[{id,name}], ok:true, guessed, near:[{id,name}]}, o
+   {hits:[], ok:false} si no se pudo leer la lista. El nombre exacto manda (el
+   de inquilinos o el interno); si no hay ninguno, valen los que contienen lo
+   escrito. No se recorta: quien pinta la lista decide cuántas enseña.
+   near: hasta MAX_SUGGEST villas parecidas que NO están en hits, para el
+   "¿Querías decir…?". Solo se calcula con cero o una villa acertada; con
+   varias ya sale la lista para elegir. */
 async function resolveVilla(name){
   const q=fold(name);
   if(!q)return {hits:[],ok:true};
@@ -1016,14 +1037,62 @@ async function resolveVilla(name){
   function norm(v){ return fold(v).replace(/^(villa|finca|casa|apartamento|apto)\s+/,''); }
   function contains(qq){ return rows.filter(function(r){ return fold(r.name).indexOf(qq)>=0||fold(r.alt).indexOf(qq)>=0; }); }
   const qn=norm(q);
+  /* Villas parecidas a lo escrito, sin las ya acertadas. Primero las que
+     contienen lo escrito (delfi -> DELFIN), después por distancia de edición
+     contra el nombre sin "villa" y contra cada palabra del nombre. Límite:
+     una letra de diferencia por cada cuatro escritas (delfi: 1, binisafua: 2),
+     para que un nombre inventado no traiga villas al azar. */
+  function nearest(hits){
+    const ex={}; hits.forEach(function(h){ ex[h.id]=1; });
+    const lim=Math.max(1,Math.floor(qn.length/4));
+    return rows.filter(function(r){ return !ex[r.id]; }).map(function(r){
+      const cands=[norm(r.name),norm(r.alt)].concat(fold(r.name).split(/[^a-z0-9]+/)).filter(Boolean);
+      let d=Infinity;
+      cands.forEach(function(c){
+        if(c.indexOf(qn)>=0)d=Math.min(d,0.5);
+        else d=Math.min(d,lev(qn,c));
+      });
+      return {r:r,d:d};
+    }).filter(function(x){ return x.d<=lim; })
+      .sort(function(a,b){ return a.d-b.d||a.r.name.localeCompare(b.r.name); })
+      .slice(0,MAX_SUGGEST).map(function(x){ return x.r; });
+  }
   const exact=rows.filter(function(r){ return norm(r.name)===qn||norm(r.alt)===qn; });
-  if(exact.length)return {hits:exact,ok:true};
+  if(exact.length)return {hits:exact,ok:true,guessed:false,near:exact.length===1?nearest(exact):[]};
   let part=contains(q);
   if(!part.length&&qn!==q)part=contains(qn);
   let qq=qn;
   let guessed=false;
   while(!part.length&&qq.length>4){ qq=qq.slice(0,-1); part=contains(qq); guessed=!!part.length; }
-  return {hits:part,ok:true,guessed:guessed};
+  return {hits:part,ok:true,guessed:guessed,near:part.length<=1?nearest(part):[]};
+}
+/* Bloque "¿Querías decir…?": un enlace por villa parecida. hrefOf(villa)
+   devuelve el enlace o null (sin id no hay enlace, solo el nombre). */
+function suggestBlock(near,hrefOf){
+  const l=(near||[]).slice(0,MAX_SUGGEST);
+  if(!l.length)return null;
+  const box=E('div','mia-suggest');
+  box.appendChild(note(T.didYouMean));
+  const list=E('div','mia-list');
+  l.forEach(function(h){
+    const row=E('div','mia-vrow');
+    const nm=String(h.name||'—');
+    const href=hrefOf(h);
+    if(href){
+      const a=document.createElement('a');
+      a.className='mia-vmain';
+      a.setAttribute('href',href);
+      a.appendChild(E('span','mia-n',nm));
+      row.appendChild(a);
+    }else{
+      const d=E('div','mia-vmain');
+      d.appendChild(E('span','mia-n',nm));
+      row.appendChild(d);
+    }
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+  return box;
 }
 
 /* ════════════════ WHERE de reservas ════════════════ */
@@ -1557,9 +1626,11 @@ async function doTasks(t,extraNo){
   /* La villa se resuelve una vez, antes de pintar nada: con el id el filtro de
      tareas.html es exacto y deja de depender del texto del nombre. */
   let topNote=null;
+  let near=[];
   const vName=String(t.villa==null?'':t.villa).trim();
   if(vName && !t.villaId){
     const r=await resolveVilla(vName);
+    if(r.ok)near=r.near||[];
     if(!r.ok){
       /* Sin lista de villas se sigue como antes: el nombre viaja en vi. */
     }else if(r.hits.length===1){
@@ -1614,6 +1685,12 @@ async function doTasks(t,extraNo){
       btns.appendChild(btn(T.openTar,href,true));
     }
     box.appendChild(btns);
+    /* Villas parecidas: mismo resto de filtros, otra villa. Se calculan una
+       vez con la pregunta original; quitar un chip no las cambia. */
+    const sg=suggestBlock(near,function(h){
+      return link('tareas',tasksPlan(Object.assign({},t,{villa:h.name,villaId:h.id})).params);
+    });
+    if(sg)box.appendChild(sg);
     say(box);
   };
   render();
@@ -1645,15 +1722,24 @@ async function doVilla(v,extraNo){
   const res=await resolveVilla(name);
   if(!res.ok){ sayWithNo(note('No he podido leer las villas.'),extraNo); return; }
   const hits=res.hits;
-
-  if(!hits.length){ sayWithNo(note(T.noVilla),extraNo); return; }
+  const sgV=suggestBlock(res.near,function(h){ return isId(String(h.id||''))?link('villa',{villa_id:String(h.id)}):null; });
   const box=E('div');
+  if(!hits.length){
+    box.appendChild(note(T.noVilla));
+    if(sgV)box.appendChild(sgV);
+    const naN=noApplyBlock(extraNo);
+    if(naN)box.appendChild(naN);
+    say(box);
+    return;
+  }
   if(hits.length===1){
     const id=String(hits[0].id||'');
+    if(res.guessed)box.appendChild(note(T.guessVilla));
     box.appendChild(note(String(hits[0].name||name)));
     const btns=E('div','mia-btns');
     if(isId(id))btns.appendChild(btn(T.openVilla,link('villa',{villa_id:id}),true));
     box.appendChild(btns);
+    if(sgV)box.appendChild(sgV);
   }else{
     box.appendChild(note(T.manyVillas));
     const list=E('div','mia-list');
